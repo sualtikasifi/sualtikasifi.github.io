@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Dig Game",
+    "slug": "dig-game",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "backgroundColor": "#130B2E",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#130B2E"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#130B2E"
+      },
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.diggame.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.digame.app"
+    }
+  }
+}
