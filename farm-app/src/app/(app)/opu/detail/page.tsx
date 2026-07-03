@@ -246,11 +246,11 @@ function EditAllForm({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Sağ folikül">
-          <input type="number" min={0} value={follicleRight} onChange={(e) => setFollicleRight(e.target.value)} className="input" />
-        </Field>
         <Field label="Sol folikül">
           <input type="number" min={0} value={follicleLeft} onChange={(e) => setFollicleLeft(e.target.value)} className="input" />
+        </Field>
+        <Field label="Sağ folikül">
+          <input type="number" min={0} value={follicleRight} onChange={(e) => setFollicleRight(e.target.value)} className="input" />
         </Field>
       </div>
 

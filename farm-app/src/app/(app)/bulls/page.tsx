@@ -68,9 +68,14 @@ export default function BullsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Boğalar ve Sperma Stoğu</h1>
-        <Link href="/bulls/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-          Yeni boğa
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/bulls/stock" className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50">
+            Stok Düzenle
+          </Link>
+          <Link href="/bulls/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+            Yeni boğa
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

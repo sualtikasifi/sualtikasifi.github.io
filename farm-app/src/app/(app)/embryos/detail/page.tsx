@@ -151,10 +151,11 @@ function EmbryoDetailContent() {
               ) : (
                 <div>
                   <input
-                    placeholder="Küpe no ile ara..."
+                    placeholder="Küpe Numarası"
                     value={animalSearch}
                     onChange={(e) => setAnimalSearch(e.target.value)}
                     className="input"
+                    autoComplete="off"
                   />
                   <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-neutral-200">
                     {filteredAnimals.slice(0, 20).map((a) => (

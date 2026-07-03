@@ -17,7 +17,7 @@ export function OpuFunnel({ session }: { session: OpuSession }) {
       value: totalFollicles,
       sub:
         session.follicle_count_right !== null || session.follicle_count_left !== null
-          ? `Sağ ${session.follicle_count_right ?? 0} / Sol ${session.follicle_count_left ?? 0}`
+          ? `Sol ${session.follicle_count_left ?? 0} / Sağ ${session.follicle_count_right ?? 0}`
           : undefined,
     },
     { label: "Oosit", value: session.oocyte_count, rateOf: totalFollicles },

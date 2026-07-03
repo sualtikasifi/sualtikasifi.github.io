@@ -72,6 +72,12 @@ export default function TasksPage() {
   }
 
   const nameFor = (id: string | null) => profiles.find((p) => p.id === id)?.full_name ?? "-";
+  const assigneeFor = (id: string | null) => (id === null ? "Herkes" : nameFor(id));
+
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (a.status !== b.status) return a.status === "yapildi" ? 1 : -1;
+    return a.due_date.localeCompare(b.due_date);
+  });
 
   return (
     <div className="space-y-4">
@@ -88,8 +94,13 @@ export default function TasksPage() {
         <p className="text-sm text-neutral-400">Kayıt yok.</p>
       ) : (
         <div className="card-list">
-          {tasks.map((t) => (
-            <div key={t.id} className="border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
+          {sortedTasks.map((t) => (
+            <div
+              key={t.id}
+              className={`border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0 ${
+                t.status !== "yapildi" ? "bg-red-50" : ""
+              }`}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className={`font-medium ${t.status === "yapildi" ? "text-neutral-400 line-through" : "text-neutral-900"}`}>
@@ -97,7 +108,7 @@ export default function TasksPage() {
                   </p>
                   {t.description && <p className="text-neutral-500">{t.description}</p>}
                   <p className="text-xs text-neutral-400">
-                    {nameFor(t.assigned_to)} tarafından yapılacak &middot; {nameFor(t.assigned_by)} atadı
+                    {assigneeFor(t.assigned_to)} tarafından yapılacak &middot; {nameFor(t.assigned_by)} atadı
                   </p>
                   {t.status === "yapildi" && t.completed_at && (
                     <p className="mt-1 text-xs text-green-700">

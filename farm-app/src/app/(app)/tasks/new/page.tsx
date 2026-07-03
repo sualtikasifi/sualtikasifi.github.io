@@ -37,7 +37,7 @@ export default function NewTaskPage() {
     await createTask({
       title: form.title.trim(),
       description: form.description.trim() || null,
-      assigned_to: form.assigned_to,
+      assigned_to: form.assigned_to === "herkes" ? null : form.assigned_to,
       assigned_by: profile?.id ?? null,
       due_date: form.due_date,
       due_time: form.due_time || null,
@@ -62,6 +62,7 @@ export default function NewTaskPage() {
         </Field>
         <Field label="Kime atanacak">
           <select value={form.assigned_to} onChange={(e) => update("assigned_to", e.target.value)} className="input">
+            <option value="herkes">Herkes</option>
             {profiles.map((p) => (
               <option key={p.id} value={p.id}>{p.full_name}</option>
             ))}

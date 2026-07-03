@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { listBulls, listSemenInventory, setSemenStock } from "@/lib/data";
 import { Bull, SemenInventory, SemenType } from "@/lib/types";
 import { Badge } from "@/components/Badge";
@@ -16,12 +16,19 @@ export default function BullStockPage() {
 }
 
 function BullStockContent() {
+  const router = useRouter();
   const params = useSearchParams();
   const bullId = params.get("bullId");
+  const [allBulls, setAllBulls] = useState<Bull[]>([]);
+  const [bullSearch, setBullSearch] = useState("");
   const [bull, setBull] = useState<Bull | null>(null);
   const [conventionalStock, setConventionalStock] = useState<SemenInventory | null>(null);
   const [sexedStock, setSexedStock] = useState<SemenInventory | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    listBulls().then(setAllBulls);
+  }, []);
 
   useEffect(() => {
     if (!bullId) return;
@@ -35,15 +42,66 @@ function BullStockContent() {
     });
   }, [bullId]);
 
-  if (!bullId) return <p className="text-sm text-red-600">Boğa belirtilmedi.</p>;
+  const filteredBulls = useMemo(() => {
+    const q = bullSearch.trim().toLowerCase();
+    if (!q) return allBulls;
+    return allBulls.filter(
+      (b) => b.name.toLowerCase().includes(q) || (b.code ?? "").toLowerCase().includes(q)
+    );
+  }, [allBulls, bullSearch]);
+
+  if (!bullId) {
+    return (
+      <div className="max-w-lg space-y-4">
+        <h1 className="text-lg font-semibold text-neutral-900">Stok Düzenle</h1>
+        <div className="card space-y-3">
+          <input
+            placeholder="Boğa adı veya kodu ile ara..."
+            value={bullSearch}
+            onChange={(e) => setBullSearch(e.target.value)}
+            className="input"
+            autoComplete="off"
+          />
+          <div className="max-h-80 overflow-y-auto rounded-md border border-neutral-200">
+            {filteredBulls.length === 0 ? (
+              <p className="px-3 py-2 text-sm text-neutral-400">Boğa bulunamadı.</p>
+            ) : (
+              filteredBulls.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => router.push(`/bulls/stock?bullId=${b.id}`)}
+                  className="block w-full px-3 py-2 text-left text-sm hover:bg-neutral-50"
+                >
+                  <span className="font-medium text-neutral-900">{b.name}</span>
+                  {b.code && <span className="ml-2 text-neutral-500">{b.code}</span>}
+                  {b.breed && <span className="ml-2 text-neutral-400">{b.breed}</span>}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) return <p className="text-sm text-neutral-500">Yükleniyor...</p>;
   if (!bull) return <p className="text-sm text-red-600">Boğa bulunamadı.</p>;
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">
-        {bull.name} {bull.code && <span className="text-neutral-500">({bull.code})</span>}
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-neutral-900">
+          {bull.name} {bull.code && <span className="text-neutral-500">({bull.code})</span>}
+        </h1>
+        <button
+          type="button"
+          onClick={() => router.push("/bulls/stock")}
+          className="text-xs font-medium text-green-700 hover:underline"
+        >
+          Başka boğa seç
+        </button>
+      </div>
 
       <SemenTypeCard
         bullId={bullId}

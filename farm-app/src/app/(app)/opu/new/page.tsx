@@ -61,7 +61,7 @@ export default function NewOpuSessionPage() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">Yeni OPU seansı</h1>
+      <h1 className="text-lg font-semibold text-neutral-900">Yeni OPU Ekle</h1>
       <p className="text-sm text-neutral-500">
         Bu ilk kayıt aşaması: donör hayvan ve folikül sayılarını gir. Oosit, bölünme ve embriyo
         sayıları laboratuvar sonuçları geldikçe ayrı ayrı sorulacak.
@@ -78,10 +78,11 @@ export default function NewOpuSessionPage() {
           ) : (
             <div>
               <input
-                placeholder="Küpe no ile ara..."
+                placeholder="Küpe Numarası"
                 value={animalSearch}
                 onChange={(e) => setAnimalSearch(e.target.value)}
                 className="input"
+                autoComplete="off"
               />
               <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-neutral-200">
                 {filteredAnimals.slice(0, 20).map((a) => (
@@ -109,21 +110,21 @@ export default function NewOpuSessionPage() {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Sağ folikül">
-            <input
-              type="number"
-              min={0}
-              value={form.follicle_count_right}
-              onChange={(e) => update("follicle_count_right", e.target.value)}
-              className="input"
-            />
-          </Field>
           <Field label="Sol folikül">
             <input
               type="number"
               min={0}
               value={form.follicle_count_left}
               onChange={(e) => update("follicle_count_left", e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="Sağ folikül">
+            <input
+              type="number"
+              min={0}
+              value={form.follicle_count_right}
+              onChange={(e) => update("follicle_count_right", e.target.value)}
               className="input"
             />
           </Field>

@@ -171,3 +171,14 @@ export interface CalfFeeding {
   created_by: string | null;
   created_at: string;
 }
+
+export interface Medicine {
+  id: string;
+  name: string;
+  unit: string;
+  stock_count: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
