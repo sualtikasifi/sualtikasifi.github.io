@@ -47,6 +47,9 @@ export default function CalvesPage() {
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [examDrafts, setExamDrafts] = useState<Record<string, string>>({});
   const [savingExamId, setSavingExamId] = useState<string | null>(null);
+  const [quickEarTag, setQuickEarTag] = useState("");
+  const [quickAdding, setQuickAdding] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
 
   function loadData() {
     return Promise.all([listAnimals(), listCalfFeedings()]);
@@ -109,14 +112,56 @@ export default function CalvesPage() {
     setSavingExamId(null);
   }
 
+  async function handleQuickAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profile) return;
+    const tag = quickEarTag.trim();
+    if (!tag) return;
+    const calf = calves.find((c) => c.ear_tag.toLowerCase() === tag.toLowerCase());
+    if (!calf) {
+      setQuickError(`"${tag}" kupe numarali buzagi bulunamadi.`);
+      return;
+    }
+    setQuickError(null);
+    setQuickAdding(true);
+    await createCalfFeeding({
+      animal_id: calf.id,
+      fed_at: new Date().toISOString(),
+      drank: false,
+      notes: null,
+      created_by: profile.id,
+    });
+    await refresh();
+    setQuickAdding(false);
+    setQuickEarTag("");
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Buzagilar</h1>
-        <Link href="/animals/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800">
-          Yeni buzagi ekle
-        </Link>
-      </div>
+      <h1 className="text-lg font-semibold text-neutral-900">Buzagilar</h1>
+
+      <section className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
+        <p className="text-sm font-medium text-red-800">🍼❌ Sutunu icmeyen buzagi ekle</p>
+        <form onSubmit={handleQuickAdd} className="flex gap-2">
+          <input
+            value={quickEarTag}
+            onChange={(e) => {
+              setQuickEarTag(e.target.value);
+              setQuickError(null);
+            }}
+            placeholder="Kupe no"
+            className="input flex-1"
+          />
+          <button
+            type="submit"
+            disabled={quickAdding || !quickEarTag.trim()}
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {quickAdding ? "Ekleniyor..." : "Ekle"}
+          </button>
+        </form>
+        {quickError && <p className="text-xs text-red-700">{quickError}</p>}
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-neutral-700">Son Ogunde Mamasini Icmeyenler</h2>
