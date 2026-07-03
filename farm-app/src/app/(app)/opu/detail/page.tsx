@@ -12,7 +12,7 @@ import { OPU_STAGE_INFO, OpuStage as Stage, opuStageFor as stageFor } from "@/li
 
 export default function OpuSessionDetailPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-neutral-500">Yukleniyor...</p>}>
+    <Suspense fallback={<p className="text-sm text-neutral-500">Yükleniyor...</p>}>
       <OpuSessionDetailContent />
     </Suspense>
   );
@@ -43,9 +43,9 @@ function OpuSessionDetailContent() {
     });
   }, [id]);
 
-  if (!id) return <p className="text-sm text-red-600">OPU seansi belirtilmedi.</p>;
-  if (loading) return <p className="text-sm text-neutral-500">Yukleniyor...</p>;
-  if (!session) return <p className="text-sm text-red-600">Kayit bulunamadi.</p>;
+  if (!id) return <p className="text-sm text-red-600">OPU seansı belirtilmedi.</p>;
+  if (loading) return <p className="text-sm text-neutral-500">Yükleniyor...</p>;
+  if (!session) return <p className="text-sm text-red-600">Kayıt bulunamadı.</p>;
 
   const stage = stageFor(session);
 
@@ -60,7 +60,7 @@ function OpuSessionDetailContent() {
         </div>
         <Link
           href={`/opu/embryos/new?sessionId=${session.id}`}
-          className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
+          className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800"
         >
           Embriyo ekle
         </Link>
@@ -87,12 +87,12 @@ function OpuSessionDetailContent() {
         />
       )}
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+      <div className="card">
         <h2 className="mb-2 text-sm font-semibold text-neutral-800">
           Embriyolar (tek tek etiketlenenler) &middot; {embryos.length}
         </h2>
         {embryos.length === 0 ? (
-          <p className="text-sm text-neutral-400">Henuz embriyo eklenmedi.</p>
+          <p className="text-sm text-neutral-400">Henüz embriyo eklenmedi.</p>
         ) : (
           <div className="divide-y divide-neutral-100">
             {embryos.map((e) => (
@@ -160,7 +160,7 @@ function StageCard({
   }
 
   return (
-    <form onSubmit={handleSave} className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+    <form onSubmit={handleSave} className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-amber-700">{q.title}</p>
         <label className="mt-1 block text-sm font-medium text-neutral-800">{q.question}</label>
@@ -172,22 +172,18 @@ function StageCard({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         className="input"
-        placeholder="Sayi gir"
+        placeholder="Sayı gir"
       />
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-neutral-600">Not (opsiyonel)</span>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={2} />
       </label>
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving || value.trim() === ""}
-          className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-        >
+        <button type="submit" disabled={saving || value.trim() === ""} className="btn-primary">
           {saving ? "Kaydediliyor..." : "Kaydet"}
         </button>
         <button type="button" onClick={onEditAll} className="text-xs text-neutral-500 underline hover:no-underline">
-          Tum bilgileri duzenle
+          Tüm bilgileri düzenle
         </button>
       </div>
     </form>
@@ -241,32 +237,32 @@ function EditAllForm({
   }
 
   return (
-    <form onSubmit={handleSave} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+    <form onSubmit={handleSave} className="card space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-neutral-800">Tum bilgileri duzenle</h2>
+        <h2 className="text-sm font-semibold text-neutral-800">Tüm bilgileri düzenle</h2>
         <button type="button" onClick={onCancel} className="text-xs text-neutral-500 underline hover:no-underline">
-          Geri don
+          Geri dön
         </button>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Sag folikul">
+        <Field label="Sağ folikül">
           <input type="number" min={0} value={follicleRight} onChange={(e) => setFollicleRight(e.target.value)} className="input" />
         </Field>
-        <Field label="Sol folikul">
+        <Field label="Sol folikül">
           <input type="number" min={0} value={follicleLeft} onChange={(e) => setFollicleLeft(e.target.value)} className="input" />
         </Field>
       </div>
 
-      <Field label="Toplanan oosit sayisi">
+      <Field label="Toplanan oosit sayısı">
         <input type="number" min={0} value={oocyteCount} onChange={(e) => setOocyteCount(e.target.value)} className="input" />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Bolunen (cleavage) sayisi">
+        <Field label="Bölünen (cleavage) sayısı">
           <input type="number" min={0} value={cleavedCount} onChange={(e) => setCleavedCount(e.target.value)} className="input" />
         </Field>
-        <Field label="Embriyoya donusen sayi">
+        <Field label="Embriyoya dönüşen sayı">
           <input type="number" min={0} value={embryoCount} onChange={(e) => setEmbryoCount(e.target.value)} className="input" />
         </Field>
       </div>
@@ -279,11 +275,7 @@ function EditAllForm({
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={3} />
       </Field>
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-      >
+      <button type="submit" disabled={saving} className="btn-primary">
         {saving ? "Kaydediliyor..." : "Kaydet"}
       </button>
     </form>

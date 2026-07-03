@@ -27,15 +27,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-neutral-900">Marder Ciftlik Yonetimi</h1>
-        <p className="mt-1 text-sm text-neutral-500">Devam etmek icin giris yapin.</p>
+    <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-green-50 to-neutral-100 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-md">
+        <div className="mb-1 text-3xl">🐄</div>
+        <h1 className="text-xl font-semibold text-neutral-900">Marder Çiftlik Yönetimi</h1>
+        <p className="mt-1 text-sm text-neutral-500">Devam etmek için giriş yapın.</p>
 
         {isDemoMode && (
-          <div className="mt-4 rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
-            Demo modu aktif: Supabase baglantisi henuz kurulmadi. E-posta/sifre
-            girmeden asagidaki butona basarak demo hesabiyla girebilirsiniz.
+          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            Demo modu aktif: Supabase bağlantısı henüz kurulmadı. E-posta/şifre
+            girmeden aşağıdaki butona basarak demo hesabıyla girebilirsiniz.
           </div>
         )}
 
@@ -49,17 +50,17 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+                  className="input mt-1"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700">Sifre</label>
+                <label className="block text-sm font-medium text-neutral-700">Şifre</label>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none"
+                  className="input mt-1"
                 />
               </div>
             </>
@@ -67,12 +68,8 @@ export default function LoginPage() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-          >
-            {isDemoMode ? "Demo hesabiyla gir" : submitting ? "Giris yapiliyor..." : "Giris yap"}
+          <button type="submit" disabled={submitting} className="btn-primary w-full">
+            {isDemoMode ? "Demo hesabıyla gir" : submitting ? "Giriş yapılıyor..." : "Giriş yap"}
           </button>
         </form>
       </div>

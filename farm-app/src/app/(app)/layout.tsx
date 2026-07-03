@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [loading, profile, router]);
 
   if (loading) {
-    return <div className="flex flex-1 items-center justify-center text-sm text-neutral-500">Yukleniyor...</div>;
+    return <div className="flex flex-1 items-center justify-center text-sm text-neutral-500">Yükleniyor...</div>;
   }
 
   if (!profile) {
@@ -28,7 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-full flex-1 flex-col">
       <DemoBanner />
       <NavBar />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6 sm:py-8">{children}</main>
     </div>
   );
 }

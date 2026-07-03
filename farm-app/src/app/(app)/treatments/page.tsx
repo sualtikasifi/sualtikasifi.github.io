@@ -29,15 +29,15 @@ export default function MastitisPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Mastitler</h1>
-        <Link href="/treatments/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800">
-          Yeni mastitis kaydi
+        <Link href="/treatments/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+          Yeni mastitis kaydı
         </Link>
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Yukleniyor...</p>
+        <p className="text-sm text-neutral-500">Yükleniyor...</p>
       ) : treatments.length === 0 ? (
-        <p className="text-sm text-neutral-400">Kayit yok.</p>
+        <p className="text-sm text-neutral-400">Kayıt yok.</p>
       ) : (
         <div className="space-y-3">
           {treatments.map((t) => (

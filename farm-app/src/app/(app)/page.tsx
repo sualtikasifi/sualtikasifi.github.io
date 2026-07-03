@@ -29,7 +29,7 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-neutral-500">Yukleniyor...</p>;
+    return <p className="text-sm text-neutral-500">Yükleniyor...</p>;
   }
 
   const today = todayIso();
@@ -47,32 +47,32 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
         <StatCard label="Aktif hayvan" value={activeAnimals.length} />
-        <StatCard label="Bugunku gorev" value={todayTasks.length} />
-        <StatCard label="Geciken gorev" value={overdueTasks.length} tone={overdueTasks.length > 0 ? "warn" : undefined} />
+        <StatCard label="Bugünkü görev" value={todayTasks.length} />
+        <StatCard label="Geciken görev" value={overdueTasks.length} tone={overdueTasks.length > 0 ? "warn" : undefined} />
         <StatCard label="Devam eden mastitis" value={inTreatment.length} />
-        <StatCard label="Dusuk sperma stogu" value={lowStockRows.length} tone={lowStockRows.length > 0 ? "warn" : undefined} />
-        <StatCard label="Gelisen embriyo" value={developingEmbryos.length} />
+        <StatCard label="Düşük sperma stoğu" value={lowStockRows.length} tone={lowStockRows.length > 0 ? "warn" : undefined} />
+        <StatCard label="Gelişen embriyo" value={developingEmbryos.length} />
       </div>
 
-      <Section title="Bugunun gorevleri" href="/tasks">
+      <Section title="Bugünün görevleri" href="/tasks">
         {todayTasks.length === 0 ? (
-          <EmptyRow text="Bugun icin bekleyen gorev yok." />
+          <EmptyRow text="Bugün için bekleyen görev yok." />
         ) : (
           todayTasks.map((t) => <TaskRow key={t.id} task={t} />)
         )}
       </Section>
 
-      <Section title="Geciken gorevler" href="/tasks">
+      <Section title="Geciken görevler" href="/tasks">
         {overdueTasks.length === 0 ? (
-          <EmptyRow text="Geciken gorev yok." />
+          <EmptyRow text="Geciken görev yok." />
         ) : (
           overdueTasks.map((t) => <TaskRow key={t.id} task={t} />)
         )}
       </Section>
 
-      <Section title="Son mastitis kayitlari" href="/treatments">
+      <Section title="Son mastitis kayıtları" href="/treatments">
         {mastitisTreatments.length === 0 ? (
-          <EmptyRow text="Henuz mastitis kaydi yok." />
+          <EmptyRow text="Henüz mastitis kaydı yok." />
         ) : (
           mastitisTreatments.slice(0, 5).map((t) => (
             <div key={t.id} className="flex items-center justify-between py-2 text-sm">
@@ -88,7 +88,7 @@ export default function DashboardPage() {
                     t.ended_at ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
                   }`}
                 >
-                  {t.ended_at ? "Tamamlandi" : "Devam ediyor"}
+                  {t.ended_at ? "Tamamlandı" : "Devam ediyor"}
                 </span>
               </div>
             </div>
@@ -101,7 +101,7 @@ export default function DashboardPage() {
 
 function StatCard({ label, value, tone }: { label: string; value: number; tone?: "warn" }) {
   return (
-    <div className={`rounded-lg border p-3 ${tone === "warn" && value > 0 ? "border-amber-300 bg-amber-50" : "border-neutral-200 bg-white"}`}>
+    <div className={`rounded-xl border p-3 shadow-sm transition-colors ${tone === "warn" && value > 0 ? "border-amber-300 bg-amber-50" : "border-neutral-200 bg-white"}`}>
       <p className="text-2xl font-semibold text-neutral-900">{value}</p>
       <p className="text-xs text-neutral-500">{label}</p>
     </div>
@@ -110,10 +110,10 @@ function StatCard({ label, value, tone }: { label: string; value: number; tone?:
 
 function Section({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4">
+    <div className="card">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-neutral-800">{title}</h2>
-        <Link href={href} className="text-xs text-green-700 hover:underline">Tumunu gor</Link>
+        <Link href={href} className="text-xs font-medium text-green-700 hover:underline">Tümünü gör</Link>
       </div>
       <div className="divide-y divide-neutral-100">{children}</div>
     </div>

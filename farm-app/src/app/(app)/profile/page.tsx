@@ -51,12 +51,12 @@ export default function ProfilePage() {
     setSaved(true);
   }
 
-  if (!profile) return <p className="text-sm text-neutral-500">Yukleniyor...</p>;
+  if (!profile) return <p className="text-sm text-neutral-500">Yükleniyor...</p>;
 
   return (
     <div className="max-w-lg space-y-4">
       <h1 className="text-lg font-semibold text-neutral-900">Profilim</h1>
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+      <form onSubmit={handleSubmit} className="card space-y-3">
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-neutral-700">Unvan + Ad Soyad</span>
           <input
@@ -65,30 +65,26 @@ export default function ProfilePage() {
               setFullName(e.target.value);
               setSaved(false);
             }}
-            placeholder="orn. Dr. Ayse Kaya (Veteriner)"
+            placeholder="örn. Dr. Ayşe Kaya (Veteriner)"
             className="input"
           />
         </label>
         <p className="text-xs text-neutral-400">
-          Bu isim gorevlerde, mastitis kayitlarinda ve diger kayitlarda &quot;kim yapti&quot; bilgisi olarak
-          gosterilir. E-posta yerine unvan + ad soyad seklinde girmeniz onerilir.
+          Bu isim görevlerde, mastitis kayıtlarında ve diğer kayıtlarda &quot;kim yaptı&quot; bilgisi olarak
+          gösterilir. E-posta yerine unvan + ad soyad şeklinde girmeniz önerilir.
         </p>
-        <button
-          type="submit"
-          disabled={saving || !fullName.trim()}
-          className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-        >
+        <button type="submit" disabled={saving || !fullName.trim()} className="btn-primary">
           {saving ? "Kaydediliyor..." : "Kaydet"}
         </button>
         {saved && <p className="text-sm text-green-700">Kaydedildi.</p>}
       </form>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-neutral-800">Son 1 Ayda Tamamladigim Gorevler</h2>
+      <div className="card">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-800">Son 1 Ayda Tamamladığım Görevler</h2>
         {loadingTasks ? (
-          <p className="text-sm text-neutral-500">Yukleniyor...</p>
+          <p className="text-sm text-neutral-500">Yükleniyor...</p>
         ) : completedTasks.length === 0 ? (
-          <p className="text-sm text-neutral-400">Son 1 ayda tamamlanan gorev yok.</p>
+          <p className="text-sm text-neutral-400">Son 1 ayda tamamlanan görev yok.</p>
         ) : (
           <div className="divide-y divide-neutral-100">
             {completedTasks.map((t) => (

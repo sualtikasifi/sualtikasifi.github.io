@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/format";
 
 export default function BullStockPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-neutral-500">Yukleniyor...</p>}>
+    <Suspense fallback={<p className="text-sm text-neutral-500">Yükleniyor...</p>}>
       <BullStockContent />
     </Suspense>
   );
@@ -35,9 +35,9 @@ function BullStockContent() {
     });
   }, [bullId]);
 
-  if (!bullId) return <p className="text-sm text-red-600">Boga belirtilmedi.</p>;
-  if (loading) return <p className="text-sm text-neutral-500">Yukleniyor...</p>;
-  if (!bull) return <p className="text-sm text-red-600">Boga bulunamadi.</p>;
+  if (!bullId) return <p className="text-sm text-red-600">Boğa belirtilmedi.</p>;
+  if (loading) return <p className="text-sm text-neutral-500">Yükleniyor...</p>;
+  if (!bull) return <p className="text-sm text-red-600">Boğa bulunamadı.</p>;
 
   return (
     <div className="max-w-lg space-y-4">
@@ -92,28 +92,28 @@ function SemenTypeCard({
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+    <div className="card space-y-3">
       <Badge value={semenType} />
 
       <div className="flex items-center justify-between">
         <div>
           <p className="text-3xl font-semibold text-neutral-900">{stock?.straw_count ?? 0}</p>
           <p className="text-xs text-neutral-400">
-            straw {stock?.updated_at && `· son guncelleme ${formatDate(stock.updated_at.slice(0, 10))}`}
+            straw {stock?.updated_at && `· son güncelleme ${formatDate(stock.updated_at.slice(0, 10))}`}
           </p>
         </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => quickAdjust(-1)}
-            className="h-10 w-10 rounded-md border border-neutral-300 text-lg hover:bg-neutral-50"
+            className="h-10 w-10 rounded-md border border-neutral-300 text-lg shadow-sm transition-colors hover:bg-neutral-50"
           >
             -1
           </button>
           <button
             type="button"
             onClick={() => quickAdjust(1)}
-            className="h-10 w-10 rounded-md border border-neutral-300 text-lg hover:bg-neutral-50"
+            className="h-10 w-10 rounded-md border border-neutral-300 text-lg shadow-sm transition-colors hover:bg-neutral-50"
           >
             +1
           </button>
@@ -121,7 +121,7 @@ function SemenTypeCard({
       </div>
 
       <form onSubmit={handleSave} className="space-y-3">
-        <Field label="Kesin straw sayisi">
+        <Field label="Kesin straw sayısı">
           <input
             type="number"
             min={0}
@@ -136,11 +136,7 @@ function SemenTypeCard({
         <Field label="Notlar">
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={2} />
         </Field>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-        >
+        <button type="submit" disabled={saving} className="btn-primary">
           {saving ? "Kaydediliyor..." : "Kaydet"}
         </button>
       </form>

@@ -4,8 +4,8 @@ import { AuthProvider } from "@/lib/auth";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
-  title: "Marder Ciftlik Yonetimi",
-  description: "Marder hayvancilik ciftligi kayit ve is takip uygulamasi",
+  title: "Marder Çiftlik Yönetimi",
+  description: "Marder hayvancılık çiftliği kayıt ve iş takip uygulaması",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192.png",
@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900">
+      <body className="min-h-full flex flex-col bg-[var(--background)] text-neutral-900">
         <AuthProvider>{children}</AuthProvider>
         <ServiceWorkerRegister />
       </body>

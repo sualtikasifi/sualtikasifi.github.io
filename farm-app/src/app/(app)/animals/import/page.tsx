@@ -29,7 +29,7 @@ export default function ImportAnimalsPage() {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(buffer);
       const sheet = workbook.worksheets[0];
-      if (!sheet) throw new Error("Dosyada sayfa bulunamadi.");
+      if (!sheet) throw new Error("Dosyada sayfa bulunamadı.");
       const tags: string[] = [];
       sheet.eachRow((row, rowNumber) => {
         if (rowNumber === 1) return;
@@ -39,10 +39,10 @@ export default function ImportAnimalsPage() {
         if (text) tags.push(text);
       });
       const unique = Array.from(new Set(tags));
-      if (unique.length === 0) throw new Error("Ilk sutunda kupe numarasi bulunamadi.");
+      if (unique.length === 0) throw new Error("İlk sütunda küpe numarası bulunamadı.");
       setEarTags(unique);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Dosya okunamadi.");
+      setError(err instanceof Error ? err.message : "Dosya okunamadı.");
     } finally {
       setParsing(false);
     }
@@ -71,12 +71,12 @@ export default function ImportAnimalsPage() {
       const skipped = earTags.length - inserted;
       setResult(
         `${inserted} yeni hayvan eklendi.` +
-          (skipped > 0 ? ` ${skipped} kupe numarasi zaten kayitliydi, atlandi.` : "")
+          (skipped > 0 ? ` ${skipped} küpe numarası zaten kayıtlıydı, atlandı.` : "")
       );
       setEarTags([]);
       setFileName("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ice aktarilirken bir hata olustu.");
+      setError(err instanceof Error ? err.message : "İçe aktarılırken bir hata oluştu.");
     } finally {
       setImporting(false);
     }
@@ -85,12 +85,12 @@ export default function ImportAnimalsPage() {
   return (
     <div className="max-w-lg space-y-4">
       <h1 className="text-lg font-semibold text-neutral-900">Excel&apos;den Hayvan Aktar</h1>
-      <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+      <div className="card space-y-3">
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-700">Excel dosyasi (.xlsx)</span>
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Excel dosyası (.xlsx)</span>
           <input type="file" accept=".xlsx" onChange={handleFile} className="input" />
           <span className="mt-1 block text-xs text-neutral-400">
-            Ilk sutun kupe numarasi olarak okunur, ilk satir baslik kabul edilir.
+            İlk sütun küpe numarası olarak okunur, ilk satır başlık kabul edilir.
           </span>
         </label>
 
@@ -99,8 +99,8 @@ export default function ImportAnimalsPage() {
         {earTags.length > 0 && (
           <>
             <p className="text-sm text-neutral-700">
-              <strong>{fileName}</strong> icinde <strong>{earTags.length}</strong> benzersiz kupe
-              numarasi bulundu.
+              <strong>{fileName}</strong> içinde <strong>{earTags.length}</strong> benzersiz küpe
+              numarası bulundu.
             </p>
             <div className="max-h-32 overflow-y-auto rounded-md border border-neutral-200 p-2 text-xs text-neutral-500">
               {earTags.slice(0, 40).join(", ")}
@@ -116,17 +116,13 @@ export default function ImportAnimalsPage() {
                 onChange={(e) => setWeanStatus(e.target.value as "yetiskin" | "buzagi")}
                 className="input"
               >
-                <option value="yetiskin">Yetiskin / sutten kesilmis</option>
-                <option value="buzagi">Buzagi / sutten kesilmemis</option>
+                <option value="yetiskin">Yetişkin / sütten kesilmiş</option>
+                <option value="buzagi">Buzağı / sütten kesilmemiş</option>
               </select>
             </label>
 
-            <button
-              onClick={handleImport}
-              disabled={importing}
-              className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-            >
-              {importing ? "Aktariliyor..." : `${earTags.length} hayvani ice aktar`}
+            <button onClick={handleImport} disabled={importing} className="btn-primary">
+              {importing ? "Aktarılıyor..." : `${earTags.length} hayvanı içe aktar`}
             </button>
           </>
         )}

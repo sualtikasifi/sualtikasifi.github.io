@@ -43,9 +43,9 @@ export default function NewBullPage() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">Yeni boga</h1>
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <Field label="Isim *">
+      <h1 className="text-lg font-semibold text-neutral-900">Yeni boğa</h1>
+      <form onSubmit={handleSubmit} className="card space-y-3">
+        <Field label="İsim *">
           <input required value={form.name} onChange={(e) => update("name", e.target.value)} className="input" />
         </Field>
         <div className="grid grid-cols-2 gap-3">
@@ -57,38 +57,26 @@ export default function NewBullPage() {
           </Field>
         </div>
 
-        <FieldBlock label="Sperma turu">
+        <FieldBlock label="Sperma türü">
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setSemenType("konvansiyonel")}
-              className={`rounded-full border px-3 py-1.5 text-sm ${
-                semenType === "konvansiyonel"
-                  ? "border-green-600 bg-green-50 text-green-800"
-                  : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-              }`}
+              className={`chip ${semenType === "konvansiyonel" ? "chip-selected" : "chip-unselected"}`}
             >
               Konvansiyonel
             </button>
             <button
               type="button"
               onClick={() => setSemenType("disi")}
-              className={`rounded-full border px-3 py-1.5 text-sm ${
-                semenType === "disi"
-                  ? "border-green-600 bg-green-50 text-green-800"
-                  : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-              }`}
+              className={`chip ${semenType === "disi" ? "chip-selected" : "chip-unselected"}`}
             >
-              Disi Sperma
+              Dişi Sperma
             </button>
           </div>
         </FieldBlock>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-        >
+        <button type="submit" disabled={submitting} className="btn-primary">
           {submitting ? "Kaydediliyor..." : "Kaydet"}
         </button>
       </form>
