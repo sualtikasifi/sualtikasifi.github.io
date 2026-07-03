@@ -2,20 +2,23 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listAnimals, listTreatments } from "@/lib/data";
-import { Animal, Treatment } from "@/lib/types";
-import { Badge } from "@/components/Badge";
-import { formatDate } from "@/lib/format";
+import { listAnimals, listMastitisTreatments, listProfiles } from "@/lib/data";
+import { Animal, MastitisTreatment, Profile } from "@/lib/types";
+import { useAuth } from "@/lib/auth";
+import { MastitisTreatmentCard } from "@/components/MastitisTreatmentCard";
 
-export default function TreatmentsPage() {
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
+export default function MastitisPage() {
+  const { profile } = useAuth();
+  const [treatments, setTreatments] = useState<MastitisTreatment[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([listTreatments(), listAnimals()]).then(([t, a]) => {
+    Promise.all([listMastitisTreatments(), listAnimals(), listProfiles()]).then(([t, a, p]) => {
       setTreatments(t);
       setAnimals(a);
+      setProfiles(p);
       setLoading(false);
     });
   }, []);
@@ -25,9 +28,9 @@ export default function TreatmentsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Tedaviler</h1>
+        <h1 className="text-lg font-semibold text-neutral-900">Mastitler</h1>
         <Link href="/treatments/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800">
-          Yeni tedavi
+          Yeni mastitis kaydi
         </Link>
       </div>
 
@@ -36,25 +39,15 @@ export default function TreatmentsPage() {
       ) : treatments.length === 0 ? (
         <p className="text-sm text-neutral-400">Kayit yok.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+        <div className="space-y-3">
           {treatments.map((t) => (
-            <Link
+            <MastitisTreatmentCard
               key={t.id}
-              href={`/animals/detail?id=${t.animal_id}`}
-              className="block border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0 hover:bg-neutral-50"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{earTagFor(t.animal_id)}</span>
-                  <Badge value={t.category} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-neutral-400">{formatDate(t.treatment_date)}</span>
-                  <Badge value={t.outcome} />
-                </div>
-              </div>
-              <p className="mt-1 text-neutral-600">{t.diagnosis}</p>
-            </Link>
+              treatmentId={t.id}
+              earTag={earTagFor(t.animal_id)}
+              profiles={profiles}
+              currentProfileId={profile?.id ?? null}
+            />
           ))}
         </div>
       )}

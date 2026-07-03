@@ -10,13 +10,16 @@ import {
   listCalfFeedings,
   listEmbryosForRecipient,
   listInseminations,
+  listMastitisTreatments,
   listOpuSessions,
-  listTreatments,
+  listProfiles,
   updateAnimal,
 } from "@/lib/data";
-import { Animal, AnimalStatus, Bull, CalfFeeding, Embryo, Insemination, OpuSession, Treatment } from "@/lib/types";
+import { Animal, AnimalStatus, Bull, CalfFeeding, Embryo, Insemination, MastitisTreatment, OpuSession, Profile } from "@/lib/types";
 import { Badge } from "@/components/Badge";
+import { MastitisTreatmentCard } from "@/components/MastitisTreatmentCard";
 import { formatDate } from "@/lib/format";
+import { useAuth } from "@/lib/auth";
 
 export default function AnimalDetailPage() {
   return (
@@ -27,10 +30,12 @@ export default function AnimalDetailPage() {
 }
 
 function AnimalDetailContent() {
+  const { profile } = useAuth();
   const params = useSearchParams();
   const id = params.get("id");
   const [animal, setAnimal] = useState<Animal | null>(null);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [mastitisTreatments, setMastitisTreatments] = useState<MastitisTreatment[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [inseminations, setInseminations] = useState<Insemination[]>([]);
   const [bulls, setBulls] = useState<Bull[]>([]);
   const [donorSessions, setDonorSessions] = useState<OpuSession[]>([]);
@@ -44,16 +49,18 @@ function AnimalDetailContent() {
     if (!id) return;
     Promise.all([
       getAnimal(id),
-      listTreatments(id),
+      listMastitisTreatments(id),
+      listProfiles(),
       listInseminations(id),
       listBulls(),
       listOpuSessions(),
       listEmbryosForRecipient(id),
       listAnimals(),
       listCalfFeedings(id),
-    ]).then(([a, t, ins, b, sessions, received, animals, feed]) => {
+    ]).then(([a, mt, p, ins, b, sessions, received, animals, feed]) => {
       setAnimal(a ?? null);
-      setTreatments(t);
+      setMastitisTreatments(mt);
+      setProfiles(p);
       setInseminations(ins);
       setBulls(b);
       setOpuSessions(sessions);
@@ -101,7 +108,7 @@ function AnimalDetailContent() {
             href={`/treatments/new?animalId=${animal.id}`}
             className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
           >
-            Tedavi ekle
+            Mastitis kaydi ekle
           </Link>
         </div>
       </div>
@@ -147,30 +154,19 @@ function AnimalDetailContent() {
         )}
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-neutral-800">Tedavi gecmisi</h2>
-        {treatments.length === 0 ? (
-          <p className="text-sm text-neutral-400">Kayit yok.</p>
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold text-neutral-800">Mastitis gecmisi</h2>
+        {mastitisTreatments.length === 0 ? (
+          <p className="rounded-lg border border-neutral-200 bg-white p-4 text-sm text-neutral-400">Kayit yok.</p>
         ) : (
-          <div className="divide-y divide-neutral-100">
-            {treatments.map((t) => (
-              <div key={t.id} className="py-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge value={t.category} />
-                    {t.udder_quarter && <span className="text-xs text-neutral-500">({udderLabel(t.udder_quarter)})</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-neutral-400">{formatDate(t.treatment_date)}</span>
-                    <Badge value={t.outcome} />
-                  </div>
-                </div>
-                <p className="mt-1 text-neutral-700">{t.diagnosis}</p>
-                {t.medication && <p className="text-neutral-500">Ilac: {t.medication} {t.dose && `(${t.dose})`}</p>}
-                {t.notes && <p className="text-neutral-500">{t.notes}</p>}
-              </div>
-            ))}
-          </div>
+          mastitisTreatments.map((t) => (
+            <MastitisTreatmentCard
+              key={t.id}
+              treatmentId={t.id}
+              profiles={profiles}
+              currentProfileId={profile?.id ?? null}
+            />
+          ))
         )}
       </div>
 
@@ -295,10 +291,6 @@ function AnimalDetailContent() {
       )}
     </div>
   );
-}
-
-function udderLabel(q: string) {
-  return { on_sol: "On Sol", on_sag: "On Sag", arka_sol: "Arka Sol", arka_sag: "Arka Sag" }[q] ?? q;
 }
 
 function InfoItem({ label, value, span }: { label: string; value: string; span?: boolean }) {

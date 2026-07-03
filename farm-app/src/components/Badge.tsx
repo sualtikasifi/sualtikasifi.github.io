@@ -5,9 +5,6 @@ const COLORS: Record<string, string> = {
   aktif: "bg-green-100 text-green-800",
   satildi: "bg-blue-100 text-blue-800",
   olu: "bg-neutral-300 text-neutral-700",
-  devam_ediyor: "bg-amber-100 text-amber-800",
-  iyilesti: "bg-green-100 text-green-800",
-  olum: "bg-red-100 text-red-800",
   bekleniyor: "bg-amber-100 text-amber-800",
   gebe: "bg-green-100 text-green-800",
   gebe_degil: "bg-neutral-200 text-neutral-600",
@@ -17,6 +14,10 @@ const COLORS: Record<string, string> = {
   atildi: "bg-neutral-200 text-neutral-600",
   konvansiyonel: "bg-neutral-200 text-neutral-700",
   disi: "bg-pink-100 text-pink-800",
+  on_sol: "bg-purple-100 text-purple-800",
+  on_sag: "bg-purple-100 text-purple-800",
+  arka_sol: "bg-indigo-100 text-indigo-800",
+  arka_sag: "bg-indigo-100 text-indigo-800",
 };
 
 const LABELS: Record<string, string> = {
@@ -26,12 +27,6 @@ const LABELS: Record<string, string> = {
   aktif: "Aktif",
   satildi: "Satildi",
   olu: "Olu",
-  devam_ediyor: "Devam ediyor",
-  iyilesti: "Iyilesti",
-  olum: "Olum",
-  genel: "Genel",
-  mastitis: "Mastitis",
-  buzagi_beslenme: "Buzagi Beslenme",
   bekleniyor: "Bekleniyor",
   gebe: "Gebe",
   gebe_degil: "Gebe degil",
@@ -46,6 +41,10 @@ const LABELS: Record<string, string> = {
   yumurtadan_cikan_blastosist: "Yumurtadan Cikan Blastosist",
   konvansiyonel: "Konvansiyonel",
   disi: "Disi",
+  on_sol: "On Sol",
+  on_sag: "On Sag",
+  arka_sol: "Arka Sol",
+  arka_sag: "Arka Sag",
 };
 
 export function Badge({ value }: { value: string }) {

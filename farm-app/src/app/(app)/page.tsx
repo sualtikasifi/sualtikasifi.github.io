@@ -2,24 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listAnimals, listEmbryos, listSemenInventory, listTasks, listTreatments } from "@/lib/data";
-import { Animal, Embryo, SemenInventory, Task, Treatment } from "@/lib/types";
+import { listAnimals, listEmbryos, listMastitisTreatments, listSemenInventory, listTasks } from "@/lib/data";
+import { Animal, Embryo, MastitisTreatment, SemenInventory, Task } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate, todayIso } from "@/lib/format";
 
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [mastitisTreatments, setMastitisTreatments] = useState<MastitisTreatment[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [inventory, setInventory] = useState<SemenInventory[]>([]);
   const [embryos, setEmbryos] = useState<Embryo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([listTasks(), listTreatments(), listAnimals(), listSemenInventory(), listEmbryos()]).then(
-      ([t, tr, a, inv, emb]) => {
+    Promise.all([listTasks(), listMastitisTreatments(), listAnimals(), listSemenInventory(), listEmbryos()]).then(
+      ([t, mt, a, inv, emb]) => {
         setTasks(t);
-        setTreatments(tr);
+        setMastitisTreatments(mt);
         setAnimals(a);
         setInventory(inv);
         setEmbryos(emb);
@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const todayTasks = pending.filter((t) => t.due_date === today);
   const overdueTasks = pending.filter((t) => t.due_date < today);
   const activeAnimals = animals.filter((a) => a.status === "aktif");
-  const inTreatment = treatments.filter((t) => t.outcome === "devam_ediyor");
+  const inTreatment = mastitisTreatments.filter((t) => !t.ended_at);
   const lowStockRows = inventory.filter((i) => i.straw_count <= 5);
   const developingEmbryos = embryos.filter((e) => e.status === "gelisiyor");
 
@@ -49,7 +49,7 @@ export default function DashboardPage() {
         <StatCard label="Aktif hayvan" value={activeAnimals.length} />
         <StatCard label="Bugunku gorev" value={todayTasks.length} />
         <StatCard label="Geciken gorev" value={overdueTasks.length} tone={overdueTasks.length > 0 ? "warn" : undefined} />
-        <StatCard label="Devam eden tedavi" value={inTreatment.length} />
+        <StatCard label="Devam eden mastitis" value={inTreatment.length} />
         <StatCard label="Dusuk sperma stogu" value={lowStockRows.length} tone={lowStockRows.length > 0 ? "warn" : undefined} />
         <StatCard label="Gelisen embriyo" value={developingEmbryos.length} />
       </div>
@@ -70,19 +70,26 @@ export default function DashboardPage() {
         )}
       </Section>
 
-      <Section title="Son tedavi kayitlari" href="/treatments">
-        {treatments.length === 0 ? (
-          <EmptyRow text="Henuz tedavi kaydi yok." />
+      <Section title="Son mastitis kayitlari" href="/treatments">
+        {mastitisTreatments.length === 0 ? (
+          <EmptyRow text="Henuz mastitis kaydi yok." />
         ) : (
-          treatments.slice(0, 5).map((t) => (
+          mastitisTreatments.slice(0, 5).map((t) => (
             <div key={t.id} className="flex items-center justify-between py-2 text-sm">
-              <div>
+              <div className="flex items-center gap-2">
                 <span className="font-medium">{animals.find((a) => a.id === t.animal_id)?.ear_tag ?? "?"}</span>
-                <span className="ml-2 text-neutral-500">{t.diagnosis ?? t.category}</span>
+                <Badge value={t.udder_quarter} />
+                {t.diagnosis && <span className="text-neutral-500">{t.diagnosis}</span>}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-neutral-400">{formatDate(t.treatment_date)}</span>
-                <Badge value={t.outcome} />
+                <span className="text-neutral-400">{formatDate(t.start_date)}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    t.ended_at ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+                  }`}
+                >
+                  {t.ended_at ? "Tamamlandi" : "Devam ediyor"}
+                </span>
               </div>
             </div>
           ))

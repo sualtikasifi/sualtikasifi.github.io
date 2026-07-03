@@ -3,8 +3,6 @@ export type UserRole = "yonetici" | "veteriner" | "calisan";
 export type AnimalStatus = "aktif" | "satildi" | "olu";
 export type AnimalGender = "disi" | "erkek";
 
-export type TreatmentCategory = "genel" | "mastitis" | "buzagi_beslenme";
-export type TreatmentOutcome = "devam_ediyor" | "iyilesti" | "olum";
 export type UdderQuarter = "on_sol" | "on_sag" | "arka_sol" | "arka_sag";
 
 export type TaskStatus = "bekliyor" | "yapildi" | "iptal";
@@ -43,20 +41,32 @@ export interface Animal {
   updated_at: string;
 }
 
-export interface Treatment {
+export interface MastitisTreatment {
   id: string;
   animal_id: string;
-  treatment_date: string;
-  category: TreatmentCategory;
+  udder_quarter: UdderQuarter;
   diagnosis: string | null;
   medication: string | null;
-  dose: string | null;
-  udder_quarter: UdderQuarter | null;
   vet_name: string | null;
-  outcome: TreatmentOutcome;
+  start_date: string;
+  protocol_days: number;
+  withdrawal_days: number;
+  ended_at: string | null;
+  withdrawal_cleared_at: string | null;
+  withdrawal_cleared_by: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export interface MastitisDose {
+  id: string;
+  mastitis_treatment_id: string;
+  day_number: number;
+  done: boolean;
+  done_by: string | null;
+  done_at: string | null;
+  note: string | null;
 }
 
 export interface Task {

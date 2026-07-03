@@ -4,11 +4,12 @@ import {
   CalfFeeding,
   Embryo,
   Insemination,
+  MastitisDose,
+  MastitisTreatment,
   OpuSession,
   Profile,
   SemenInventory,
   Task,
-  Treatment,
 } from "@/lib/types";
 import {
   DEMO_USER_ID,
@@ -17,11 +18,12 @@ import {
   seedCalfFeedings,
   seedEmbryos,
   seedInseminations,
+  seedMastitisDoses,
+  seedMastitisTreatments,
   seedOpuSessions,
   seedProfiles,
   seedSemenInventory,
   seedTasks,
-  seedTreatments,
 } from "./seed";
 
 const STORAGE_KEY = "farm_app_demo_db_v1";
@@ -30,7 +32,8 @@ const SESSION_KEY = "farm_app_demo_session_v1";
 interface DemoDb {
   profiles: Profile[];
   animals: Animal[];
-  treatments: Treatment[];
+  mastitisTreatments: MastitisTreatment[];
+  mastitisDoses: MastitisDose[];
   tasks: Task[];
   bulls: Bull[];
   semenInventory: SemenInventory[];
@@ -44,7 +47,8 @@ function initialDb(): DemoDb {
   return {
     profiles: seedProfiles,
     animals: seedAnimals,
-    treatments: seedTreatments,
+    mastitisTreatments: seedMastitisTreatments,
+    mastitisDoses: seedMastitisDoses,
     tasks: seedTasks,
     bulls: seedBulls,
     semenInventory: seedSemenInventory,
@@ -69,7 +73,8 @@ function loadDb(): DemoDb {
   return {
     profiles: parsed.profiles ?? seedProfiles,
     animals: parsed.animals ?? seedAnimals,
-    treatments: parsed.treatments ?? seedTreatments,
+    mastitisTreatments: parsed.mastitisTreatments ?? seedMastitisTreatments,
+    mastitisDoses: parsed.mastitisDoses ?? seedMastitisDoses,
     tasks: parsed.tasks ?? seedTasks,
     bulls: parsed.bulls ?? seedBulls,
     semenInventory: parsed.semenInventory ?? seedSemenInventory,
@@ -143,19 +148,116 @@ export function demoUpdateAnimal(id: string, patch: Partial<Animal>): Animal | u
   return db.animals[idx];
 }
 
-// --- Treatments ---
+// --- Mastitis treatments ---
 
-export function demoListTreatments(animalId?: string): Treatment[] {
-  const all = loadDb().treatments.sort((a, b) => b.treatment_date.localeCompare(a.treatment_date));
+export function demoListMastitisTreatments(animalId?: string): MastitisTreatment[] {
+  const all = loadDb().mastitisTreatments.sort((a, b) => b.start_date.localeCompare(a.start_date));
   return animalId ? all.filter((t) => t.animal_id === animalId) : all;
 }
 
-export function demoCreateTreatment(input: Omit<Treatment, "id" | "created_at">): Treatment {
+export function demoGetMastitisTreatment(id: string): MastitisTreatment | undefined {
+  return loadDb().mastitisTreatments.find((t) => t.id === id);
+}
+
+export function demoCreateMastitisTreatment(
+  input: Omit<
+    MastitisTreatment,
+    "id" | "created_at" | "ended_at" | "withdrawal_cleared_at" | "withdrawal_cleared_by"
+  >
+): MastitisTreatment {
   const db = loadDb();
-  const treatment: Treatment = { ...input, id: newId("treat"), created_at: new Date().toISOString() };
-  db.treatments.push(treatment);
+  const treatment: MastitisTreatment = {
+    ...input,
+    id: newId("mastitis"),
+    ended_at: null,
+    withdrawal_cleared_at: null,
+    withdrawal_cleared_by: null,
+    created_at: new Date().toISOString(),
+  };
+  db.mastitisTreatments.push(treatment);
+  for (let day = 1; day <= input.protocol_days; day++) {
+    db.mastitisDoses.push({
+      id: newId("dose"),
+      mastitis_treatment_id: treatment.id,
+      day_number: day,
+      done: false,
+      done_by: null,
+      done_at: null,
+      note: null,
+    });
+  }
   saveDb(db);
   return treatment;
+}
+
+export function demoListMastitisDoses(treatmentId: string): MastitisDose[] {
+  return loadDb()
+    .mastitisDoses.filter((d) => d.mastitis_treatment_id === treatmentId)
+    .sort((a, b) => a.day_number - b.day_number);
+}
+
+export function demoCompleteMastitisDose(
+  doseId: string,
+  doneBy: string,
+  note: string | null
+): MastitisDose | undefined {
+  const db = loadDb();
+  const idx = db.mastitisDoses.findIndex((d) => d.id === doseId);
+  if (idx === -1) return undefined;
+  db.mastitisDoses[idx] = {
+    ...db.mastitisDoses[idx],
+    done: true,
+    done_by: doneBy,
+    done_at: new Date().toISOString(),
+    note,
+  };
+  const treatmentIdx = db.mastitisTreatments.findIndex(
+    (t) => t.id === db.mastitisDoses[idx].mastitis_treatment_id
+  );
+  if (treatmentIdx !== -1 && !db.mastitisTreatments[treatmentIdx].ended_at) {
+    const doses = db.mastitisDoses.filter(
+      (d) => d.mastitis_treatment_id === db.mastitisTreatments[treatmentIdx].id
+    );
+    if (doses.every((d) => d.done)) {
+      db.mastitisTreatments[treatmentIdx] = {
+        ...db.mastitisTreatments[treatmentIdx],
+        ended_at: new Date().toISOString(),
+      };
+    }
+  }
+  saveDb(db);
+  return db.mastitisDoses[idx];
+}
+
+export function demoReopenMastitisDose(doseId: string): MastitisDose | undefined {
+  const db = loadDb();
+  const idx = db.mastitisDoses.findIndex((d) => d.id === doseId);
+  if (idx === -1) return undefined;
+  db.mastitisDoses[idx] = { ...db.mastitisDoses[idx], done: false, done_by: null, done_at: null, note: null };
+  saveDb(db);
+  return db.mastitisDoses[idx];
+}
+
+export function demoEndMastitisTreatment(id: string): MastitisTreatment | undefined {
+  const db = loadDb();
+  const idx = db.mastitisTreatments.findIndex((t) => t.id === id);
+  if (idx === -1) return undefined;
+  db.mastitisTreatments[idx] = { ...db.mastitisTreatments[idx], ended_at: new Date().toISOString() };
+  saveDb(db);
+  return db.mastitisTreatments[idx];
+}
+
+export function demoClearMastitisWithdrawal(id: string, clearedBy: string): MastitisTreatment | undefined {
+  const db = loadDb();
+  const idx = db.mastitisTreatments.findIndex((t) => t.id === id);
+  if (idx === -1) return undefined;
+  db.mastitisTreatments[idx] = {
+    ...db.mastitisTreatments[idx],
+    withdrawal_cleared_at: new Date().toISOString(),
+    withdrawal_cleared_by: clearedBy,
+  };
+  saveDb(db);
+  return db.mastitisTreatments[idx];
 }
 
 // --- Tasks ---

@@ -44,25 +44,46 @@ create table if not exists animals (
 create index if not exists animals_ear_tag_idx on animals (ear_tag);
 create index if not exists animals_status_idx on animals (status);
 
--- 3. Tedavi / sağlık kayıtları (genel + mastitis meme bazlı alan dahil)
-create table if not exists treatments (
+-- 3. Mastitis tedavileri (meme bazli protokollu tedavi + arinma takibi)
+-- protocol_days: tedavi protokolunun toplam gun sayisi (varsayilan 4).
+-- withdrawal_days: tedavi bittikten sonraki arinma (sut karisimina donmeme) suresi (varsayilan 3 gun).
+-- ended_at: tedavi protokolu tamamlaninca (tum gunler yapilinca) otomatik, ya da erken
+-- sonlandirildiginda manuel olarak set edilir.
+-- withdrawal_cleared_at/by: arinma suresi dolduktan sonra "arinmadan cikti" onayi.
+create table if not exists mastitis_treatments (
   id uuid primary key default gen_random_uuid(),
   animal_id uuid not null references animals (id) on delete cascade,
-  treatment_date date not null default current_date,
-  category text not null default 'genel' check (category in ('genel', 'mastitis', 'buzagi_beslenme')),
+  udder_quarter text not null check (udder_quarter in ('on_sol', 'on_sag', 'arka_sol', 'arka_sag')),
   diagnosis text,
   medication text,
-  dose text,
-  udder_quarter text check (udder_quarter in ('on_sol', 'on_sag', 'arka_sol', 'arka_sag')),
   vet_name text,
-  outcome text not null default 'devam_ediyor' check (outcome in ('devam_ediyor', 'iyilesti', 'olum')),
+  start_date date not null default current_date,
+  protocol_days integer not null default 4 check (protocol_days > 0),
+  withdrawal_days integer not null default 3 check (withdrawal_days >= 0),
+  ended_at timestamptz,
+  withdrawal_cleared_at timestamptz,
+  withdrawal_cleared_by uuid references profiles (id),
   notes text,
   created_by uuid references profiles (id),
   created_at timestamptz not null default now()
 );
 
-create index if not exists treatments_animal_idx on treatments (animal_id);
-create index if not exists treatments_date_idx on treatments (treatment_date);
+create index if not exists mastitis_treatments_animal_idx on mastitis_treatments (animal_id);
+create index if not exists mastitis_treatments_start_date_idx on mastitis_treatments (start_date);
+
+-- Protokolun her gununun tedavisi yapildi mi takibi (gorevlerdeki gibi kim/ne zaman kaydi)
+create table if not exists mastitis_doses (
+  id uuid primary key default gen_random_uuid(),
+  mastitis_treatment_id uuid not null references mastitis_treatments (id) on delete cascade,
+  day_number integer not null,
+  done boolean not null default false,
+  done_by uuid references profiles (id),
+  done_at timestamptz,
+  note text,
+  unique (mastitis_treatment_id, day_number)
+);
+
+create index if not exists mastitis_doses_treatment_idx on mastitis_doses (mastitis_treatment_id);
 
 -- 4. Gorevler (calisanlar arasi is atama ve programlama)
 create table if not exists tasks (
@@ -191,7 +212,8 @@ create index if not exists calf_feedings_fed_at_idx on calf_feedings (fed_at);
 -- Row Level Security: giris yapmis herkes (10 kisilik guvenilir ekip) okuyup yazabilir
 alter table profiles enable row level security;
 alter table animals enable row level security;
-alter table treatments enable row level security;
+alter table mastitis_treatments enable row level security;
+alter table mastitis_doses enable row level security;
 alter table tasks enable row level security;
 alter table bulls enable row level security;
 alter table semen_inventory enable row level security;
@@ -204,7 +226,8 @@ create policy "profiles_select_authenticated" on profiles for select to authenti
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
 
 create policy "animals_all_authenticated" on animals for all to authenticated using (true) with check (true);
-create policy "treatments_all_authenticated" on treatments for all to authenticated using (true) with check (true);
+create policy "mastitis_treatments_all_authenticated" on mastitis_treatments for all to authenticated using (true) with check (true);
+create policy "mastitis_doses_all_authenticated" on mastitis_doses for all to authenticated using (true) with check (true);
 create policy "tasks_all_authenticated" on tasks for all to authenticated using (true) with check (true);
 create policy "bulls_all_authenticated" on bulls for all to authenticated using (true) with check (true);
 create policy "semen_inventory_all_authenticated" on semen_inventory for all to authenticated using (true) with check (true);

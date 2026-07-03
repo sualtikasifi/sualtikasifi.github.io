@@ -81,6 +81,11 @@ export default function CalvesPage() {
     [calves, statuses]
   );
 
+  const missedLastFeeding = useMemo(
+    () => calves.filter((c) => (statuses.get(c.id)?.streak ?? 0) >= 1),
+    [calves, statuses]
+  );
+
   async function logFeeding(animalId: string, drank: boolean) {
     if (!profile) return;
     setLoggingId(animalId);
@@ -107,6 +112,48 @@ export default function CalvesPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900">Buzagilar</h1>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-neutral-700">Son Ogunde Mamasini Icmeyenler</h2>
+        {loading ? (
+          <p className="text-sm text-neutral-500">Yukleniyor...</p>
+        ) : missedLastFeeding.length === 0 ? (
+          <p className="text-sm text-neutral-400">Son ogunde mamasini icmeyen buzagi yok.</p>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+            {missedLastFeeding.map((c) => {
+              const s = statuses.get(c.id)!;
+              return (
+                <div key={c.id} className="flex items-center justify-between border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
+                  <div>
+                    <span className="font-medium text-neutral-900">{c.ear_tag}</span>
+                    {c.name && <span className="ml-2 text-neutral-500">{c.name}</span>}
+                    <span className="ml-2 text-xs text-red-600">
+                      Son ogunde icmedi {s.streak > 1 && `(${s.streak}. kez ustuste)`}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => logFeeding(c.id, true)}
+                      disabled={loggingId === c.id}
+                      className="rounded-md border border-green-600 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
+                    >
+                      Icti
+                    </button>
+                    <button
+                      onClick={() => logFeeding(c.id, false)}
+                      disabled={loggingId === c.id}
+                      className="rounded-md border border-red-500 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      Icmedi
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-neutral-700">

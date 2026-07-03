@@ -6,9 +6,8 @@ import { useAuth } from "@/lib/auth";
 
 const links = [
   { href: "/", label: "Panel" },
-  { href: "/animals", label: "Hayvanlar" },
   { href: "/calves", label: "Buzagilar" },
-  { href: "/treatments", label: "Tedaviler" },
+  { href: "/treatments", label: "Mastitler" },
   { href: "/inseminations", label: "Tohumlama" },
   { href: "/bulls", label: "Bogalar" },
   { href: "/opu", label: "OPU/Embriyo" },

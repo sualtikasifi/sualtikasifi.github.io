@@ -1,4 +1,4 @@
-import { Animal, Bull, CalfFeeding, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
+import { Animal, Bull, CalfFeeding, Embryo, Insemination, MastitisDose, MastitisTreatment, OpuSession, Profile, SemenInventory, Task } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -74,36 +74,101 @@ export const seedAnimals: Animal[] = [
   },
 ];
 
-export const seedTreatments: Treatment[] = [
+// mastitis-1: Boncuk (animal-3), devam eden 4 gunluk protokol, 2 gun yapildi, 2 gun kaldi.
+// mastitis-2: Benekli (animal-2), protokol tamamlandi, arinma suresi de tamamlanip onaylandi.
+export const seedMastitisTreatments: MastitisTreatment[] = [
   {
-    id: "treat-1",
-    animal_id: "animal-1",
-    treatment_date: daysAgo(2),
-    category: "buzagi_beslenme",
-    diagnosis: "Rutin mama kontrolu",
-    medication: null,
-    dose: "2 litre buzagi mamasi",
-    udder_quarter: null,
-    vet_name: null,
-    outcome: "iyilesti",
-    notes: "Istahli sekilde icti.",
-    created_by: DEMO_USER_ID,
+    id: "mastitis-1",
+    animal_id: "animal-3",
+    udder_quarter: "arka_sag",
+    diagnosis: "Klinik mastitis",
+    medication: "Antibiyotik enjeksiyon",
+    vet_name: "Dr. Ayse Kaya",
+    start_date: daysAgo(2),
+    protocol_days: 4,
+    withdrawal_days: 3,
+    ended_at: null,
+    withdrawal_cleared_at: null,
+    withdrawal_cleared_by: null,
+    notes: "Sutu ayri sagiliyor, atilacak.",
+    created_by: "demo-user-2",
     created_at: daysAgo(2),
   },
   {
-    id: "treat-2",
-    animal_id: "animal-3",
-    treatment_date: daysAgo(1),
-    category: "mastitis",
-    diagnosis: "Klinik mastitis",
-    medication: "Antibiyotik enjeksiyon",
-    dose: "1 doz / gun, 3 gun",
-    udder_quarter: "arka_sag",
+    id: "mastitis-2",
+    animal_id: "animal-2",
+    udder_quarter: "on_sol",
+    diagnosis: "Subklinik mastitis",
+    medication: "Intramamer antibiyotik tup",
     vet_name: "Dr. Ayse Kaya",
-    outcome: "devam_ediyor",
-    notes: "Sutu ayri sagiliyor, atilacak.",
+    start_date: daysAgo(10),
+    protocol_days: 4,
+    withdrawal_days: 3,
+    ended_at: daysAgo(6),
+    withdrawal_cleared_at: daysAgo(2),
+    withdrawal_cleared_by: "demo-user-2",
+    notes: null,
     created_by: "demo-user-2",
-    created_at: daysAgo(1),
+    created_at: daysAgo(10),
+  },
+];
+
+export const seedMastitisDoses: MastitisDose[] = [
+  {
+    id: "dose-1",
+    mastitis_treatment_id: "mastitis-1",
+    day_number: 1,
+    done: true,
+    done_by: "demo-user-2",
+    done_at: daysAgo(2),
+    note: null,
+  },
+  {
+    id: "dose-2",
+    mastitis_treatment_id: "mastitis-1",
+    day_number: 2,
+    done: true,
+    done_by: "demo-user-3",
+    done_at: daysAgo(1),
+    note: "Hafif iyilesme var.",
+  },
+  { id: "dose-3", mastitis_treatment_id: "mastitis-1", day_number: 3, done: false, done_by: null, done_at: null, note: null },
+  { id: "dose-4", mastitis_treatment_id: "mastitis-1", day_number: 4, done: false, done_by: null, done_at: null, note: null },
+  {
+    id: "dose-5",
+    mastitis_treatment_id: "mastitis-2",
+    day_number: 1,
+    done: true,
+    done_by: "demo-user-2",
+    done_at: daysAgo(9),
+    note: null,
+  },
+  {
+    id: "dose-6",
+    mastitis_treatment_id: "mastitis-2",
+    day_number: 2,
+    done: true,
+    done_by: "demo-user-3",
+    done_at: daysAgo(8),
+    note: null,
+  },
+  {
+    id: "dose-7",
+    mastitis_treatment_id: "mastitis-2",
+    day_number: 3,
+    done: true,
+    done_by: "demo-user-3",
+    done_at: daysAgo(7),
+    note: null,
+  },
+  {
+    id: "dose-8",
+    mastitis_treatment_id: "mastitis-2",
+    day_number: 4,
+    done: true,
+    done_by: "demo-user-2",
+    done_at: daysAgo(6),
+    note: "Protokol tamamlandi.",
   },
 ];
 

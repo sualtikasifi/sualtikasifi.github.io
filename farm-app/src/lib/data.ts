@@ -1,6 +1,18 @@
 import { isDemoMode, supabase } from "./supabaseClient";
 import * as mock from "./mock/store";
-import { Animal, Bull, CalfFeeding, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "./types";
+import {
+  Animal,
+  Bull,
+  CalfFeeding,
+  Embryo,
+  Insemination,
+  MastitisDose,
+  MastitisTreatment,
+  OpuSession,
+  Profile,
+  SemenInventory,
+  Task,
+} from "./types";
 
 export { isDemoMode };
 
@@ -48,22 +60,119 @@ export async function updateAnimal(id: string, patch: Partial<Animal>): Promise<
   return data as Animal;
 }
 
-// --- Treatments ---
+// --- Mastitis treatments ---
 
-export async function listTreatments(animalId?: string): Promise<Treatment[]> {
-  if (isDemoMode) return mock.demoListTreatments(animalId);
-  let query = supabase!.from("treatments").select("*").order("treatment_date", { ascending: false });
+export async function listMastitisTreatments(animalId?: string): Promise<MastitisTreatment[]> {
+  if (isDemoMode) return mock.demoListMastitisTreatments(animalId);
+  let query = supabase!.from("mastitis_treatments").select("*").order("start_date", { ascending: false });
   if (animalId) query = query.eq("animal_id", animalId);
   const { data, error } = await query;
   if (error) throw error;
-  return data as Treatment[];
+  return data as MastitisTreatment[];
 }
 
-export async function createTreatment(input: Omit<Treatment, "id" | "created_at">): Promise<Treatment> {
-  if (isDemoMode) return mock.demoCreateTreatment(input);
-  const { data, error } = await supabase!.from("treatments").insert(input).select().single();
+export async function getMastitisTreatment(id: string): Promise<MastitisTreatment | undefined> {
+  if (isDemoMode) return mock.demoGetMastitisTreatment(id);
+  const { data, error } = await supabase!.from("mastitis_treatments").select("*").eq("id", id).single();
+  if (error) return undefined;
+  return data as MastitisTreatment;
+}
+
+export async function createMastitisTreatment(
+  input: Omit<
+    MastitisTreatment,
+    "id" | "created_at" | "ended_at" | "withdrawal_cleared_at" | "withdrawal_cleared_by"
+  >
+): Promise<MastitisTreatment> {
+  if (isDemoMode) return mock.demoCreateMastitisTreatment(input);
+  const { data, error } = await supabase!.from("mastitis_treatments").insert(input).select().single();
   if (error) throw error;
-  return data as Treatment;
+  const treatment = data as MastitisTreatment;
+  const doses = Array.from({ length: input.protocol_days }, (_, i) => ({
+    mastitis_treatment_id: treatment.id,
+    day_number: i + 1,
+  }));
+  const { error: doseError } = await supabase!.from("mastitis_doses").insert(doses);
+  if (doseError) throw doseError;
+  return treatment;
+}
+
+export async function listMastitisDoses(treatmentId: string): Promise<MastitisDose[]> {
+  if (isDemoMode) return mock.demoListMastitisDoses(treatmentId);
+  const { data, error } = await supabase!
+    .from("mastitis_doses")
+    .select("*")
+    .eq("mastitis_treatment_id", treatmentId)
+    .order("day_number", { ascending: true });
+  if (error) throw error;
+  return data as MastitisDose[];
+}
+
+export async function completeMastitisDose(
+  id: string,
+  doneBy: string,
+  note: string | null
+): Promise<MastitisDose | undefined> {
+  if (isDemoMode) return mock.demoCompleteMastitisDose(id, doneBy, note);
+  const { data, error } = await supabase!
+    .from("mastitis_doses")
+    .update({ done: true, done_by: doneBy, done_at: new Date().toISOString(), note })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  const dose = data as MastitisDose;
+  const { data: doses } = await supabase!
+    .from("mastitis_doses")
+    .select("*")
+    .eq("mastitis_treatment_id", dose.mastitis_treatment_id);
+  if (doses && (doses as MastitisDose[]).every((d) => d.done)) {
+    await supabase!
+      .from("mastitis_treatments")
+      .update({ ended_at: new Date().toISOString() })
+      .eq("id", dose.mastitis_treatment_id)
+      .is("ended_at", null);
+  }
+  return dose;
+}
+
+export async function reopenMastitisDose(id: string): Promise<MastitisDose | undefined> {
+  if (isDemoMode) return mock.demoReopenMastitisDose(id);
+  const { data, error } = await supabase!
+    .from("mastitis_doses")
+    .update({ done: false, done_by: null, done_at: null, note: null })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as MastitisDose;
+}
+
+export async function endMastitisTreatment(id: string): Promise<MastitisTreatment | undefined> {
+  if (isDemoMode) return mock.demoEndMastitisTreatment(id);
+  const { data, error } = await supabase!
+    .from("mastitis_treatments")
+    .update({ ended_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as MastitisTreatment;
+}
+
+export async function clearMastitisWithdrawal(
+  id: string,
+  clearedBy: string
+): Promise<MastitisTreatment | undefined> {
+  if (isDemoMode) return mock.demoClearMastitisWithdrawal(id, clearedBy);
+  const { data, error } = await supabase!
+    .from("mastitis_treatments")
+    .update({ withdrawal_cleared_at: new Date().toISOString(), withdrawal_cleared_by: clearedBy })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as MastitisTreatment;
 }
 
 // --- Tasks ---

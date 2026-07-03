@@ -2,19 +2,19 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createTreatment, listAnimals } from "@/lib/data";
-import { Animal, TreatmentCategory, UdderQuarter } from "@/lib/types";
+import { createMastitisTreatment, listAnimals } from "@/lib/data";
+import { Animal, UdderQuarter } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 
-export default function NewTreatmentPage() {
+export default function NewMastitisPage() {
   return (
     <Suspense fallback={<p className="text-sm text-neutral-500">Yukleniyor...</p>}>
-      <NewTreatmentContent />
+      <NewMastitisContent />
     </Suspense>
   );
 }
 
-function NewTreatmentContent() {
+function NewMastitisContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { profile } = useAuth();
@@ -25,14 +25,13 @@ function NewTreatmentContent() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     animal_id: preselectedAnimalId,
-    treatment_date: new Date().toISOString().slice(0, 10),
-    category: "genel" as TreatmentCategory,
+    udder_quarter: "" as UdderQuarter | "",
+    start_date: new Date().toISOString().slice(0, 10),
+    protocol_days: 4,
+    withdrawal_days: 3,
     diagnosis: "",
     medication: "",
-    dose: "",
-    udder_quarter: "" as UdderQuarter | "",
     vet_name: "",
-    outcome: "devam_ediyor" as "devam_ediyor" | "iyilesti" | "olum",
     notes: "",
   });
 
@@ -52,28 +51,27 @@ function NewTreatmentContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.animal_id) return;
+    if (!form.animal_id || !form.udder_quarter) return;
     setSubmitting(true);
-    await createTreatment({
+    await createMastitisTreatment({
       animal_id: form.animal_id,
-      treatment_date: form.treatment_date,
-      category: form.category,
+      udder_quarter: form.udder_quarter,
+      start_date: form.start_date,
+      protocol_days: form.protocol_days,
+      withdrawal_days: form.withdrawal_days,
       diagnosis: form.diagnosis.trim() || null,
       medication: form.medication.trim() || null,
-      dose: form.dose.trim() || null,
-      udder_quarter: form.category === "mastitis" && form.udder_quarter ? form.udder_quarter : null,
       vet_name: form.vet_name.trim() || null,
-      outcome: form.outcome,
       notes: form.notes.trim() || null,
       created_by: profile?.id ?? null,
     });
     setSubmitting(false);
-    router.push(`/animals/detail?id=${form.animal_id}`);
+    router.push("/treatments");
   }
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">Yeni tedavi kaydi</h1>
+      <h1 className="text-lg font-semibold text-neutral-900">Yeni mastitis kaydi</h1>
       <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
         <FieldBlock label="Hayvan *">
           {form.animal_id ? (
@@ -107,59 +105,59 @@ function NewTreatmentContent() {
           )}
         </FieldBlock>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Tarih">
+        <Field label="Meme *">
+          <select
+            value={form.udder_quarter}
+            onChange={(e) => update("udder_quarter", e.target.value as UdderQuarter)}
+            className="input"
+          >
+            <option value="">Secin</option>
+            <option value="on_sol">On Sol</option>
+            <option value="on_sag">On Sag</option>
+            <option value="arka_sol">Arka Sol</option>
+            <option value="arka_sag">Arka Sag</option>
+          </select>
+        </Field>
+
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Baslangic tarihi">
             <input
               type="date"
-              value={form.treatment_date}
-              onChange={(e) => update("treatment_date", e.target.value)}
+              value={form.start_date}
+              onChange={(e) => update("start_date", e.target.value)}
               className="input"
             />
           </Field>
-          <Field label="Kategori">
-            <select value={form.category} onChange={(e) => update("category", e.target.value as TreatmentCategory)} className="input">
-              <option value="genel">Genel</option>
-              <option value="mastitis">Mastitis</option>
-              <option value="buzagi_beslenme">Buzagi Beslenme</option>
-            </select>
+          <Field label="Protokol (gun)">
+            <input
+              type="number"
+              min={1}
+              value={form.protocol_days}
+              onChange={(e) => update("protocol_days", Number(e.target.value))}
+              className="input"
+            />
+          </Field>
+          <Field label="Arinma (gun)">
+            <input
+              type="number"
+              min={0}
+              value={form.withdrawal_days}
+              onChange={(e) => update("withdrawal_days", Number(e.target.value))}
+              className="input"
+            />
           </Field>
         </div>
-
-        {form.category === "mastitis" && (
-          <Field label="Meme">
-            <select value={form.udder_quarter} onChange={(e) => update("udder_quarter", e.target.value as UdderQuarter)} className="input">
-              <option value="">Secin</option>
-              <option value="on_sol">On Sol</option>
-              <option value="on_sag">On Sag</option>
-              <option value="arka_sol">Arka Sol</option>
-              <option value="arka_sag">Arka Sag</option>
-            </select>
-          </Field>
-        )}
 
         <Field label="Tani / aciklama">
           <input value={form.diagnosis} onChange={(e) => update("diagnosis", e.target.value)} className="input" />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Ilac">
-            <input value={form.medication} onChange={(e) => update("medication", e.target.value)} className="input" />
-          </Field>
-          <Field label="Doz">
-            <input value={form.dose} onChange={(e) => update("dose", e.target.value)} className="input" />
-          </Field>
-        </div>
+        <Field label="Ilac">
+          <input value={form.medication} onChange={(e) => update("medication", e.target.value)} className="input" />
+        </Field>
 
         <Field label="Veteriner">
           <input value={form.vet_name} onChange={(e) => update("vet_name", e.target.value)} className="input" />
-        </Field>
-
-        <Field label="Durum">
-          <select value={form.outcome} onChange={(e) => update("outcome", e.target.value as typeof form.outcome)} className="input">
-            <option value="devam_ediyor">Devam ediyor</option>
-            <option value="iyilesti">Iyilesti</option>
-            <option value="olum">Olum</option>
-          </select>
         </Field>
 
         <Field label="Notlar">
@@ -168,7 +166,7 @@ function NewTreatmentContent() {
 
         <button
           type="submit"
-          disabled={submitting || !form.animal_id}
+          disabled={submitting || !form.animal_id || !form.udder_quarter}
           className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
         >
           {submitting ? "Kaydediliyor..." : "Kaydet"}
