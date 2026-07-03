@@ -5,6 +5,7 @@ import Link from "next/link";
 import { listAnimals, listEmbryos, listOpuSessions } from "@/lib/data";
 import { Animal, Embryo, OpuSession } from "@/lib/types";
 import { formatDate } from "@/lib/format";
+import { OPU_STAGE_INFO, opuStageFor } from "@/lib/opuStage";
 
 export default function OpuSessionsPage() {
   const [sessions, setSessions] = useState<OpuSession[]>([]);
@@ -43,26 +44,42 @@ export default function OpuSessionsPage() {
         <p className="text-sm text-neutral-400">Kayit yok.</p>
       ) : (
         <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-          {sessions.map((s) => (
-            <Link
-              key={s.id}
-              href={`/opu/detail?id=${s.id}`}
-              className="flex items-center justify-between border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0 hover:bg-neutral-50"
-            >
-              <div>
-                <span className="font-medium text-neutral-900">{earTagFor(s.donor_animal_id)}</span>
-                <span className="ml-2 text-neutral-500">(donor)</span>
-                {s.technician_name && <p className="text-xs text-neutral-400">{s.technician_name}</p>}
-              </div>
-              <div className="text-right">
-                <p className="text-neutral-600">
-                  {totalFollicles(s) ?? "-"} folikul &middot; {s.oocyte_count ?? "-"} oosit &middot;{" "}
-                  {s.cleaved_count ?? "-"} bolunen &middot; {s.embryo_count ?? embryoCountFor(s.id)} embriyo
-                </p>
-                <p className="text-xs text-neutral-400">{formatDate(s.session_date)}</p>
-              </div>
-            </Link>
-          ))}
+          {sessions.map((s) => {
+            const stage = opuStageFor(s);
+            return (
+              <Link
+                key={s.id}
+                href={`/opu/detail?id=${s.id}`}
+                className="block border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0 hover:bg-neutral-50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-neutral-900">{earTagFor(s.donor_animal_id)}</span>
+                    <span className="ml-2 text-neutral-500">(donor)</span>
+                    {s.technician_name && <p className="text-xs text-neutral-400">{s.technician_name}</p>}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-neutral-600">
+                      {totalFollicles(s) ?? "-"} folikul &middot; {s.oocyte_count ?? "-"} oosit &middot;{" "}
+                      {s.cleaved_count ?? "-"} bolunen &middot; {s.embryo_count ?? embryoCountFor(s.id)} embriyo
+                    </p>
+                    <p className="text-xs text-neutral-400">{formatDate(s.session_date)}</p>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  {stage === "done" ? (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                      Tum asamalar tamamlandi
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      Siradaki soru: {OPU_STAGE_INFO[stage].question}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

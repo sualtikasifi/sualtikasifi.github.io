@@ -41,11 +41,7 @@ export default function InseminationsPage() {
       ) : (
         <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
           {inseminations.map((i) => (
-            <Link
-              key={i.id}
-              href={`/animals/detail?id=${i.animal_id}`}
-              className="block border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0 hover:bg-neutral-50"
-            >
+            <div key={i.id} className="border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{earTagFor(i.animal_id)}</span>
@@ -57,8 +53,12 @@ export default function InseminationsPage() {
                   <Badge value={i.pregnancy_result} />
                 </div>
               </div>
-              {i.technician_name && <p className="mt-1 text-neutral-500">Teknisyen: {i.technician_name}</p>}
-            </Link>
+              {i.technician_name && <p className="mt-1 text-neutral-500">Tohumlayici: {i.technician_name}</p>}
+              {i.pregnancy_check_date && (
+                <p className="text-neutral-500">Gebelik kontrol tarihi: {formatDate(i.pregnancy_check_date)}</p>
+              )}
+              {i.notes && <p className="text-neutral-500">{i.notes}</p>}
+            </div>
           ))}
         </div>
       )}

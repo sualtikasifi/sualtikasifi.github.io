@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createOpuSession, listAnimals } from "@/lib/data";
-import { Animal } from "@/lib/types";
+import { createOpuSession, listAnimals, listProfiles } from "@/lib/data";
+import { Animal, Profile } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 
 export default function NewOpuSessionPage() {
   const router = useRouter();
   const { profile } = useAuth();
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [animalSearch, setAnimalSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -22,7 +23,10 @@ export default function NewOpuSessionPage() {
   });
 
   useEffect(() => {
-    listAnimals().then(setAnimals);
+    Promise.all([listAnimals(), listProfiles()]).then(([a, p]) => {
+      setAnimals(a);
+      setProfiles(p);
+    });
   }, []);
 
   const filteredAnimals = useMemo(() => {
@@ -125,9 +129,24 @@ export default function NewOpuSessionPage() {
           </Field>
         </div>
 
-        <Field label="Teknisyen">
-          <input value={form.technician_name} onChange={(e) => update("technician_name", e.target.value)} className="input" />
-        </Field>
+        <FieldBlock label="Veteriner Hekim/Tekniker">
+          <div className="flex flex-wrap gap-2">
+            {profiles.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => update("technician_name", p.full_name)}
+                className={`rounded-full border px-3 py-1.5 text-sm ${
+                  form.technician_name === p.full_name
+                    ? "border-green-600 bg-green-50 text-green-800"
+                    : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+                }`}
+              >
+                {p.full_name}
+              </button>
+            ))}
+          </div>
+        </FieldBlock>
 
         <Field label="Notlar">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} className="input" rows={3} />

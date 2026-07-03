@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createInsemination, listAnimals, listBulls, listSemenInventory } from "@/lib/data";
-import { Animal, Bull, PregnancyResult, SemenInventory, SemenType } from "@/lib/types";
+import { createInsemination, listAnimals, listBulls, listProfiles, listSemenInventory } from "@/lib/data";
+import { Animal, Bull, Profile, SemenInventory, SemenType } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 
 export default function NewInseminationPage() {
@@ -23,6 +23,7 @@ function NewInseminationContent() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [bulls, setBulls] = useState<Bull[]>([]);
   const [inventory, setInventory] = useState<SemenInventory[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [animalSearch, setAnimalSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -31,15 +32,15 @@ function NewInseminationContent() {
     semen_type: "konvansiyonel" as SemenType,
     insemination_date: new Date().toISOString().slice(0, 10),
     technician_name: "",
-    pregnancy_result: "bekleniyor" as PregnancyResult,
     notes: "",
   });
 
   useEffect(() => {
-    Promise.all([listAnimals(), listBulls(), listSemenInventory()]).then(([a, b, i]) => {
+    Promise.all([listAnimals(), listBulls(), listSemenInventory(), listProfiles()]).then(([a, b, i, p]) => {
       setAnimals(a);
       setBulls(b);
       setInventory(i);
+      setProfiles(p);
       setForm((f) => ({ ...f, bull_id: f.bull_id || b[0]?.id || "" }));
     });
   }, []);
@@ -69,7 +70,7 @@ function NewInseminationContent() {
       insemination_date: form.insemination_date,
       technician_name: form.technician_name.trim() || null,
       pregnancy_check_date: null,
-      pregnancy_result: form.pregnancy_result,
+      pregnancy_result: "bekleniyor",
       notes: form.notes.trim() || null,
       created_by: profile?.id ?? null,
     });
@@ -141,31 +142,33 @@ function NewInseminationContent() {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Tarih">
-            <input
-              type="date"
-              value={form.insemination_date}
-              onChange={(e) => update("insemination_date", e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Teknisyen">
-            <input value={form.technician_name} onChange={(e) => update("technician_name", e.target.value)} className="input" />
-          </Field>
-        </div>
-
-        <Field label="Gebelik durumu">
-          <select
-            value={form.pregnancy_result}
-            onChange={(e) => update("pregnancy_result", e.target.value as PregnancyResult)}
+        <Field label="Tarih">
+          <input
+            type="date"
+            value={form.insemination_date}
+            onChange={(e) => update("insemination_date", e.target.value)}
             className="input"
-          >
-            <option value="bekleniyor">Bekleniyor</option>
-            <option value="gebe">Gebe</option>
-            <option value="gebe_degil">Gebe degil</option>
-          </select>
+          />
         </Field>
+
+        <FieldBlock label="Tohumlayici">
+          <div className="flex flex-wrap gap-2">
+            {profiles.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => update("technician_name", p.full_name)}
+                className={`rounded-full border px-3 py-1.5 text-sm ${
+                  form.technician_name === p.full_name
+                    ? "border-green-600 bg-green-50 text-green-800"
+                    : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+                }`}
+              >
+                {p.full_name}
+              </button>
+            ))}
+          </div>
+        </FieldBlock>
 
         <Field label="Notlar">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} className="input" rows={3} />

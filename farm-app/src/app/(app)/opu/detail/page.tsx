@@ -8,15 +8,7 @@ import { Animal, Embryo, OpuSession } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { OpuFunnel } from "@/components/OpuFunnel";
 import { formatDate } from "@/lib/format";
-
-type Stage = "oocyte" | "cleaved" | "embryo" | "done";
-
-function stageFor(session: OpuSession): Stage {
-  if (session.oocyte_count === null) return "oocyte";
-  if (session.cleaved_count === null) return "cleaved";
-  if (session.embryo_count === null) return "embryo";
-  return "done";
-}
+import { OPU_STAGE_INFO, OpuStage as Stage, opuStageFor as stageFor } from "@/lib/opuStage";
 
 export default function OpuSessionDetailPage() {
   return (
@@ -142,24 +134,6 @@ function StageCard({
   const [notes, setNotes] = useState(session.notes ?? "");
   const [saving, setSaving] = useState(false);
 
-  const questions: Record<Exclude<Stage, "done">, { title: string; question: string; field: "oocyte_count" | "cleaved_count" | "embryo_count" }> = {
-    oocyte: {
-      title: "Laboratuvar sonucu bekleniyor",
-      question: "Foliküllerden kaç oosit çıktı?",
-      field: "oocyte_count",
-    },
-    cleaved: {
-      title: "Bölünme (cleavage) kontrolü",
-      question: "Oositlerden kaçı bölündü?",
-      field: "cleaved_count",
-    },
-    embryo: {
-      title: "Embriyo sayımı",
-      question: "Bölünenlerden kaçı embriyoya dönüştü?",
-      field: "embryo_count",
-    },
-  };
-
   if (stage === "done") {
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 p-4">
@@ -171,7 +145,7 @@ function StageCard({
     );
   }
 
-  const q = questions[stage];
+  const q = OPU_STAGE_INFO[stage];
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
