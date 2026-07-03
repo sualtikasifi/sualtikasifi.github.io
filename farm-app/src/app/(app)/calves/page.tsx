@@ -308,60 +308,6 @@ export default function CalvesPage() {
           </div>
         )}
       </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">Tum Buzagilar</h2>
-        {loading ? (
-          <p className="text-sm text-neutral-500">Yukleniyor...</p>
-        ) : calves.length === 0 ? (
-          <p className="text-sm text-neutral-400">Kayitli buzagi yok (sutten kesilmemis hayvan).</p>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-            {calves.map((c) => {
-              const s = statuses.get(c.id)!;
-              return (
-                <div key={c.id} className="border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
-                  <div className="flex items-center justify-between gap-3">
-                    <Link href={`/animals/detail?id=${c.id}`} className="hover:underline">
-                      <span className="font-medium text-neutral-900">{c.ear_tag}</span>
-                      {c.name && <span className="ml-2 text-neutral-500">{c.name}</span>}
-                    </Link>
-                    <div className="flex items-center gap-1">
-                      {[...s.last3].reverse().map((f) => (
-                        <span
-                          key={f.id}
-                          title={formatDateTime(f.fed_at)}
-                          className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
-                            f.drank ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800"
-                          }`}
-                        >
-                          {f.drank ? "✓" : "✗"}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={() => logFeeding(c.id, true)}
-                      disabled={loggingId === c.id}
-                      className="rounded-md border border-green-600 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
-                    >
-                      Icti
-                    </button>
-                    <button
-                      onClick={() => logFeeding(c.id, false)}
-                      disabled={loggingId === c.id}
-                      className="rounded-md border border-red-500 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                    >
-                      Icmedi
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
     </div>
   );
 }

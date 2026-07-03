@@ -91,41 +91,37 @@ export default function TasksPage() {
           {tasks.map((t) => (
             <div key={t.id} className="border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={t.status === "yapildi"}
-                    onChange={() => (t.status === "yapildi" ? handleReopen(t) : startConfirm(t))}
-                    className="mt-1 h-4 w-4"
-                  />
-                  <div>
-                    <p className={`font-medium ${t.status === "yapildi" ? "text-neutral-400 line-through" : "text-neutral-900"}`}>
-                      {t.title}
+                <div>
+                  <p className={`font-medium ${t.status === "yapildi" ? "text-neutral-400 line-through" : "text-neutral-900"}`}>
+                    {t.title}
+                  </p>
+                  {t.description && <p className="text-neutral-500">{t.description}</p>}
+                  <p className="text-xs text-neutral-400">
+                    {nameFor(t.assigned_to)} tarafindan yapilacak &middot; {nameFor(t.assigned_by)} atadi
+                  </p>
+                  {t.status === "yapildi" && t.completed_at && (
+                    <p className="mt-1 text-xs text-green-700">
+                      {nameFor(t.completed_by)} tarafindan {formatDateTime(t.completed_at)} tarihinde onaylandi
+                      {t.completion_note && (
+                        <span className="ml-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
+                          Not var
+                        </span>
+                      )}
                     </p>
-                    {t.description && <p className="text-neutral-500">{t.description}</p>}
-                    <p className="text-xs text-neutral-400">
-                      {nameFor(t.assigned_to)} tarafindan yapilacak &middot; {nameFor(t.assigned_by)} atadi
-                    </p>
-                    {t.status === "yapildi" && t.completed_at && (
-                      <p className="mt-1 text-xs text-green-700">
-                        {nameFor(t.completed_by)} tarafindan {formatDateTime(t.completed_at)} tarihinde onaylandi
-                        {t.completion_note && (
-                          <span className="ml-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
-                            Not var
-                          </span>
-                        )}
-                      </p>
-                    )}
-                    {t.status === "yapildi" && t.completion_note && (
-                      <p className="mt-0.5 text-xs text-neutral-500">Not: {t.completion_note}</p>
-                    )}
-                  </div>
+                  )}
+                  {t.status === "yapildi" && t.completion_note && (
+                    <p className="mt-0.5 text-xs text-neutral-500">Not: {t.completion_note}</p>
+                  )}
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
+                <div className="flex shrink-0 flex-col items-end gap-2">
                   <span className="text-neutral-500">
                     {formatDate(t.due_date)} {t.due_time && t.due_time.slice(0, 5)}
                   </span>
                   <Badge value={t.status} />
+                  <CompleteButton
+                    task={t}
+                    onClick={() => (t.status === "yapildi" ? handleReopen(t) : startConfirm(t))}
+                  />
                 </div>
               </div>
 
@@ -167,5 +163,29 @@ export default function TasksPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function CompleteButton({ task, onClick }: { task: Task; onClick: () => void }) {
+  const done = task.status === "yapildi";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+        done
+          ? "border-green-600 bg-green-600 text-white hover:bg-green-700"
+          : "border-neutral-300 text-neutral-600 hover:border-green-600 hover:text-green-700"
+      }`}
+    >
+      <span
+        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] ${
+          done ? "border-white text-white" : "border-neutral-400"
+        }`}
+      >
+        {done && "✓"}
+      </span>
+      {done ? "Tamamlandi" : "Yapildi olarak isaretle"}
+    </button>
   );
 }

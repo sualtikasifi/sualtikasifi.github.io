@@ -34,7 +34,7 @@ export default function OpuSessionsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">OPU Seanslari</h1>
         <Link href="/opu/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800">
-          Yeni OPU seansi
+          Yeni OPU
         </Link>
       </div>
 
