@@ -95,6 +95,15 @@ create table if not exists mastitis_doses (
 
 create index if not exists mastitis_doses_treatment_idx on mastitis_doses (mastitis_treatment_id);
 
+-- Daha once girilen tedavi protokolleri (ilac metni), bir sonraki kayitta tek
+-- tiklamayla tekrar secilebilsin diye saklanir.
+create table if not exists mastitis_protocols (
+  id uuid primary key default gen_random_uuid(),
+  medication text not null unique,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
 -- 4. Gorevler (calisanlar arasi is atama ve programlama)
 create table if not exists tasks (
   id uuid primary key default gen_random_uuid(),
@@ -224,6 +233,7 @@ alter table profiles enable row level security;
 alter table animals enable row level security;
 alter table mastitis_treatments enable row level security;
 alter table mastitis_doses enable row level security;
+alter table mastitis_protocols enable row level security;
 alter table tasks enable row level security;
 alter table bulls enable row level security;
 alter table semen_inventory enable row level security;
@@ -238,6 +248,7 @@ create policy "profiles_update_own" on profiles for update to authenticated usin
 create policy "animals_all_authenticated" on animals for all to authenticated using (true) with check (true);
 create policy "mastitis_treatments_all_authenticated" on mastitis_treatments for all to authenticated using (true) with check (true);
 create policy "mastitis_doses_all_authenticated" on mastitis_doses for all to authenticated using (true) with check (true);
+create policy "mastitis_protocols_all_authenticated" on mastitis_protocols for all to authenticated using (true) with check (true);
 create policy "tasks_all_authenticated" on tasks for all to authenticated using (true) with check (true);
 create policy "bulls_all_authenticated" on bulls for all to authenticated using (true) with check (true);
 create policy "semen_inventory_all_authenticated" on semen_inventory for all to authenticated using (true) with check (true);

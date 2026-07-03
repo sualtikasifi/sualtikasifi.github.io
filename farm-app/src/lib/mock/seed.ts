@@ -1,4 +1,4 @@
-import { Animal, Bull, CalfFeeding, Embryo, Insemination, MastitisDose, MastitisTreatment, OpuSession, Profile, SemenInventory, Task } from "@/lib/types";
+import { Animal, Bull, CalfFeeding, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, OpuSession, Profile, SemenInventory, Task } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -169,6 +169,21 @@ export const seedMastitisDoses: MastitisDose[] = [
     done_by: "demo-user-2",
     done_at: daysAgo(6),
     note: "Protokol tamamlandi.",
+  },
+];
+
+export const seedMastitisProtocols: MastitisProtocol[] = [
+  {
+    id: "protocol-1",
+    medication: "Gun 1-4: Intramamer antibiyotik tup, gunde 1 kez, sagimdan sonra uygulanir.",
+    created_by: "demo-user-2",
+    created_at: daysAgo(10),
+  },
+  {
+    id: "protocol-2",
+    medication: "Gun 1-3: Sistemik antibiyotik enjeksiyon (IM), gunde 1 doz.",
+    created_by: "demo-user-2",
+    created_at: daysAgo(9),
   },
 ];
 

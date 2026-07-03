@@ -69,6 +69,13 @@ export interface MastitisDose {
   note: string | null;
 }
 
+export interface MastitisProtocol {
+  id: string;
+  medication: string;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface Task {
   id: string;
   title: string;

@@ -2,9 +2,18 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createMastitisTreatment, listAnimals } from "@/lib/data";
-import { Animal, UdderQuarter } from "@/lib/types";
+import {
+  createMastitisTreatment,
+  listAnimals,
+  listMastitisProtocols,
+  listProfiles,
+  saveMastitisProtocolIfNew,
+} from "@/lib/data";
+import { Animal, MastitisProtocol, Profile, UdderQuarter } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+
+const DIAGNOSIS_OPTIONS = ["Mastitis", "Retensiyo Sekundinarium", "Toksikasyon"] as const;
+type DiagnosisOption = (typeof DIAGNOSIS_OPTIONS)[number] | "Diger";
 
 export default function NewMastitisPage() {
   return (
@@ -21,16 +30,19 @@ function NewMastitisContent() {
   const preselectedAnimalId = params.get("animalId") ?? "";
 
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [protocols, setProtocols] = useState<MastitisProtocol[]>([]);
   const [animalSearch, setAnimalSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [udderQuarters, setUdderQuarters] = useState<UdderQuarter[]>([]);
+  const [diagnosisOption, setDiagnosisOption] = useState<DiagnosisOption>("Mastitis");
+  const [diagnosisCustom, setDiagnosisCustom] = useState("");
   const [form, setForm] = useState({
     animal_id: preselectedAnimalId,
     start_date: new Date().toISOString().slice(0, 10),
     protocol_days: 4,
     withdrawal_days: 3,
-    diagnosis: "",
     medication: "",
     vet_name: "",
     notes: "",
@@ -41,7 +53,11 @@ function NewMastitisContent() {
   }
 
   useEffect(() => {
-    listAnimals().then(setAnimals);
+    Promise.all([listAnimals(), listProfiles(), listMastitisProtocols()]).then(([a, p, pr]) => {
+      setAnimals(a);
+      setProfiles(p);
+      setProtocols(pr);
+    });
   }, []);
 
   const filteredAnimals = useMemo(() => {
@@ -54,12 +70,16 @@ function NewMastitisContent() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  const diagnosis =
+    diagnosisOption === "Diger" ? diagnosisCustom.trim() : diagnosisOption;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.animal_id || udderQuarters.length === 0) return;
+    if (!form.animal_id || udderQuarters.length === 0 || !diagnosis) return;
     setSubmitting(true);
     setError(null);
     try {
+      const medication = form.medication.trim() || null;
       await Promise.all(
         udderQuarters.map((udder_quarter) =>
           createMastitisTreatment({
@@ -68,14 +88,21 @@ function NewMastitisContent() {
             start_date: form.start_date,
             protocol_days: form.protocol_days,
             withdrawal_days: form.withdrawal_days,
-            diagnosis: form.diagnosis.trim() || null,
-            medication: form.medication.trim() || null,
+            diagnosis,
+            medication,
             vet_name: form.vet_name.trim() || null,
             notes: form.notes.trim() || null,
             created_by: profile?.id ?? null,
           })
         )
       );
+      if (medication) {
+        try {
+          await saveMastitisProtocolIfNew(medication, profile?.id ?? null);
+        } catch {
+          // Protokol kaydi ikincil bir islem, tedavi kaydi zaten basarili oldu.
+        }
+      }
       router.push("/treatments");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kaydedilirken bir hata olustu.");
@@ -183,17 +210,80 @@ function NewMastitisContent() {
           </Field>
         </div>
 
-        <Field label="Tani / aciklama">
-          <input value={form.diagnosis} onChange={(e) => update("diagnosis", e.target.value)} className="input" />
-        </Field>
+        <FieldBlock label="Tani *">
+          <div className="flex flex-wrap gap-2">
+            {[...DIAGNOSIS_OPTIONS, "Diger" as const].map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setDiagnosisOption(option)}
+                className={`rounded-full border px-3 py-1.5 text-sm ${
+                  diagnosisOption === option
+                    ? "border-green-600 bg-green-50 text-green-800"
+                    : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+                }`}
+              >
+                {option === "Diger" ? "Diger..." : option}
+              </button>
+            ))}
+          </div>
+          {diagnosisOption === "Diger" && (
+            <input
+              value={diagnosisCustom}
+              onChange={(e) => setDiagnosisCustom(e.target.value)}
+              placeholder="Hastalik adini yazin"
+              className="input mt-2"
+            />
+          )}
+        </FieldBlock>
 
-        <Field label="Ilac">
-          <input value={form.medication} onChange={(e) => update("medication", e.target.value)} className="input" />
-        </Field>
+        <FieldBlock label="Ilac / Tedavi Protokolu">
+          {protocols.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {protocols.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => update("medication", p.medication)}
+                  title={p.medication}
+                  className={`rounded-full border px-3 py-1 text-xs ${
+                    form.medication === p.medication
+                      ? "border-green-600 bg-green-50 text-green-800"
+                      : "border-neutral-300 text-neutral-600 hover:bg-neutral-50"
+                  }`}
+                >
+                  {p.medication.length > 40 ? `${p.medication.slice(0, 40)}...` : p.medication}
+                </button>
+              ))}
+            </div>
+          )}
+          <textarea
+            value={form.medication}
+            onChange={(e) => update("medication", e.target.value)}
+            placeholder="Tedavi protokolunu yazin (yeni ise kaydedilip bir sonraki seferde tek tikla secilebilir)"
+            className="input"
+            rows={2}
+          />
+        </FieldBlock>
 
-        <Field label="Veteriner">
-          <input value={form.vet_name} onChange={(e) => update("vet_name", e.target.value)} className="input" />
-        </Field>
+        <FieldBlock label="Veteriner">
+          <div className="flex flex-wrap gap-2">
+            {profiles.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => update("vet_name", p.full_name)}
+                className={`rounded-full border px-3 py-1.5 text-sm ${
+                  form.vet_name === p.full_name
+                    ? "border-green-600 bg-green-50 text-green-800"
+                    : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
+                }`}
+              >
+                {p.full_name}
+              </button>
+            ))}
+          </div>
+        </FieldBlock>
 
         <Field label="Notlar">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} className="input" rows={3} />
@@ -203,7 +293,7 @@ function NewMastitisContent() {
 
         <button
           type="submit"
-          disabled={submitting || !form.animal_id || udderQuarters.length === 0}
+          disabled={submitting || !form.animal_id || udderQuarters.length === 0 || !diagnosis}
           className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
         >
           {submitting ? "Kaydediliyor..." : "Kaydet"}

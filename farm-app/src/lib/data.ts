@@ -7,6 +7,7 @@ import {
   Embryo,
   Insemination,
   MastitisDose,
+  MastitisProtocol,
   MastitisTreatment,
   OpuSession,
   Profile,
@@ -198,6 +199,27 @@ export async function clearMastitisWithdrawal(
     .single();
   if (error) throw error;
   return data as MastitisTreatment;
+}
+
+export async function listMastitisProtocols(): Promise<MastitisProtocol[]> {
+  if (isDemoMode) return mock.demoListMastitisProtocols();
+  const { data, error } = await supabase!
+    .from("mastitis_protocols")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data as MastitisProtocol[];
+}
+
+export async function saveMastitisProtocolIfNew(
+  medication: string,
+  createdBy: string | null
+): Promise<void> {
+  if (isDemoMode) return mock.demoSaveMastitisProtocolIfNew(medication, createdBy);
+  const { error } = await supabase!
+    .from("mastitis_protocols")
+    .upsert({ medication, created_by: createdBy }, { onConflict: "medication", ignoreDuplicates: true });
+  if (error) throw error;
 }
 
 // --- Tasks ---

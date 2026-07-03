@@ -5,6 +5,7 @@ import {
   Embryo,
   Insemination,
   MastitisDose,
+  MastitisProtocol,
   MastitisTreatment,
   OpuSession,
   Profile,
@@ -19,6 +20,7 @@ import {
   seedEmbryos,
   seedInseminations,
   seedMastitisDoses,
+  seedMastitisProtocols,
   seedMastitisTreatments,
   seedOpuSessions,
   seedProfiles,
@@ -34,6 +36,7 @@ interface DemoDb {
   animals: Animal[];
   mastitisTreatments: MastitisTreatment[];
   mastitisDoses: MastitisDose[];
+  mastitisProtocols: MastitisProtocol[];
   tasks: Task[];
   bulls: Bull[];
   semenInventory: SemenInventory[];
@@ -49,6 +52,7 @@ function initialDb(): DemoDb {
     animals: seedAnimals,
     mastitisTreatments: seedMastitisTreatments,
     mastitisDoses: seedMastitisDoses,
+    mastitisProtocols: seedMastitisProtocols,
     tasks: seedTasks,
     bulls: seedBulls,
     semenInventory: seedSemenInventory,
@@ -75,6 +79,7 @@ function loadDb(): DemoDb {
     animals: parsed.animals ?? seedAnimals,
     mastitisTreatments: parsed.mastitisTreatments ?? seedMastitisTreatments,
     mastitisDoses: parsed.mastitisDoses ?? seedMastitisDoses,
+    mastitisProtocols: parsed.mastitisProtocols ?? seedMastitisProtocols,
     tasks: parsed.tasks ?? seedTasks,
     bulls: parsed.bulls ?? seedBulls,
     semenInventory: parsed.semenInventory ?? seedSemenInventory,
@@ -282,6 +287,25 @@ export function demoClearMastitisWithdrawal(id: string, clearedBy: string): Mast
   };
   saveDb(db);
   return db.mastitisTreatments[idx];
+}
+
+export function demoListMastitisProtocols(): MastitisProtocol[] {
+  return loadDb().mastitisProtocols.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function demoSaveMastitisProtocolIfNew(medication: string, createdBy: string | null): void {
+  const db = loadDb();
+  const exists = db.mastitisProtocols.some(
+    (p) => p.medication.trim().toLowerCase() === medication.trim().toLowerCase()
+  );
+  if (exists) return;
+  db.mastitisProtocols.push({
+    id: newId("protocol"),
+    medication,
+    created_by: createdBy,
+    created_at: new Date().toISOString(),
+  });
+  saveDb(db);
 }
 
 // --- Tasks ---
