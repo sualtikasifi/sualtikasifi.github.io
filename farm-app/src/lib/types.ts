@@ -11,6 +11,15 @@ export type TaskStatus = "bekliyor" | "yapildi" | "iptal";
 
 export type PregnancyResult = "bekleniyor" | "gebe" | "gebe_degil";
 
+export type EmbryoGrade = "1" | "2" | "3" | "4";
+export type EmbryoStage =
+  | "morula"
+  | "erken_blastosist"
+  | "blastosist"
+  | "genisleyen_blastosist"
+  | "yumurtadan_cikan_blastosist";
+export type EmbryoStatus = "gelisiyor" | "dondu" | "transfer_edildi" | "atildi";
+
 export interface Profile {
   id: string;
   full_name: string;
@@ -92,4 +101,31 @@ export interface Insemination {
   notes: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export interface OpuSession {
+  id: string;
+  donor_animal_id: string;
+  session_date: string;
+  technician_name: string | null;
+  oocyte_count: number | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface Embryo {
+  id: string;
+  opu_session_id: string;
+  label: string;
+  grade: EmbryoGrade | null;
+  stage: EmbryoStage | null;
+  day_reached: number | null;
+  status: EmbryoStatus;
+  recipient_animal_id: string | null;
+  transfer_date: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }

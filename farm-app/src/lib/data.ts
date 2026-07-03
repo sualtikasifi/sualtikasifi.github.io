@@ -1,6 +1,6 @@
 import { isDemoMode, supabase } from "./supabaseClient";
 import * as mock from "./mock/store";
-import { Animal, Bull, Insemination, Profile, SemenInventory, Task, Treatment } from "./types";
+import { Animal, Bull, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "./types";
 
 export { isDemoMode };
 
@@ -176,4 +176,71 @@ export async function updateInsemination(
   const { data, error } = await supabase!.from("inseminations").update(patch).eq("id", id).select().single();
   if (error) throw error;
   return data as Insemination;
+}
+
+// --- OPU sessions & embryos ---
+
+export async function listOpuSessions(): Promise<OpuSession[]> {
+  if (isDemoMode) return mock.demoListOpuSessions();
+  const { data, error } = await supabase!
+    .from("opu_sessions")
+    .select("*")
+    .order("session_date", { ascending: false });
+  if (error) throw error;
+  return data as OpuSession[];
+}
+
+export async function getOpuSession(id: string): Promise<OpuSession | undefined> {
+  if (isDemoMode) return mock.demoGetOpuSession(id);
+  const { data, error } = await supabase!.from("opu_sessions").select("*").eq("id", id).single();
+  if (error) return undefined;
+  return data as OpuSession;
+}
+
+export async function createOpuSession(
+  input: Omit<OpuSession, "id" | "created_at">
+): Promise<OpuSession> {
+  if (isDemoMode) return mock.demoCreateOpuSession(input);
+  const { data, error } = await supabase!.from("opu_sessions").insert(input).select().single();
+  if (error) throw error;
+  return data as OpuSession;
+}
+
+export async function listEmbryos(opuSessionId?: string): Promise<Embryo[]> {
+  if (isDemoMode) return mock.demoListEmbryos(opuSessionId);
+  let query = supabase!.from("embryos").select("*").order("label", { ascending: true });
+  if (opuSessionId) query = query.eq("opu_session_id", opuSessionId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as Embryo[];
+}
+
+export async function listEmbryosForRecipient(animalId: string): Promise<Embryo[]> {
+  if (isDemoMode) return mock.demoListEmbryosForRecipient(animalId);
+  const { data, error } = await supabase!.from("embryos").select("*").eq("recipient_animal_id", animalId);
+  if (error) throw error;
+  return data as Embryo[];
+}
+
+export async function getEmbryo(id: string): Promise<Embryo | undefined> {
+  if (isDemoMode) return mock.demoGetEmbryo(id);
+  const { data, error } = await supabase!.from("embryos").select("*").eq("id", id).single();
+  if (error) return undefined;
+  return data as Embryo;
+}
+
+export async function createEmbryo(
+  input: Omit<Embryo, "id" | "created_at" | "updated_at">
+): Promise<Embryo> {
+  if (isDemoMode) return mock.demoCreateEmbryo(input);
+  const { data, error } = await supabase!.from("embryos").insert(input).select().single();
+  if (error) throw error;
+  return data as Embryo;
+}
+
+export async function updateEmbryo(id: string, patch: Partial<Embryo>): Promise<Embryo | undefined> {
+  if (isDemoMode) return mock.demoUpdateEmbryo(id, patch);
+  const { data, error } = await supabase!.from("embryos").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data as Embryo;
 }

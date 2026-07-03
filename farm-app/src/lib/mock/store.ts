@@ -1,9 +1,11 @@
-import { Animal, Bull, Insemination, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
+import { Animal, Bull, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
 import {
   DEMO_USER_ID,
   seedAnimals,
   seedBulls,
+  seedEmbryos,
   seedInseminations,
+  seedOpuSessions,
   seedProfiles,
   seedSemenInventory,
   seedTasks,
@@ -21,6 +23,8 @@ interface DemoDb {
   bulls: Bull[];
   semenInventory: SemenInventory[];
   inseminations: Insemination[];
+  opuSessions: OpuSession[];
+  embryos: Embryo[];
 }
 
 function initialDb(): DemoDb {
@@ -32,6 +36,8 @@ function initialDb(): DemoDb {
     bulls: seedBulls,
     semenInventory: seedSemenInventory,
     inseminations: seedInseminations,
+    opuSessions: seedOpuSessions,
+    embryos: seedEmbryos,
   };
 }
 
@@ -54,6 +60,8 @@ function loadDb(): DemoDb {
     bulls: parsed.bulls ?? seedBulls,
     semenInventory: parsed.semenInventory ?? seedSemenInventory,
     inseminations: parsed.inseminations ?? seedInseminations,
+    opuSessions: parsed.opuSessions ?? seedOpuSessions,
+    embryos: parsed.embryos ?? seedEmbryos,
   };
 }
 
@@ -257,4 +265,53 @@ export function demoUpdateInsemination(id: string, patch: Partial<Insemination>)
   db.inseminations[idx] = { ...db.inseminations[idx], ...patch };
   saveDb(db);
   return db.inseminations[idx];
+}
+
+// --- OPU sessions & embryos ---
+
+export function demoListOpuSessions(): OpuSession[] {
+  return loadDb().opuSessions.sort((a, b) => b.session_date.localeCompare(a.session_date));
+}
+
+export function demoGetOpuSession(id: string): OpuSession | undefined {
+  return loadDb().opuSessions.find((s) => s.id === id);
+}
+
+export function demoCreateOpuSession(input: Omit<OpuSession, "id" | "created_at">): OpuSession {
+  const db = loadDb();
+  const session: OpuSession = { ...input, id: newId("opu"), created_at: new Date().toISOString() };
+  db.opuSessions.push(session);
+  saveDb(db);
+  return session;
+}
+
+export function demoListEmbryos(opuSessionId?: string): Embryo[] {
+  const all = loadDb().embryos.sort((a, b) => a.label.localeCompare(b.label));
+  return opuSessionId ? all.filter((e) => e.opu_session_id === opuSessionId) : all;
+}
+
+export function demoListEmbryosForRecipient(animalId: string): Embryo[] {
+  return loadDb().embryos.filter((e) => e.recipient_animal_id === animalId);
+}
+
+export function demoGetEmbryo(id: string): Embryo | undefined {
+  return loadDb().embryos.find((e) => e.id === id);
+}
+
+export function demoCreateEmbryo(input: Omit<Embryo, "id" | "created_at" | "updated_at">): Embryo {
+  const db = loadDb();
+  const now = new Date().toISOString();
+  const embryo: Embryo = { ...input, id: newId("embryo"), created_at: now, updated_at: now };
+  db.embryos.push(embryo);
+  saveDb(db);
+  return embryo;
+}
+
+export function demoUpdateEmbryo(id: string, patch: Partial<Embryo>): Embryo | undefined {
+  const db = loadDb();
+  const idx = db.embryos.findIndex((e) => e.id === id);
+  if (idx === -1) return undefined;
+  db.embryos[idx] = { ...db.embryos[idx], ...patch, updated_at: new Date().toISOString() };
+  saveDb(db);
+  return db.embryos[idx];
 }

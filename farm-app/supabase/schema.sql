@@ -120,6 +120,41 @@ create table if not exists inseminations (
 create index if not exists inseminations_animal_idx on inseminations (animal_id);
 create index if not exists inseminations_date_idx on inseminations (insemination_date);
 
+-- 8. OPU (Ovum Pick Up) seanslari
+create table if not exists opu_sessions (
+  id uuid primary key default gen_random_uuid(),
+  donor_animal_id uuid not null references animals (id) on delete cascade,
+  session_date date not null default current_date,
+  technician_name text,
+  oocyte_count integer check (oocyte_count >= 0),
+  notes text,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists opu_sessions_donor_idx on opu_sessions (donor_animal_id);
+create index if not exists opu_sessions_date_idx on opu_sessions (session_date);
+
+-- 9. Embriyolar (laboratuvar ortaminda gelisim takibi)
+create table if not exists embryos (
+  id uuid primary key default gen_random_uuid(),
+  opu_session_id uuid not null references opu_sessions (id) on delete cascade,
+  label text not null,
+  grade text check (grade in ('1', '2', '3', '4')),
+  stage text check (stage in ('morula', 'erken_blastosist', 'blastosist', 'genisleyen_blastosist', 'yumurtadan_cikan_blastosist')),
+  day_reached integer,
+  status text not null default 'gelisiyor' check (status in ('gelisiyor', 'dondu', 'transfer_edildi', 'atildi')),
+  recipient_animal_id uuid references animals (id),
+  transfer_date date,
+  notes text,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists embryos_session_idx on embryos (opu_session_id);
+create index if not exists embryos_recipient_idx on embryos (recipient_animal_id);
+
 -- Row Level Security: giris yapmis herkes (10 kisilik guvenilir ekip) okuyup yazabilir
 alter table profiles enable row level security;
 alter table animals enable row level security;
@@ -128,6 +163,8 @@ alter table tasks enable row level security;
 alter table bulls enable row level security;
 alter table semen_inventory enable row level security;
 alter table inseminations enable row level security;
+alter table opu_sessions enable row level security;
+alter table embryos enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
@@ -138,3 +175,5 @@ create policy "tasks_all_authenticated" on tasks for all to authenticated using 
 create policy "bulls_all_authenticated" on bulls for all to authenticated using (true) with check (true);
 create policy "semen_inventory_all_authenticated" on semen_inventory for all to authenticated using (true) with check (true);
 create policy "inseminations_all_authenticated" on inseminations for all to authenticated using (true) with check (true);
+create policy "opu_sessions_all_authenticated" on opu_sessions for all to authenticated using (true) with check (true);
+create policy "embryos_all_authenticated" on embryos for all to authenticated using (true) with check (true);

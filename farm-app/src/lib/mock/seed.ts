@@ -1,4 +1,4 @@
-import { Animal, Bull, Insemination, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
+import { Animal, Bull, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -202,5 +202,66 @@ export const seedInseminations: Insemination[] = [
     notes: "Kontrol icin 30 gun sonra tekrar bakilacak.",
     created_by: "demo-user-2",
     created_at: daysAgo(4),
+  },
+];
+
+export const seedOpuSessions: OpuSession[] = [
+  {
+    id: "opu-1",
+    donor_animal_id: "animal-2",
+    session_date: daysAgo(10),
+    technician_name: "Dr. Ayse Kaya",
+    oocyte_count: 14,
+    notes: "Donor hayvan iyi tepki verdi.",
+    created_by: "demo-user-2",
+    created_at: daysAgo(10),
+  },
+];
+
+export const seedEmbryos: Embryo[] = [
+  {
+    id: "embryo-1",
+    opu_session_id: "opu-1",
+    label: "E1",
+    grade: "1",
+    stage: "blastosist",
+    day_reached: 7,
+    status: "dondu",
+    recipient_animal_id: null,
+    transfer_date: null,
+    notes: null,
+    created_by: "demo-user-2",
+    created_at: daysAgo(3),
+    updated_at: daysAgo(3),
+  },
+  {
+    id: "embryo-2",
+    opu_session_id: "opu-1",
+    label: "E2",
+    grade: "2",
+    stage: "genisleyen_blastosist",
+    day_reached: 7,
+    status: "transfer_edildi",
+    recipient_animal_id: "animal-3",
+    transfer_date: daysAgo(2),
+    notes: "Aliciya taze transfer edildi.",
+    created_by: "demo-user-2",
+    created_at: daysAgo(3),
+    updated_at: daysAgo(2),
+  },
+  {
+    id: "embryo-3",
+    opu_session_id: "opu-1",
+    label: "E3",
+    grade: "3",
+    stage: "erken_blastosist",
+    day_reached: 6,
+    status: "gelisiyor",
+    recipient_animal_id: null,
+    transfer_date: null,
+    notes: "Gelisimi izleniyor.",
+    created_by: "demo-user-2",
+    created_at: daysAgo(3),
+    updated_at: daysAgo(1),
   },
 ];

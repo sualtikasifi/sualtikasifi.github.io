@@ -10,6 +10,7 @@ const links = [
   { href: "/treatments", label: "Tedaviler" },
   { href: "/inseminations", label: "Tohumlama" },
   { href: "/bulls", label: "Bogalar" },
+  { href: "/opu", label: "OPU/Embriyo" },
   { href: "/tasks", label: "Gorevler" },
 ];
 

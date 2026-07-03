@@ -11,6 +11,10 @@ const COLORS: Record<string, string> = {
   bekleniyor: "bg-amber-100 text-amber-800",
   gebe: "bg-green-100 text-green-800",
   gebe_degil: "bg-neutral-200 text-neutral-600",
+  gelisiyor: "bg-amber-100 text-amber-800",
+  dondu: "bg-blue-100 text-blue-800",
+  transfer_edildi: "bg-green-100 text-green-800",
+  atildi: "bg-neutral-200 text-neutral-600",
 };
 
 const LABELS: Record<string, string> = {
@@ -29,6 +33,15 @@ const LABELS: Record<string, string> = {
   bekleniyor: "Bekleniyor",
   gebe: "Gebe",
   gebe_degil: "Gebe degil",
+  gelisiyor: "Gelisiyor",
+  dondu: "Dondu",
+  transfer_edildi: "Transfer edildi",
+  atildi: "Atildi",
+  morula: "Morula",
+  erken_blastosist: "Erken Blastosist",
+  blastosist: "Blastosist",
+  genisleyen_blastosist: "Genisleyen Blastosist",
+  yumurtadan_cikan_blastosist: "Yumurtadan Cikan Blastosist",
 };
 
 export function Badge({ value }: { value: string }) {

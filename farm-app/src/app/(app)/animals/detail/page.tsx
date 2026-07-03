@@ -3,8 +3,17 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getAnimal, listBulls, listInseminations, listTreatments, updateAnimal } from "@/lib/data";
-import { Animal, AnimalStatus, Bull, Insemination, Treatment } from "@/lib/types";
+import {
+  getAnimal,
+  listAnimals,
+  listBulls,
+  listEmbryosForRecipient,
+  listInseminations,
+  listOpuSessions,
+  listTreatments,
+  updateAnimal,
+} from "@/lib/data";
+import { Animal, AnimalStatus, Bull, Embryo, Insemination, OpuSession, Treatment } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate } from "@/lib/format";
 
@@ -23,19 +32,33 @@ function AnimalDetailContent() {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [inseminations, setInseminations] = useState<Insemination[]>([]);
   const [bulls, setBulls] = useState<Bull[]>([]);
+  const [donorSessions, setDonorSessions] = useState<OpuSession[]>([]);
+  const [receivedEmbryos, setReceivedEmbryos] = useState<Embryo[]>([]);
+  const [opuSessions, setOpuSessions] = useState<OpuSession[]>([]);
+  const [allAnimals, setAllAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([getAnimal(id), listTreatments(id), listInseminations(id), listBulls()]).then(
-      ([a, t, ins, b]) => {
-        setAnimal(a ?? null);
-        setTreatments(t);
-        setInseminations(ins);
-        setBulls(b);
-        setLoading(false);
-      }
-    );
+    Promise.all([
+      getAnimal(id),
+      listTreatments(id),
+      listInseminations(id),
+      listBulls(),
+      listOpuSessions(),
+      listEmbryosForRecipient(id),
+      listAnimals(),
+    ]).then(([a, t, ins, b, sessions, received, animals]) => {
+      setAnimal(a ?? null);
+      setTreatments(t);
+      setInseminations(ins);
+      setBulls(b);
+      setOpuSessions(sessions);
+      setDonorSessions(sessions.filter((s) => s.donor_animal_id === id));
+      setReceivedEmbryos(received);
+      setAllAnimals(animals);
+      setLoading(false);
+    });
   }, [id]);
 
   async function handleStatusChange(status: AnimalStatus) {
@@ -171,6 +194,51 @@ function AnimalDetailContent() {
           </div>
         )}
       </div>
+
+      {donorSessions.length > 0 && (
+        <div className="rounded-lg border border-neutral-200 bg-white p-4">
+          <h2 className="mb-2 text-sm font-semibold text-neutral-800">Donor oldugu OPU seanslari</h2>
+          <div className="divide-y divide-neutral-100">
+            {donorSessions.map((s) => (
+              <Link
+                key={s.id}
+                href={`/opu/detail?id=${s.id}`}
+                className="flex items-center justify-between py-2 text-sm hover:bg-neutral-50"
+              >
+                <span>{s.oocyte_count ?? "-"} oosit</span>
+                <span className="text-neutral-400">{formatDate(s.session_date)}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {receivedEmbryos.length > 0 && (
+        <div className="rounded-lg border border-neutral-200 bg-white p-4">
+          <h2 className="mb-2 text-sm font-semibold text-neutral-800">Alici olarak transfer edilen embriyolar</h2>
+          <div className="divide-y divide-neutral-100">
+            {receivedEmbryos.map((e) => (
+              <Link
+                key={e.id}
+                href={`/embryos/detail?id=${e.id}`}
+                className="flex items-center justify-between py-2 text-sm hover:bg-neutral-50"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{e.label}</span>
+                  <span className="text-xs text-neutral-500">
+                    (donor: {(() => {
+                      const session = opuSessions.find((s) => s.id === e.opu_session_id);
+                      const donorAnimal = session && allAnimals.find((a) => a.id === session.donor_animal_id);
+                      return donorAnimal?.ear_tag ?? "-";
+                    })()})
+                  </span>
+                </div>
+                <span className="text-neutral-400">{formatDate(e.transfer_date)}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
