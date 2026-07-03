@@ -1,8 +1,20 @@
-import { Animal, Bull, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
+import {
+  Animal,
+  Bull,
+  CalfFeeding,
+  Embryo,
+  Insemination,
+  OpuSession,
+  Profile,
+  SemenInventory,
+  Task,
+  Treatment,
+} from "@/lib/types";
 import {
   DEMO_USER_ID,
   seedAnimals,
   seedBulls,
+  seedCalfFeedings,
   seedEmbryos,
   seedInseminations,
   seedOpuSessions,
@@ -25,6 +37,7 @@ interface DemoDb {
   inseminations: Insemination[];
   opuSessions: OpuSession[];
   embryos: Embryo[];
+  calfFeedings: CalfFeeding[];
 }
 
 function initialDb(): DemoDb {
@@ -38,6 +51,7 @@ function initialDb(): DemoDb {
     inseminations: seedInseminations,
     opuSessions: seedOpuSessions,
     embryos: seedEmbryos,
+    calfFeedings: seedCalfFeedings,
   };
 }
 
@@ -62,6 +76,7 @@ function loadDb(): DemoDb {
     inseminations: parsed.inseminations ?? seedInseminations,
     opuSessions: parsed.opuSessions ?? seedOpuSessions,
     embryos: parsed.embryos ?? seedEmbryos,
+    calfFeedings: parsed.calfFeedings ?? seedCalfFeedings,
   };
 }
 
@@ -363,4 +378,46 @@ export function demoUpdateEmbryo(id: string, patch: Partial<Embryo>): Embryo | u
   db.embryos[idx] = { ...db.embryos[idx], ...patch, updated_at: new Date().toISOString() };
   saveDb(db);
   return db.embryos[idx];
+}
+
+// --- Calf feedings ---
+
+export function demoListCalfFeedings(animalId?: string): CalfFeeding[] {
+  const all = loadDb().calfFeedings.sort((a, b) => b.fed_at.localeCompare(a.fed_at));
+  return animalId ? all.filter((f) => f.animal_id === animalId) : all;
+}
+
+export function demoCreateCalfFeeding(
+  input: Omit<CalfFeeding, "id" | "created_at" | "exam_result" | "examined_by" | "examined_at">
+): CalfFeeding {
+  const db = loadDb();
+  const feeding: CalfFeeding = {
+    ...input,
+    id: newId("feed"),
+    exam_result: null,
+    examined_by: null,
+    examined_at: null,
+    created_at: new Date().toISOString(),
+  };
+  db.calfFeedings.push(feeding);
+  saveDb(db);
+  return feeding;
+}
+
+export function demoSetCalfFeedingExam(
+  id: string,
+  examResult: string,
+  examinedBy: string
+): CalfFeeding | undefined {
+  const db = loadDb();
+  const idx = db.calfFeedings.findIndex((f) => f.id === id);
+  if (idx === -1) return undefined;
+  db.calfFeedings[idx] = {
+    ...db.calfFeedings[idx],
+    exam_result: examResult,
+    examined_by: examinedBy,
+    examined_at: new Date().toISOString(),
+  };
+  saveDb(db);
+  return db.calfFeedings[idx];
 }

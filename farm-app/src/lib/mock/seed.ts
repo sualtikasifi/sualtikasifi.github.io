@@ -1,4 +1,4 @@
-import { Animal, Bull, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
+import { Animal, Bull, CalfFeeding, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -19,6 +19,11 @@ const daysFromNow = (n: number) => {
   const d = new Date(today);
   d.setDate(d.getDate() + n);
   return iso(d);
+};
+const hoursAgo = (n: number) => {
+  const d = new Date(today);
+  d.setHours(d.getHours() - n);
+  return d.toISOString();
 };
 
 export const seedAnimals: Animal[] = [
@@ -326,5 +331,46 @@ export const seedEmbryos: Embryo[] = [
     created_by: "demo-user-2",
     created_at: daysAgo(3),
     updated_at: daysAgo(1),
+  },
+];
+
+// Sarikiz (animal-1) icin: ilk ogun ictı, sonraki iki ogunu ardarda icmedi
+// (streak = 2 -> "Uyari" durumu, muayene sonucu henuz girilmedi).
+export const seedCalfFeedings: CalfFeeding[] = [
+  {
+    id: "feed-1",
+    animal_id: "animal-1",
+    fed_at: hoursAgo(16),
+    drank: true,
+    notes: null,
+    exam_result: null,
+    examined_by: null,
+    examined_at: null,
+    created_by: "demo-user-3",
+    created_at: hoursAgo(16),
+  },
+  {
+    id: "feed-2",
+    animal_id: "animal-1",
+    fed_at: hoursAgo(10),
+    drank: false,
+    notes: "Isteksizdi, biberonu itti.",
+    exam_result: null,
+    examined_by: null,
+    examined_at: null,
+    created_by: "demo-user-3",
+    created_at: hoursAgo(10),
+  },
+  {
+    id: "feed-3",
+    animal_id: "animal-1",
+    fed_at: hoursAgo(4),
+    drank: false,
+    notes: null,
+    exam_result: null,
+    examined_by: null,
+    examined_at: null,
+    created_by: "demo-user-3",
+    created_at: hoursAgo(4),
   },
 ];

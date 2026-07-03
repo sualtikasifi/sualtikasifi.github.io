@@ -7,13 +7,14 @@ import {
   getAnimal,
   listAnimals,
   listBulls,
+  listCalfFeedings,
   listEmbryosForRecipient,
   listInseminations,
   listOpuSessions,
   listTreatments,
   updateAnimal,
 } from "@/lib/data";
-import { Animal, AnimalStatus, Bull, Embryo, Insemination, OpuSession, Treatment } from "@/lib/types";
+import { Animal, AnimalStatus, Bull, CalfFeeding, Embryo, Insemination, OpuSession, Treatment } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate } from "@/lib/format";
 
@@ -36,6 +37,7 @@ function AnimalDetailContent() {
   const [receivedEmbryos, setReceivedEmbryos] = useState<Embryo[]>([]);
   const [opuSessions, setOpuSessions] = useState<OpuSession[]>([]);
   const [allAnimals, setAllAnimals] = useState<Animal[]>([]);
+  const [feedings, setFeedings] = useState<CalfFeeding[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,7 +50,8 @@ function AnimalDetailContent() {
       listOpuSessions(),
       listEmbryosForRecipient(id),
       listAnimals(),
-    ]).then(([a, t, ins, b, sessions, received, animals]) => {
+      listCalfFeedings(id),
+    ]).then(([a, t, ins, b, sessions, received, animals, feed]) => {
       setAnimal(a ?? null);
       setTreatments(t);
       setInseminations(ins);
@@ -57,6 +60,7 @@ function AnimalDetailContent() {
       setDonorSessions(sessions.filter((s) => s.donor_animal_id === id));
       setReceivedEmbryos(received);
       setAllAnimals(animals);
+      setFeedings(feed);
       setLoading(false);
     });
   }, [id]);
@@ -169,6 +173,53 @@ function AnimalDetailContent() {
           </div>
         )}
       </div>
+
+      {!animal.weaned_at && (
+        <div className="rounded-lg border border-neutral-200 bg-white p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-neutral-800">Mama icme gecmisi</h2>
+            <Link href="/calves" className="text-xs font-medium text-green-700 hover:underline">
+              Buzagilar sayfasina git
+            </Link>
+          </div>
+          {feedings.length === 0 ? (
+            <p className="text-sm text-neutral-400">Kayit yok.</p>
+          ) : (
+            <div className="divide-y divide-neutral-100">
+              {feedings.map((f) => (
+                <div key={f.id} className="py-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                          f.drank ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800"
+                        }`}
+                      >
+                        {f.drank ? "✓" : "✗"}
+                      </span>
+                      <span className="text-neutral-700">{f.drank ? "Icti" : "Icmedi"}</span>
+                      {f.notes && <span className="text-neutral-400">- {f.notes}</span>}
+                    </div>
+                    <span className="text-neutral-400">
+                    {new Date(f.fed_at).toLocaleString("tr-TR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                    </span>
+                  </div>
+                  {f.exam_result && (
+                    <p className="mt-1 rounded-md bg-neutral-50 px-2 py-1 text-xs text-neutral-600">
+                      Muayene sonucu: {f.exam_result}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-lg border border-neutral-200 bg-white p-4">
         <h2 className="mb-2 text-sm font-semibold text-neutral-800">Tohumlama gecmisi</h2>

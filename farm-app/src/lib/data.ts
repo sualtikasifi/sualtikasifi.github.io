@@ -1,6 +1,6 @@
 import { isDemoMode, supabase } from "./supabaseClient";
 import * as mock from "./mock/store";
-import { Animal, Bull, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "./types";
+import { Animal, Bull, CalfFeeding, Embryo, Insemination, OpuSession, Profile, SemenInventory, Task, Treatment } from "./types";
 
 export { isDemoMode };
 
@@ -295,4 +295,40 @@ export async function updateEmbryo(id: string, patch: Partial<Embryo>): Promise<
   const { data, error } = await supabase!.from("embryos").update(patch).eq("id", id).select().single();
   if (error) throw error;
   return data as Embryo;
+}
+
+// --- Calf feedings ---
+
+export async function listCalfFeedings(animalId?: string): Promise<CalfFeeding[]> {
+  if (isDemoMode) return mock.demoListCalfFeedings(animalId);
+  let query = supabase!.from("calf_feedings").select("*").order("fed_at", { ascending: false });
+  if (animalId) query = query.eq("animal_id", animalId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as CalfFeeding[];
+}
+
+export async function createCalfFeeding(
+  input: Omit<CalfFeeding, "id" | "created_at" | "exam_result" | "examined_by" | "examined_at">
+): Promise<CalfFeeding> {
+  if (isDemoMode) return mock.demoCreateCalfFeeding(input);
+  const { data, error } = await supabase!.from("calf_feedings").insert(input).select().single();
+  if (error) throw error;
+  return data as CalfFeeding;
+}
+
+export async function setCalfFeedingExam(
+  id: string,
+  examResult: string,
+  examinedBy: string
+): Promise<CalfFeeding | undefined> {
+  if (isDemoMode) return mock.demoSetCalfFeedingExam(id, examResult, examinedBy);
+  const { data, error } = await supabase!
+    .from("calf_feedings")
+    .update({ exam_result: examResult, examined_by: examinedBy, examined_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfFeeding;
 }

@@ -169,6 +169,25 @@ create table if not exists embryos (
 create index if not exists embryos_session_idx on embryos (opu_session_id);
 create index if not exists embryos_recipient_idx on embryos (recipient_animal_id);
 
+-- 10. Buzagi besleme kayitlari (her ogunde ictimi/icmedi mi takibi)
+-- Ardarda 2 kez icmezse muayene gerekir; muayene sonucu bu kayda (en son kacirilan
+-- ogune) yazilir. Sonuc girilmeden uyari kalkmaz.
+create table if not exists calf_feedings (
+  id uuid primary key default gen_random_uuid(),
+  animal_id uuid not null references animals (id) on delete cascade,
+  fed_at timestamptz not null default now(),
+  drank boolean not null,
+  notes text,
+  exam_result text,
+  examined_by uuid references profiles (id),
+  examined_at timestamptz,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists calf_feedings_animal_idx on calf_feedings (animal_id);
+create index if not exists calf_feedings_fed_at_idx on calf_feedings (fed_at);
+
 -- Row Level Security: giris yapmis herkes (10 kisilik guvenilir ekip) okuyup yazabilir
 alter table profiles enable row level security;
 alter table animals enable row level security;
@@ -179,6 +198,7 @@ alter table semen_inventory enable row level security;
 alter table inseminations enable row level security;
 alter table opu_sessions enable row level security;
 alter table embryos enable row level security;
+alter table calf_feedings enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
@@ -191,3 +211,4 @@ create policy "semen_inventory_all_authenticated" on semen_inventory for all to 
 create policy "inseminations_all_authenticated" on inseminations for all to authenticated using (true) with check (true);
 create policy "opu_sessions_all_authenticated" on opu_sessions for all to authenticated using (true) with check (true);
 create policy "embryos_all_authenticated" on embryos for all to authenticated using (true) with check (true);
+create policy "calf_feedings_all_authenticated" on calf_feedings for all to authenticated using (true) with check (true);
