@@ -23,6 +23,7 @@ function NewMastitisContent() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [animalSearch, setAnimalSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [udderQuarters, setUdderQuarters] = useState<UdderQuarter[]>([]);
   const [form, setForm] = useState({
     animal_id: preselectedAnimalId,
@@ -57,24 +58,29 @@ function NewMastitisContent() {
     e.preventDefault();
     if (!form.animal_id || udderQuarters.length === 0) return;
     setSubmitting(true);
-    await Promise.all(
-      udderQuarters.map((udder_quarter) =>
-        createMastitisTreatment({
-          animal_id: form.animal_id,
-          udder_quarter,
-          start_date: form.start_date,
-          protocol_days: form.protocol_days,
-          withdrawal_days: form.withdrawal_days,
-          diagnosis: form.diagnosis.trim() || null,
-          medication: form.medication.trim() || null,
-          vet_name: form.vet_name.trim() || null,
-          notes: form.notes.trim() || null,
-          created_by: profile?.id ?? null,
-        })
-      )
-    );
-    setSubmitting(false);
-    router.push("/treatments");
+    setError(null);
+    try {
+      await Promise.all(
+        udderQuarters.map((udder_quarter) =>
+          createMastitisTreatment({
+            animal_id: form.animal_id,
+            udder_quarter,
+            start_date: form.start_date,
+            protocol_days: form.protocol_days,
+            withdrawal_days: form.withdrawal_days,
+            diagnosis: form.diagnosis.trim() || null,
+            medication: form.medication.trim() || null,
+            vet_name: form.vet_name.trim() || null,
+            notes: form.notes.trim() || null,
+            created_by: profile?.id ?? null,
+          })
+        )
+      );
+      router.push("/treatments");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kaydedilirken bir hata olustu.");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -192,6 +198,8 @@ function NewMastitisContent() {
         <Field label="Notlar">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} className="input" rows={3} />
         </Field>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button
           type="submit"
