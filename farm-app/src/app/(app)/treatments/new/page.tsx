@@ -23,9 +23,9 @@ function NewMastitisContent() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [animalSearch, setAnimalSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [udderQuarters, setUdderQuarters] = useState<UdderQuarter[]>([]);
   const [form, setForm] = useState({
     animal_id: preselectedAnimalId,
-    udder_quarter: "" as UdderQuarter | "",
     start_date: new Date().toISOString().slice(0, 10),
     protocol_days: 4,
     withdrawal_days: 3,
@@ -34,6 +34,10 @@ function NewMastitisContent() {
     vet_name: "",
     notes: "",
   });
+
+  function toggleUdderQuarter(q: UdderQuarter) {
+    setUdderQuarters((prev) => (prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q]));
+  }
 
   useEffect(() => {
     listAnimals().then(setAnimals);
@@ -51,20 +55,24 @@ function NewMastitisContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.animal_id || !form.udder_quarter) return;
+    if (!form.animal_id || udderQuarters.length === 0) return;
     setSubmitting(true);
-    await createMastitisTreatment({
-      animal_id: form.animal_id,
-      udder_quarter: form.udder_quarter,
-      start_date: form.start_date,
-      protocol_days: form.protocol_days,
-      withdrawal_days: form.withdrawal_days,
-      diagnosis: form.diagnosis.trim() || null,
-      medication: form.medication.trim() || null,
-      vet_name: form.vet_name.trim() || null,
-      notes: form.notes.trim() || null,
-      created_by: profile?.id ?? null,
-    });
+    await Promise.all(
+      udderQuarters.map((udder_quarter) =>
+        createMastitisTreatment({
+          animal_id: form.animal_id,
+          udder_quarter,
+          start_date: form.start_date,
+          protocol_days: form.protocol_days,
+          withdrawal_days: form.withdrawal_days,
+          diagnosis: form.diagnosis.trim() || null,
+          medication: form.medication.trim() || null,
+          vet_name: form.vet_name.trim() || null,
+          notes: form.notes.trim() || null,
+          created_by: profile?.id ?? null,
+        })
+      )
+    );
     setSubmitting(false);
     router.push("/treatments");
   }
@@ -105,19 +113,40 @@ function NewMastitisContent() {
           )}
         </FieldBlock>
 
-        <Field label="Meme *">
-          <select
-            value={form.udder_quarter}
-            onChange={(e) => update("udder_quarter", e.target.value as UdderQuarter)}
-            className="input"
-          >
-            <option value="">Secin</option>
-            <option value="on_sol">On Sol</option>
-            <option value="on_sag">On Sag</option>
-            <option value="arka_sol">Arka Sol</option>
-            <option value="arka_sag">Arka Sag</option>
-          </select>
-        </Field>
+        <FieldBlock label="Meme * (birden fazla secilebilir)">
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ["on_sol", "On Sol"],
+                ["on_sag", "On Sag"],
+                ["arka_sol", "Arka Sol"],
+                ["arka_sag", "Arka Sag"],
+              ] as [UdderQuarter, string][]
+            ).map(([value, label]) => (
+              <label
+                key={value}
+                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                  udderQuarters.includes(value)
+                    ? "border-green-600 bg-green-50 text-green-800"
+                    : "border-neutral-300 text-neutral-700"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={udderQuarters.includes(value)}
+                  onChange={() => toggleUdderQuarter(value)}
+                  className="h-4 w-4"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          {udderQuarters.length > 1 && (
+            <p className="mt-1 text-xs text-neutral-500">
+              Secilen her meme icin ayri bir tedavi kaydi olusturulacak.
+            </p>
+          )}
+        </FieldBlock>
 
         <div className="grid grid-cols-3 gap-3">
           <Field label="Baslangic tarihi">
@@ -166,7 +195,7 @@ function NewMastitisContent() {
 
         <button
           type="submit"
-          disabled={submitting || !form.animal_id || !form.udder_quarter}
+          disabled={submitting || !form.animal_id || udderQuarters.length === 0}
           className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
         >
           {submitting ? "Kaydediliyor..." : "Kaydet"}
