@@ -9,7 +9,7 @@ import { Badge } from "@/components/Badge";
 
 export default function EmbryoDetailPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-neutral-500">Yukleniyor...</p>}>
+    <Suspense fallback={<p className="text-sm text-neutral-500">Yükleniyor...</p>}>
       <EmbryoDetailContent />
     </Suspense>
   );
@@ -82,18 +82,18 @@ function EmbryoDetailContent() {
   }
 
   if (!id) return <p className="text-sm text-red-600">Embriyo belirtilmedi.</p>;
-  if (loading) return <p className="text-sm text-neutral-500">Yukleniyor...</p>;
-  if (!embryo) return <p className="text-sm text-red-600">Kayit bulunamadi.</p>;
+  if (loading) return <p className="text-sm text-neutral-500">Yükleniyor...</p>;
+  if (!embryo) return <p className="text-sm text-red-600">Kayıt bulunamadı.</p>;
 
   return (
     <div className="max-w-lg space-y-4">
       <div>
         <h1 className="text-lg font-semibold text-neutral-900">Embriyo {embryo.label}</h1>
         <p className="text-sm text-neutral-500">
-          Donor: {donor?.ear_tag ?? "?"} &middot;{" "}
+          Donör: {donor?.ear_tag ?? "?"} &middot;{" "}
           {session && (
             <Link href={`/opu/detail?id=${session.id}`} className="text-green-700 hover:underline">
-              OPU seansina git
+              OPU seansına git
             </Link>
           )}
         </p>
@@ -102,56 +102,56 @@ function EmbryoDetailContent() {
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+      <form onSubmit={handleSave} className="card space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Grade (kalite)">
             <select value={grade} onChange={(e) => setGrade(e.target.value as EmbryoGrade)} className="input">
-              <option value="">Secilmedi</option>
+              <option value="">Seçilmedi</option>
               <option value="1">1</option>
               <option value="2">2</option>
               <option value="3">3</option>
               <option value="4">4</option>
             </select>
           </Field>
-          <Field label="Gun (Dx)">
+          <Field label="Gün (Dx)">
             <input type="number" min={0} value={dayReached} onChange={(e) => setDayReached(e.target.value)} className="input" />
           </Field>
         </div>
 
-        <Field label="Gelisim asamasi">
+        <Field label="Gelişim aşaması">
           <select value={stage} onChange={(e) => setStage(e.target.value as EmbryoStage)} className="input">
-            <option value="">Secilmedi</option>
+            <option value="">Seçilmedi</option>
             <option value="morula">Morula</option>
             <option value="erken_blastosist">Erken Blastosist</option>
             <option value="blastosist">Blastosist</option>
-            <option value="genisleyen_blastosist">Genisleyen Blastosist</option>
-            <option value="yumurtadan_cikan_blastosist">Yumurtadan Cikan Blastosist</option>
+            <option value="genisleyen_blastosist">Genişleyen Blastosist</option>
+            <option value="yumurtadan_cikan_blastosist">Yumurtadan Çıkan Blastosist</option>
           </select>
         </Field>
 
         <Field label="Durum">
           <select value={status} onChange={(e) => setStatus(e.target.value as EmbryoStatus)} className="input">
-            <option value="gelisiyor">Gelisiyor</option>
-            <option value="dondu">Dondu</option>
+            <option value="gelisiyor">Gelişiyor</option>
+            <option value="dondu">Donduruldu</option>
             <option value="transfer_edildi">Transfer edildi</option>
-            <option value="atildi">Atildi</option>
+            <option value="atildi">Atıldı</option>
           </select>
         </Field>
 
         {status === "transfer_edildi" && (
           <>
-            <FieldBlock label="Alici hayvan">
+            <FieldBlock label="Alıcı hayvan">
               {recipientId ? (
                 <div className="flex items-center justify-between rounded-md border border-neutral-300 px-3 py-2 text-sm">
                   <span>{animals.find((a) => a.id === recipientId)?.ear_tag}</span>
                   <button type="button" onClick={() => setRecipientId(null)} className="text-xs text-green-700">
-                    Degistir
+                    Değiştir
                   </button>
                 </div>
               ) : (
                 <div>
                   <input
-                    placeholder="Kupe no ile ara..."
+                    placeholder="Küpe no ile ara..."
                     value={animalSearch}
                     onChange={(e) => setAnimalSearch(e.target.value)}
                     className="input"
@@ -182,11 +182,7 @@ function EmbryoDetailContent() {
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={3} />
         </Field>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-        >
+        <button type="submit" disabled={saving} className="btn-primary">
           {saving ? "Kaydediliyor..." : "Kaydet"}
         </button>
       </form>

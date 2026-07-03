@@ -29,17 +29,17 @@ export default function InseminationsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Tohumlamalar</h1>
-        <Link href="/inseminations/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800">
+        <Link href="/inseminations/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
           Yeni tohumlama
         </Link>
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Yukleniyor...</p>
+        <p className="text-sm text-neutral-500">Yükleniyor...</p>
       ) : inseminations.length === 0 ? (
-        <p className="text-sm text-neutral-400">Kayit yok.</p>
+        <p className="text-sm text-neutral-400">Kayıt yok.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+        <div className="card-list">
           {inseminations.map((i) => (
             <div key={i.id} className="border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
               <div className="flex items-center justify-between">
@@ -53,7 +53,7 @@ export default function InseminationsPage() {
                   <Badge value={i.pregnancy_result} />
                 </div>
               </div>
-              {i.technician_name && <p className="mt-1 text-neutral-500">Tohumlayici: {i.technician_name}</p>}
+              {i.technician_name && <p className="mt-1 text-neutral-500">Tohumlayıcı: {i.technician_name}</p>}
               {i.pregnancy_check_date && (
                 <p className="text-neutral-500">Gebelik kontrol tarihi: {formatDate(i.pregnancy_check_date)}</p>
               )}

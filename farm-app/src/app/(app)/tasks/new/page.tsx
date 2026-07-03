@@ -52,12 +52,12 @@ export default function NewTaskPage() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">Yeni gorev</h1>
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <Field label="Baslik *">
+      <h1 className="text-lg font-semibold text-neutral-900">Yeni görev</h1>
+      <form onSubmit={handleSubmit} className="card space-y-3">
+        <Field label="Başlık *">
           <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="input" />
         </Field>
-        <Field label="Aciklama">
+        <Field label="Açıklama">
           <textarea value={form.description} onChange={(e) => update("description", e.target.value)} className="input" rows={3} />
         </Field>
         <Field label="Kime atanacak">
@@ -75,11 +75,7 @@ export default function NewTaskPage() {
             <input type="time" value={form.due_time} onChange={(e) => update("due_time", e.target.value)} className="input" />
           </Field>
         </div>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-        >
+        <button type="submit" disabled={submitting} className="btn-primary">
           {submitting ? "Kaydediliyor..." : "Kaydet"}
         </button>
       </form>

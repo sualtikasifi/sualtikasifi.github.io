@@ -13,22 +13,22 @@ export function OpuFunnel({ session }: { session: OpuSession }) {
 
   const stages = [
     {
-      label: "Folikul",
+      label: "Folikül",
       value: totalFollicles,
       sub:
         session.follicle_count_right !== null || session.follicle_count_left !== null
-          ? `Sag ${session.follicle_count_right ?? 0} / Sol ${session.follicle_count_left ?? 0}`
+          ? `Sağ ${session.follicle_count_right ?? 0} / Sol ${session.follicle_count_left ?? 0}`
           : undefined,
     },
     { label: "Oosit", value: session.oocyte_count, rateOf: totalFollicles },
-    { label: "Bolunen", value: session.cleaved_count, rateOf: session.oocyte_count },
+    { label: "Bölünen", value: session.cleaved_count, rateOf: session.oocyte_count },
     { label: "Embriyo", value: session.embryo_count, rateOf: session.cleaved_count },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {stages.map((s) => (
-        <div key={s.label} className="rounded-lg border border-neutral-200 bg-white p-3">
+        <div key={s.label} className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
           <p className="text-2xl font-semibold text-neutral-900">{s.value ?? "-"}</p>
           <p className="text-xs text-neutral-500">{s.label}</p>
           {s.sub && <p className="mt-1 text-xs text-neutral-400">{s.sub}</p>}

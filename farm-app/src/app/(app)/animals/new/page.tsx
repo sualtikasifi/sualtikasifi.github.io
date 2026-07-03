@@ -46,8 +46,8 @@ export default function NewAnimalPage() {
   return (
     <div className="max-w-lg space-y-4">
       <h1 className="text-lg font-semibold text-neutral-900">Yeni hayvan</h1>
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <Field label="Kupe no *">
+      <form onSubmit={handleSubmit} className="card space-y-3">
+        <Field label="Küpe no *">
           <input
             required
             value={form.ear_tag}
@@ -55,11 +55,11 @@ export default function NewAnimalPage() {
             className="input"
           />
         </Field>
-        <Field label="Isim">
+        <Field label="İsim">
           <input value={form.name} onChange={(e) => update("name", e.target.value)} className="input" />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Dogum tarihi">
+          <Field label="Doğum tarihi">
             <input
               type="date"
               value={form.birth_date}
@@ -73,11 +73,11 @@ export default function NewAnimalPage() {
         </div>
         <Field label="Cinsiyet">
           <select value={form.gender} onChange={(e) => update("gender", e.target.value as "disi" | "erkek")} className="input">
-            <option value="disi">Disi</option>
+            <option value="disi">Dişi</option>
             <option value="erkek">Erkek</option>
           </select>
         </Field>
-        <Field label="Anne kupe no">
+        <Field label="Anne küpe no">
           <input
             value={form.mother_ear_tag}
             onChange={(e) => update("mother_ear_tag", e.target.value)}
@@ -92,11 +92,7 @@ export default function NewAnimalPage() {
             rows={3}
           />
         </Field>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
-        >
+        <button type="submit" disabled={submitting} className="btn-primary">
           {submitting ? "Kaydediliyor..." : "Kaydet"}
         </button>
       </form>

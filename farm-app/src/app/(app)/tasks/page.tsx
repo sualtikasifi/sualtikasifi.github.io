@@ -76,18 +76,18 @@ export default function TasksPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Gorevler</h1>
-        <Link href="/tasks/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800">
-          Yeni gorev
+        <h1 className="text-lg font-semibold text-neutral-900">Görevler</h1>
+        <Link href="/tasks/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+          Yeni görev
         </Link>
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Yukleniyor...</p>
+        <p className="text-sm text-neutral-500">Yükleniyor...</p>
       ) : tasks.length === 0 ? (
-        <p className="text-sm text-neutral-400">Kayit yok.</p>
+        <p className="text-sm text-neutral-400">Kayıt yok.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+        <div className="card-list">
           {tasks.map((t) => (
             <div key={t.id} className="border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
               <div className="flex items-center justify-between gap-3">
@@ -97,11 +97,11 @@ export default function TasksPage() {
                   </p>
                   {t.description && <p className="text-neutral-500">{t.description}</p>}
                   <p className="text-xs text-neutral-400">
-                    {nameFor(t.assigned_to)} tarafindan yapilacak &middot; {nameFor(t.assigned_by)} atadi
+                    {nameFor(t.assigned_to)} tarafından yapılacak &middot; {nameFor(t.assigned_by)} atadı
                   </p>
                   {t.status === "yapildi" && t.completed_at && (
                     <p className="mt-1 text-xs text-green-700">
-                      {nameFor(t.completed_by)} tarafindan {formatDateTime(t.completed_at)} tarihinde onaylandi
+                      {nameFor(t.completed_by)} tarafından {formatDateTime(t.completed_at)} tarihinde onaylandı
                       {t.completion_note && (
                         <span className="ml-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
                           Not var
@@ -128,7 +128,7 @@ export default function TasksPage() {
               {confirmingId === t.id && (
                 <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3">
                   <p className="text-sm font-medium text-neutral-800">
-                    &quot;{t.title}&quot; gorevini tamamladiginizi onayliyor musunuz?
+                    &quot;{t.title}&quot; görevini tamamladığınızı onaylıyor musunuz?
                   </p>
                   <label className="mt-2 block">
                     <span className="mb-1 block text-xs font-medium text-neutral-600">Not (opsiyonel)</span>
@@ -144,16 +144,16 @@ export default function TasksPage() {
                     <button
                       onClick={() => confirmDone(t)}
                       disabled={saving}
-                      className="rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-60"
+                      className="rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-800 disabled:opacity-60"
                     >
                       {saving ? "Kaydediliyor..." : "Onayla"}
                     </button>
                     <button
                       type="button"
                       onClick={cancelConfirm}
-                      className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-50"
+                      className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-50"
                     >
-                      Vazgec
+                      Vazgeç
                     </button>
                   </div>
                 </div>
@@ -185,7 +185,7 @@ function CompleteButton({ task, onClick }: { task: Task; onClick: () => void }) 
       >
         {done && "✓"}
       </span>
-      {done ? "Tamamlandi" : "Yapildi olarak isaretle"}
+      {done ? "Tamamlandı" : "Yapıldı olarak işaretle"}
     </button>
   );
 }

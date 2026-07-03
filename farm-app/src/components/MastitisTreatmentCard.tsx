@@ -112,11 +112,11 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
   }
 
   if (loading || !treatment || !stats) {
-    return <p className="text-sm text-neutral-500">Yukleniyor...</p>;
+    return <p className="text-sm text-neutral-500">Yükleniyor...</p>;
   }
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4">
+    <div className="card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {earTag && <span className="font-medium text-neutral-900">{earTag}</span>}
@@ -126,27 +126,27 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
               stats.isEnded ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
             }`}
           >
-            {stats.isEnded ? "Tedavi tamamlandi" : "Devam ediyor"}
+            {stats.isEnded ? "Tedavi tamamlandı" : "Devam ediyor"}
           </span>
         </div>
-        <span className="text-xs text-neutral-400">Baslangic: {formatDate(treatment.start_date)}</span>
+        <span className="text-xs text-neutral-400">Başlangıç: {formatDate(treatment.start_date)}</span>
       </div>
 
       {treatment.diagnosis && <p className="mt-2 text-sm text-neutral-700">{treatment.diagnosis}</p>}
       {treatment.medication && (
         <p className="text-sm text-neutral-500">
-          Ilac: {treatment.medication} {treatment.vet_name && `- ${treatment.vet_name}`}
+          İlaç: {treatment.medication} {treatment.vet_name && `- ${treatment.vet_name}`}
         </p>
       )}
 
       <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
         <div>
           <p className="text-xs text-neutral-400">Protokol</p>
-          <p className="text-neutral-800">{treatment.protocol_days} gun</p>
+          <p className="text-neutral-800">{treatment.protocol_days} gün</p>
         </div>
         <div>
-          <p className="text-xs text-neutral-400">Kalan tedavi gunu</p>
-          <p className="text-neutral-800">{stats.isEnded ? "-" : `${stats.remainingDays} gun`}</p>
+          <p className="text-xs text-neutral-400">Kalan tedavi günü</p>
+          <p className="text-neutral-800">{stats.isEnded ? "-" : `${stats.remainingDays} gün`}</p>
         </div>
         <div>
           <p className="text-xs text-neutral-400">Tedavi sona erdi</p>
@@ -158,9 +158,9 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
         <button
           onClick={handleEndEarly}
           disabled={ending}
-          className="mt-3 rounded-md border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-50 disabled:opacity-50"
+          className="btn-secondary mt-3 text-xs"
         >
-          {ending ? "Kaydediliyor..." : "Tedaviyi erken sonlandir"}
+          {ending ? "Kaydediliyor..." : "Tedaviyi erken sonlandır"}
         </button>
       )}
 
@@ -176,33 +176,33 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
         >
           {treatment.withdrawal_cleared_at ? (
             <p className="text-green-800">
-              Arinma tamamlandi: {formatDateTime(treatment.withdrawal_cleared_at)} ({nameFor(treatment.withdrawal_cleared_by)})
+              Arınma tamamlandı: {formatDateTime(treatment.withdrawal_cleared_at)} ({nameFor(treatment.withdrawal_cleared_by)})
             </p>
           ) : stats.needsWithdrawalExit ? (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium text-red-800">
-                Arinma suresi doldu, arinmadan cikmasi gerekiyor.
+                Arınma süresi doldu, arınmadan çıkması gerekiyor.
               </span>
               <button
                 onClick={handleClearWithdrawal}
                 disabled={clearingWithdrawal}
-                className="rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                className="rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-800 disabled:opacity-50"
               >
-                {clearingWithdrawal ? "Kaydediliyor..." : "Arinmadan cikti olarak isaretle"}
+                {clearingWithdrawal ? "Kaydediliyor..." : "Arınmadan çıktı olarak işaretle"}
               </button>
             </div>
           ) : (
             <p className="text-amber-800">
-              Arinma suruyor: {stats.withdrawalRemaining} gun kaldi ({treatment.withdrawal_days} gunluk arinma).
+              Arınma sürüyor: {stats.withdrawalRemaining} gün kaldı ({treatment.withdrawal_days} günlük arınma).
             </p>
           )}
         </div>
       )}
 
       <div className="mt-3 space-y-2">
-        <p className="text-xs font-medium text-neutral-500">Gunluk tedavi takibi</p>
+        <p className="text-xs font-medium text-neutral-500">Günlük tedavi takibi</p>
         {doses.map((dose) => (
-          <div key={dose.id} className="rounded-md border border-neutral-100 px-3 py-2 text-sm">
+          <div key={dose.id} className="rounded-md border border-neutral-100 px-3 py-2 text-sm transition-colors">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <input
@@ -212,7 +212,7 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
                   className="h-4 w-4"
                 />
                 <span className={dose.done ? "text-neutral-400 line-through" : "text-neutral-800"}>
-                  Gun {dose.day_number}
+                  Gün {dose.day_number}
                 </span>
               </div>
               {dose.done && dose.done_at && (
@@ -231,7 +231,7 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
             {confirmingDoseId === dose.id && (
               <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2">
                 <p className="text-xs font-medium text-neutral-800">
-                  Gun {dose.day_number} tedavisinin yapildigini onayliyor musunuz?
+                  Gün {dose.day_number} tedavisinin yapıldığını onaylıyor musunuz?
                 </p>
                 <textarea
                   value={note}
@@ -245,7 +245,7 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
                   <button
                     onClick={() => confirmDose(dose)}
                     disabled={savingDoseId === dose.id}
-                    className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-60"
+                    className="rounded-md bg-green-700 px-3 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-800 disabled:opacity-60"
                   >
                     {savingDoseId === dose.id ? "Kaydediliyor..." : "Onayla"}
                   </button>
@@ -255,9 +255,9 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
                       setConfirmingDoseId(null);
                       setNote("");
                     }}
-                    className="rounded-md border border-neutral-300 px-3 py-1 text-xs hover:bg-neutral-100"
+                    className="rounded-md border border-neutral-300 px-3 py-1 text-xs transition-colors hover:bg-neutral-100"
                   >
-                    Vazgec
+                    Vazgeç
                   </button>
                 </div>
               </div>

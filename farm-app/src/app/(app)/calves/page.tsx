@@ -145,7 +145,7 @@ export default function CalvesPage() {
       await refresh();
       setQuickEarTag("");
     } catch (err) {
-      setQuickError(err instanceof Error ? err.message : "Eklenirken bir hata olustu.");
+      setQuickError(err instanceof Error ? err.message : "Eklenirken bir hata oluştu.");
     } finally {
       setQuickAdding(false);
     }
@@ -154,14 +154,14 @@ export default function CalvesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Buzagilar</h1>
+        <h1 className="text-lg font-semibold text-neutral-900">Buzağılar</h1>
         <Link href="/animals/import" className="text-xs font-medium text-green-700 hover:underline">
           Excel&apos;den toplu aktar
         </Link>
       </div>
 
-      <section className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
-        <p className="text-sm font-medium text-red-800">🍼❌ Sutunu icmeyen buzagi ekle</p>
+      <section className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 shadow-sm">
+        <p className="text-sm font-medium text-red-800">🍼❌ Sütünü içmeyen buzağı ekle</p>
         <form onSubmit={handleQuickAdd} className="flex gap-2">
           <input
             value={quickEarTag}
@@ -169,13 +169,13 @@ export default function CalvesPage() {
               setQuickEarTag(e.target.value);
               setQuickError(null);
             }}
-            placeholder="Kupe no"
+            placeholder="Küpe no"
             className="input flex-1"
           />
           <button
             type="submit"
             disabled={quickAdding || !quickEarTag.trim()}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
           >
             {quickAdding ? "Ekleniyor..." : "Ekle"}
           </button>
@@ -184,13 +184,13 @@ export default function CalvesPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-700">Son Ogunde Mamasini Icmeyenler</h2>
+        <h2 className="text-sm font-semibold text-neutral-700">Son Öğünde Mamasını İçmeyenler</h2>
         {loading ? (
-          <p className="text-sm text-neutral-500">Yukleniyor...</p>
+          <p className="text-sm text-neutral-500">Yükleniyor...</p>
         ) : missedLastFeeding.length === 0 ? (
-          <p className="text-sm text-neutral-400">Son ogunde mamasini icmeyen buzagi yok.</p>
+          <p className="text-sm text-neutral-400">Son öğünde mamasını içmeyen buzağı yok.</p>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+          <div className="card-list">
             {missedLastFeeding.map((c) => {
               const s = statuses.get(c.id)!;
               return (
@@ -199,23 +199,23 @@ export default function CalvesPage() {
                     <span className="font-medium text-neutral-900">{c.ear_tag}</span>
                     {c.name && <span className="ml-2 text-neutral-500">{c.name}</span>}
                     <span className="ml-2 text-xs text-red-600">
-                      Son ogunde icmedi {s.streak > 1 && `(${s.streak}. kez ustuste)`}
+                      Son öğünde içmedi {s.streak > 1 && `(${s.streak}. kez üst üste)`}
                     </span>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => logFeeding(c.id, true)}
                       disabled={loggingId === c.id}
-                      className="rounded-md border border-green-600 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
+                      className="rounded-md border border-green-600 px-3 py-1 text-xs font-medium text-green-700 transition-colors hover:bg-green-50 disabled:opacity-50"
                     >
-                      Icti
+                      İçti
                     </button>
                     <button
                       onClick={() => logFeeding(c.id, false)}
                       disabled={loggingId === c.id}
-                      className="rounded-md border border-red-500 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      className="rounded-md border border-red-500 px-3 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
                     >
-                      Icmedi
+                      İçmedi
                     </button>
                   </div>
                 </div>
@@ -227,12 +227,12 @@ export default function CalvesPage() {
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-neutral-700">
-          Dikkat Gereken Buzagilar (son 3 ogun)
+          Dikkat Gereken Buzağılar (son 3 öğün)
         </h2>
         {loading ? (
-          <p className="text-sm text-neutral-500">Yukleniyor...</p>
+          <p className="text-sm text-neutral-500">Yükleniyor...</p>
         ) : flagged.length === 0 ? (
-          <p className="text-sm text-neutral-400">Su an uyari veren buzagi yok.</p>
+          <p className="text-sm text-neutral-400">Şu an uyarı veren buzağı yok.</p>
         ) : (
           <div className="space-y-2">
             {flagged.map((c) => {
@@ -241,7 +241,7 @@ export default function CalvesPage() {
               return (
                 <div
                   key={c.id}
-                  className={`rounded-lg border p-3 ${
+                  className={`rounded-xl border p-3 shadow-sm ${
                     urgent ? "border-red-300 bg-red-50" : "border-amber-300 bg-amber-50"
                   }`}
                 >
@@ -256,8 +256,8 @@ export default function CalvesPage() {
                       }`}
                     >
                       {urgent
-                        ? `Acil muayene gerekli (${s.streak} ogun ustuste icmedi)`
-                        : `Uyari: 2. kez icmedi, muayene edilmeli`}
+                        ? `Acil muayene gerekli (${s.streak} öğün üst üste içmedi)`
+                        : `Uyarı: 2. kez içmedi, muayene edilmeli`}
                     </span>
                   </div>
 
@@ -279,7 +279,7 @@ export default function CalvesPage() {
                     <div className="mt-3 rounded-md border border-neutral-200 bg-white p-2">
                       <label className="block">
                         <span className="mb-1 block text-xs font-medium text-neutral-600">
-                          Muayene sonucu (zorunlu, doldurulmadan uyari kalkmaz)
+                          Muayene sonucu (zorunlu, doldurulmadan uyarı kalkmaz)
                         </span>
                         <textarea
                           value={examDrafts[s.latestMissed.id] ?? ""}
@@ -296,7 +296,7 @@ export default function CalvesPage() {
                           savingExamId === s.latestMissed.id ||
                           !(examDrafts[s.latestMissed.id] ?? "").trim()
                         }
-                        className="mt-2 rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
+                        className="mt-2 rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-800 disabled:opacity-50"
                       >
                         {savingExamId === s.latestMissed.id ? "Kaydediliyor..." : "Muayene sonucunu kaydet"}
                       </button>

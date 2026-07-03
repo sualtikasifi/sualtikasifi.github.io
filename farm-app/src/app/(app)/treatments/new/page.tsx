@@ -17,7 +17,7 @@ type DiagnosisOption = (typeof DIAGNOSIS_OPTIONS)[number] | "Diger";
 
 export default function NewMastitisPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-neutral-500">Yukleniyor...</p>}>
+    <Suspense fallback={<p className="text-sm text-neutral-500">Yükleniyor...</p>}>
       <NewMastitisContent />
     </Suspense>
   );
@@ -100,32 +100,32 @@ function NewMastitisContent() {
         try {
           await saveMastitisProtocolIfNew(medication, profile?.id ?? null);
         } catch {
-          // Protokol kaydi ikincil bir islem, tedavi kaydi zaten basarili oldu.
+          // Protokol kaydı ikincil bir işlem, tedavi kaydı zaten başarılı oldu.
         }
       }
       router.push("/treatments");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kaydedilirken bir hata olustu.");
+      setError(err instanceof Error ? err.message : "Kaydedilirken bir hata oluştu.");
       setSubmitting(false);
     }
   }
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">Yeni mastitis kaydi</h1>
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+      <h1 className="text-lg font-semibold text-neutral-900">Yeni mastitis kaydı</h1>
+      <form onSubmit={handleSubmit} className="card space-y-3">
         <FieldBlock label="Hayvan *">
           {form.animal_id ? (
             <div className="flex items-center justify-between rounded-md border border-neutral-300 px-3 py-2 text-sm">
               <span>{animals.find((a) => a.id === form.animal_id)?.ear_tag}</span>
               <button type="button" onClick={() => update("animal_id", "")} className="text-xs text-green-700">
-                Degistir
+                Değiştir
               </button>
             </div>
           ) : (
             <div>
               <input
-                placeholder="Kupe no ile ara..."
+                placeholder="Küpe no ile ara..."
                 value={animalSearch}
                 onChange={(e) => setAnimalSearch(e.target.value)}
                 className="input"
@@ -146,19 +146,19 @@ function NewMastitisContent() {
           )}
         </FieldBlock>
 
-        <FieldBlock label="Meme * (birden fazla secilebilir)">
+        <FieldBlock label="Meme * (birden fazla seçilebilir)">
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                ["on_sol", "On Sol"],
-                ["on_sag", "On Sag"],
+                ["on_sol", "Ön Sol"],
+                ["on_sag", "Ön Sağ"],
                 ["arka_sol", "Arka Sol"],
-                ["arka_sag", "Arka Sag"],
+                ["arka_sag", "Arka Sağ"],
               ] as [UdderQuarter, string][]
             ).map(([value, label]) => (
               <label
                 key={value}
-                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
                   udderQuarters.includes(value)
                     ? "border-green-600 bg-green-50 text-green-800"
                     : "border-neutral-300 text-neutral-700"
@@ -176,13 +176,13 @@ function NewMastitisContent() {
           </div>
           {udderQuarters.length > 1 && (
             <p className="mt-1 text-xs text-neutral-500">
-              Secilen her meme icin ayri bir tedavi kaydi olusturulacak.
+              Seçilen her meme için ayrı bir tedavi kaydı oluşturulacak.
             </p>
           )}
         </FieldBlock>
 
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Baslangic tarihi">
+          <Field label="Başlangıç tarihi">
             <input
               type="date"
               value={form.start_date}
@@ -190,7 +190,7 @@ function NewMastitisContent() {
               className="input"
             />
           </Field>
-          <Field label="Protokol (gun)">
+          <Field label="Protokol (gün)">
             <input
               type="number"
               min={1}
@@ -199,7 +199,7 @@ function NewMastitisContent() {
               className="input"
             />
           </Field>
-          <Field label="Arinma (gun)">
+          <Field label="Arınma (gün)">
             <input
               type="number"
               min={0}
@@ -210,20 +210,16 @@ function NewMastitisContent() {
           </Field>
         </div>
 
-        <FieldBlock label="Tani *">
+        <FieldBlock label="Tanı *">
           <div className="flex flex-wrap gap-2">
             {[...DIAGNOSIS_OPTIONS, "Diger" as const].map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => setDiagnosisOption(option)}
-                className={`rounded-full border px-3 py-1.5 text-sm ${
-                  diagnosisOption === option
-                    ? "border-green-600 bg-green-50 text-green-800"
-                    : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-                }`}
+                className={`chip ${diagnosisOption === option ? "chip-selected" : "chip-unselected"}`}
               >
-                {option === "Diger" ? "Diger..." : option}
+                {option === "Diger" ? "Diğer..." : option}
               </button>
             ))}
           </div>
@@ -231,13 +227,13 @@ function NewMastitisContent() {
             <input
               value={diagnosisCustom}
               onChange={(e) => setDiagnosisCustom(e.target.value)}
-              placeholder="Hastalik adini yazin"
+              placeholder="Hastalık adını yazın"
               className="input mt-2"
             />
           )}
         </FieldBlock>
 
-        <FieldBlock label="Ilac / Tedavi Protokolu">
+        <FieldBlock label="İlaç / Tedavi Protokolü">
           {protocols.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {protocols.map((p) => (
@@ -246,7 +242,7 @@ function NewMastitisContent() {
                   type="button"
                   onClick={() => update("medication", p.medication)}
                   title={p.medication}
-                  className={`rounded-full border px-3 py-1 text-xs ${
+                  className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                     form.medication === p.medication
                       ? "border-green-600 bg-green-50 text-green-800"
                       : "border-neutral-300 text-neutral-600 hover:bg-neutral-50"
@@ -260,7 +256,7 @@ function NewMastitisContent() {
           <textarea
             value={form.medication}
             onChange={(e) => update("medication", e.target.value)}
-            placeholder="Tedavi protokolunu yazin (yeni ise kaydedilip bir sonraki seferde tek tikla secilebilir)"
+            placeholder="Tedavi protokolünü yazın (yeni ise kaydedilip bir sonraki seferde tek tıkla seçilebilir)"
             className="input"
             rows={2}
           />
@@ -273,11 +269,7 @@ function NewMastitisContent() {
                 key={p.id}
                 type="button"
                 onClick={() => update("vet_name", p.full_name)}
-                className={`rounded-full border px-3 py-1.5 text-sm ${
-                  form.vet_name === p.full_name
-                    ? "border-green-600 bg-green-50 text-green-800"
-                    : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-                }`}
+                className={`chip ${form.vet_name === p.full_name ? "chip-selected" : "chip-unselected"}`}
               >
                 {p.full_name}
               </button>
@@ -294,7 +286,7 @@ function NewMastitisContent() {
         <button
           type="submit"
           disabled={submitting || !form.animal_id || udderQuarters.length === 0 || !diagnosis}
-          className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-60"
+          className="btn-primary"
         >
           {submitting ? "Kaydediliyor..." : "Kaydet"}
         </button>

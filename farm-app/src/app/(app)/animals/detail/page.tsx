@@ -23,7 +23,7 @@ import { useAuth } from "@/lib/auth";
 
 export default function AnimalDetailPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-neutral-500">Yukleniyor...</p>}>
+    <Suspense fallback={<p className="text-sm text-neutral-500">Yükleniyor...</p>}>
       <AnimalDetailContent />
     </Suspense>
   );
@@ -85,8 +85,8 @@ function AnimalDetailContent() {
   }
 
   if (!id) return <p className="text-sm text-red-600">Hayvan belirtilmedi.</p>;
-  if (loading) return <p className="text-sm text-neutral-500">Yukleniyor...</p>;
-  if (!animal) return <p className="text-sm text-red-600">Hayvan bulunamadi.</p>;
+  if (loading) return <p className="text-sm text-neutral-500">Yükleniyor...</p>;
+  if (!animal) return <p className="text-sm text-red-600">Hayvan bulunamadı.</p>;
 
   return (
     <div className="space-y-4">
@@ -100,54 +100,54 @@ function AnimalDetailContent() {
         <div className="flex gap-2">
           <Link
             href={`/inseminations/new?animalId=${animal.id}`}
-            className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50"
+            className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50"
           >
             Tohumlama ekle
           </Link>
           <Link
             href={`/treatments/new?animalId=${animal.id}`}
-            className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
+            className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800"
           >
-            Mastitis kaydi ekle
+            Mastitis kaydı ekle
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 rounded-lg border border-neutral-200 bg-white p-4 text-sm sm:grid-cols-4">
-        <InfoItem label="Dogum tarihi" value={formatDate(animal.birth_date)} />
+      <div className="card grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+        <InfoItem label="Doğum tarihi" value={formatDate(animal.birth_date)} />
         <InfoItem label="Irk" value={animal.breed ?? "-"} />
-        <InfoItem label="Cinsiyet" value={animal.gender === "erkek" ? "Erkek" : "Disi"} />
-        <InfoItem label="Anne kupe no" value={animal.mother_ear_tag ?? "-"} />
-        <InfoItem label="Sutten kesim" value={formatDate(animal.weaned_at)} />
+        <InfoItem label="Cinsiyet" value={animal.gender === "erkek" ? "Erkek" : "Dişi"} />
+        <InfoItem label="Anne küpe no" value={animal.mother_ear_tag ?? "-"} />
+        <InfoItem label="Sütten kesim" value={formatDate(animal.weaned_at)} />
         <InfoItem label="Notlar" value={animal.notes ?? "-"} span />
       </div>
 
       <div className="flex flex-wrap gap-2">
         {!animal.weaned_at && (
-          <button onClick={handleWean} className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-50">
-            Sutten kesildi olarak isaretle
+          <button onClick={handleWean} className="btn-secondary text-xs">
+            Sütten kesildi olarak işaretle
           </button>
         )}
         {animal.status !== "olu" && (
           <button
             onClick={() => handleStatusChange("olu")}
-            className="rounded-md border border-red-300 px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
+            className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs text-red-700 shadow-sm transition-colors hover:bg-red-50"
           >
-            Olum kaydet
+            Ölüm kaydet
           </button>
         )}
         {animal.status !== "satildi" && animal.status === "aktif" && (
           <button
             onClick={() => handleStatusChange("satildi")}
-            className="rounded-md border border-blue-300 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-50"
+            className="rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
           >
-            Satildi olarak isaretle
+            Satıldı olarak işaretle
           </button>
         )}
         {animal.status !== "aktif" && (
           <button
             onClick={() => handleStatusChange("aktif")}
-            className="rounded-md border border-green-300 px-3 py-1.5 text-xs text-green-700 hover:bg-green-50"
+            className="rounded-md border border-green-300 bg-white px-3 py-1.5 text-xs text-green-700 shadow-sm transition-colors hover:bg-green-50"
           >
             Aktif yap
           </button>
@@ -155,9 +155,9 @@ function AnimalDetailContent() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-neutral-800">Mastitis gecmisi</h2>
+        <h2 className="text-sm font-semibold text-neutral-800">Mastitis geçmişi</h2>
         {mastitisTreatments.length === 0 ? (
-          <p className="rounded-lg border border-neutral-200 bg-white p-4 text-sm text-neutral-400">Kayit yok.</p>
+          <p className="card text-sm text-neutral-400">Kayıt yok.</p>
         ) : (
           mastitisTreatments.map((t) => (
             <MastitisTreatmentCard
@@ -171,15 +171,15 @@ function AnimalDetailContent() {
       </div>
 
       {!animal.weaned_at && (
-        <div className="rounded-lg border border-neutral-200 bg-white p-4">
+        <div className="card">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-neutral-800">Mama icme gecmisi</h2>
+            <h2 className="text-sm font-semibold text-neutral-800">Mama içme geçmişi</h2>
             <Link href="/calves" className="text-xs font-medium text-green-700 hover:underline">
-              Buzagilar sayfasina git
+              Buzağılar sayfasına git
             </Link>
           </div>
           {feedings.length === 0 ? (
-            <p className="text-sm text-neutral-400">Kayit yok.</p>
+            <p className="text-sm text-neutral-400">Kayıt yok.</p>
           ) : (
             <div className="divide-y divide-neutral-100">
               {feedings.map((f) => (
@@ -193,7 +193,7 @@ function AnimalDetailContent() {
                       >
                         {f.drank ? "✓" : "✗"}
                       </span>
-                      <span className="text-neutral-700">{f.drank ? "Icti" : "Icmedi"}</span>
+                      <span className="text-neutral-700">{f.drank ? "İçti" : "İçmedi"}</span>
                       {f.notes && <span className="text-neutral-400">- {f.notes}</span>}
                     </div>
                     <span className="text-neutral-400">
@@ -217,10 +217,10 @@ function AnimalDetailContent() {
         </div>
       )}
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-neutral-800">Tohumlama gecmisi</h2>
+      <div className="card">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-800">Tohumlama geçmişi</h2>
         {inseminations.length === 0 ? (
-          <p className="text-sm text-neutral-400">Kayit yok.</p>
+          <p className="text-sm text-neutral-400">Kayıt yok.</p>
         ) : (
           <div className="divide-y divide-neutral-100">
             {inseminations.map((i) => (
@@ -246,8 +246,8 @@ function AnimalDetailContent() {
       </div>
 
       {donorSessions.length > 0 && (
-        <div className="rounded-lg border border-neutral-200 bg-white p-4">
-          <h2 className="mb-2 text-sm font-semibold text-neutral-800">Donor oldugu OPU seanslari</h2>
+        <div className="card">
+          <h2 className="mb-2 text-sm font-semibold text-neutral-800">Donör olduğu OPU seansları</h2>
           <div className="divide-y divide-neutral-100">
             {donorSessions.map((s) => (
               <Link
@@ -264,8 +264,8 @@ function AnimalDetailContent() {
       )}
 
       {receivedEmbryos.length > 0 && (
-        <div className="rounded-lg border border-neutral-200 bg-white p-4">
-          <h2 className="mb-2 text-sm font-semibold text-neutral-800">Alici olarak transfer edilen embriyolar</h2>
+        <div className="card">
+          <h2 className="mb-2 text-sm font-semibold text-neutral-800">Alıcı olarak transfer edilen embriyolar</h2>
           <div className="divide-y divide-neutral-100">
             {receivedEmbryos.map((e) => (
               <Link
@@ -276,7 +276,7 @@ function AnimalDetailContent() {
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{e.label}</span>
                   <span className="text-xs text-neutral-500">
-                    (donor: {(() => {
+                    (donör: {(() => {
                       const session = opuSessions.find((s) => s.id === e.opu_session_id);
                       const donorAnimal = session && allAnimals.find((a) => a.id === session.donor_animal_id);
                       return donorAnimal?.ear_tag ?? "-";
