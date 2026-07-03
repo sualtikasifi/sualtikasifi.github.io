@@ -228,6 +228,20 @@ create table if not exists calf_feedings (
 create index if not exists calf_feedings_animal_idx on calf_feedings (animal_id);
 create index if not exists calf_feedings_fed_at_idx on calf_feedings (fed_at);
 
+-- 11. Asi/ilac stok takibi (sayim + kullanimda dusum + alimda ekleme)
+create table if not exists medicines (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  unit text not null default 'adet',
+  stock_count integer not null default 0 check (stock_count >= 0),
+  notes text,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists medicines_name_idx on medicines (name);
+
 -- Row Level Security: giris yapmis herkes (10 kisilik guvenilir ekip) okuyup yazabilir
 alter table profiles enable row level security;
 alter table animals enable row level security;
@@ -241,6 +255,7 @@ alter table inseminations enable row level security;
 alter table opu_sessions enable row level security;
 alter table embryos enable row level security;
 alter table calf_feedings enable row level security;
+alter table medicines enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
@@ -256,3 +271,4 @@ create policy "inseminations_all_authenticated" on inseminations for all to auth
 create policy "opu_sessions_all_authenticated" on opu_sessions for all to authenticated using (true) with check (true);
 create policy "embryos_all_authenticated" on embryos for all to authenticated using (true) with check (true);
 create policy "calf_feedings_all_authenticated" on calf_feedings for all to authenticated using (true) with check (true);
+create policy "medicines_all_authenticated" on medicines for all to authenticated using (true) with check (true);

@@ -25,6 +25,8 @@ export default function InseminationsPage() {
   const earTagFor = (animalId: string) => animals.find((a) => a.id === animalId)?.ear_tag ?? "?";
   const bullNameFor = (bullId: string | null) => (bullId ? bulls.find((b) => b.id === bullId)?.name ?? "?" : "-");
 
+  const sortedInseminations = [...inseminations].sort((a, b) => b.created_at.localeCompare(a.created_at));
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -40,7 +42,7 @@ export default function InseminationsPage() {
         <p className="text-sm text-neutral-400">Kayıt yok.</p>
       ) : (
         <div className="card-list">
-          {inseminations.map((i) => (
+          {sortedInseminations.map((i) => (
             <div key={i.id} className="border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -50,7 +52,7 @@ export default function InseminationsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-neutral-400">{formatDate(i.insemination_date)}</span>
-                  <Badge value={i.pregnancy_result} />
+                  {i.pregnancy_result !== "gebe_degil" && <Badge value={i.pregnancy_result} />}
                 </div>
               </div>
               {i.technician_name && <p className="mt-1 text-neutral-500">Tohumlayıcı: {i.technician_name}</p>}

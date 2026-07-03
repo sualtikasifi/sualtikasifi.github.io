@@ -1,4 +1,4 @@
-import { Animal, Bull, CalfFeeding, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, OpuSession, Profile, SemenInventory, Task } from "@/lib/types";
+import { Animal, Bull, CalfFeeding, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuSession, Profile, SemenInventory, Task } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -452,5 +452,38 @@ export const seedCalfFeedings: CalfFeeding[] = [
     examined_at: null,
     created_by: "demo-user-3",
     created_at: hoursAgo(4),
+  },
+];
+
+export const seedMedicines: Medicine[] = [
+  {
+    id: "medicine-1",
+    name: "Şap Aşısı",
+    unit: "doz",
+    stock_count: 40,
+    notes: "Soğuk zincirde, buzdolabında saklanır.",
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(60),
+    updated_at: daysAgo(5),
+  },
+  {
+    id: "medicine-2",
+    name: "Oksitetrasiklin (antibiyotik)",
+    unit: "şişe",
+    stock_count: 6,
+    notes: null,
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(30),
+    updated_at: daysAgo(2),
+  },
+  {
+    id: "medicine-3",
+    name: "Vitamin AD3E",
+    unit: "şişe",
+    stock_count: 3,
+    notes: "Stok azalıyor, sipariş verilecek.",
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(45),
+    updated_at: daysAgo(1),
   },
 ];

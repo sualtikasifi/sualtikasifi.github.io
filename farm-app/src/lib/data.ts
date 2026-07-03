@@ -9,6 +9,7 @@ import {
   MastitisDose,
   MastitisProtocol,
   MastitisTreatment,
+  Medicine,
   OpuSession,
   Profile,
   SemenInventory,
@@ -487,4 +488,51 @@ export async function setCalfFeedingExam(
     .single();
   if (error) throw error;
   return data as CalfFeeding;
+}
+
+// --- Medicines (asi/ilac stok takibi) ---
+
+export async function listMedicines(): Promise<Medicine[]> {
+  if (isDemoMode) return mock.demoListMedicines();
+  const { data, error } = await supabase!.from("medicines").select("*").order("name", { ascending: true });
+  if (error) throw error;
+  return data as Medicine[];
+}
+
+export async function createMedicine(
+  input: Omit<Medicine, "id" | "created_at" | "updated_at">
+): Promise<Medicine> {
+  if (isDemoMode) return mock.demoCreateMedicine(input);
+  const { data, error } = await supabase!.from("medicines").insert(input).select().single();
+  if (error) throw error;
+  return data as Medicine;
+}
+
+export async function setMedicineStock(
+  id: string,
+  patch: Partial<Omit<Medicine, "id" | "created_at">>
+): Promise<Medicine | undefined> {
+  if (isDemoMode) return mock.demoUpdateMedicine(id, patch);
+  const { data, error } = await supabase!
+    .from("medicines")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Medicine;
+}
+
+export async function adjustMedicineStock(id: string, delta: number): Promise<Medicine | undefined> {
+  if (isDemoMode) return mock.demoAdjustMedicineStock(id, delta);
+  const { data: existing } = await supabase!.from("medicines").select("*").eq("id", id).maybeSingle();
+  const nextCount = Math.max(0, (existing?.stock_count ?? 0) + delta);
+  const { data, error } = await supabase!
+    .from("medicines")
+    .update({ stock_count: nextCount, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Medicine;
 }

@@ -7,6 +7,7 @@ import {
   MastitisDose,
   MastitisProtocol,
   MastitisTreatment,
+  Medicine,
   OpuSession,
   Profile,
   SemenInventory,
@@ -22,6 +23,7 @@ import {
   seedMastitisDoses,
   seedMastitisProtocols,
   seedMastitisTreatments,
+  seedMedicines,
   seedOpuSessions,
   seedProfiles,
   seedSemenInventory,
@@ -44,6 +46,7 @@ interface DemoDb {
   opuSessions: OpuSession[];
   embryos: Embryo[];
   calfFeedings: CalfFeeding[];
+  medicines: Medicine[];
 }
 
 function initialDb(): DemoDb {
@@ -60,6 +63,7 @@ function initialDb(): DemoDb {
     opuSessions: seedOpuSessions,
     embryos: seedEmbryos,
     calfFeedings: seedCalfFeedings,
+    medicines: seedMedicines,
   };
 }
 
@@ -87,6 +91,7 @@ function loadDb(): DemoDb {
     opuSessions: parsed.opuSessions ?? seedOpuSessions,
     embryos: parsed.embryos ?? seedEmbryos,
     calfFeedings: parsed.calfFeedings ?? seedCalfFeedings,
+    medicines: parsed.medicines ?? seedMedicines,
   };
 }
 
@@ -570,4 +575,41 @@ export function demoSetCalfFeedingExam(
   };
   saveDb(db);
   return db.calfFeedings[idx];
+}
+
+// --- Medicines (asi/ilac stok takibi) ---
+
+export function demoListMedicines(): Medicine[] {
+  return loadDb().medicines.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function demoCreateMedicine(input: Omit<Medicine, "id" | "created_at" | "updated_at">): Medicine {
+  const db = loadDb();
+  const now = new Date().toISOString();
+  const medicine: Medicine = { ...input, id: newId("medicine"), created_at: now, updated_at: now };
+  db.medicines.push(medicine);
+  saveDb(db);
+  return medicine;
+}
+
+export function demoUpdateMedicine(id: string, patch: Partial<Medicine>): Medicine | undefined {
+  const db = loadDb();
+  const idx = db.medicines.findIndex((m) => m.id === id);
+  if (idx === -1) return undefined;
+  db.medicines[idx] = { ...db.medicines[idx], ...patch, updated_at: new Date().toISOString() };
+  saveDb(db);
+  return db.medicines[idx];
+}
+
+export function demoAdjustMedicineStock(id: string, delta: number): Medicine | undefined {
+  const db = loadDb();
+  const idx = db.medicines.findIndex((m) => m.id === id);
+  if (idx === -1) return undefined;
+  db.medicines[idx] = {
+    ...db.medicines[idx],
+    stock_count: Math.max(0, db.medicines[idx].stock_count + delta),
+    updated_at: new Date().toISOString(),
+  };
+  saveDb(db);
+  return db.medicines[idx];
 }
