@@ -52,7 +52,7 @@ export default function InseminationsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-neutral-400">{formatDate(i.insemination_date)}</span>
-                  {i.pregnancy_result !== "gebe_degil" && <Badge value={i.pregnancy_result} />}
+                  {i.pregnancy_result === "gebe" && <Badge value={i.pregnancy_result} />}
                 </div>
               </div>
               {i.technician_name && <p className="mt-1 text-neutral-500">Tohumlayıcı: {i.technician_name}</p>}
