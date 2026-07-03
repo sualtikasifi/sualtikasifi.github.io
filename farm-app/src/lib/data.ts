@@ -18,23 +18,31 @@ import {
 
 export { isDemoMode };
 
-// Supabase/PostgREST caps a single select() at 1000 rows by default. Any list
-// that can plausibly grow past that (e.g. a full animal herd) needs to page
-// through with .range() instead of silently truncating.
+// Supabase/PostgREST caps a single select() response at a max-rows value
+// configured on the project (1000 by default, but can be set lower). Any list
+// that can plausibly exceed that needs to page through with .range() instead
+// of silently truncating. We can't assume what the cap actually is, so every
+// query asks for an exact count and we keep paging - advancing by however
+// many rows actually came back - until we've collected that many, rather than
+// assuming a fixed page size matches what the server was willing to return.
 const PAGE_SIZE = 1000;
 
 async function fetchAllPages<T>(
-  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+  buildQuery: (
+    from: number,
+    to: number
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null; count: number | null }>
 ): Promise<T[]> {
   const all: T[] = [];
   let from = 0;
   while (true) {
-    const { data, error } = await buildQuery(from, from + PAGE_SIZE - 1);
+    const { data, error, count } = await buildQuery(from, from + PAGE_SIZE - 1);
     if (error) throw error;
     const rows = data ?? [];
     all.push(...rows);
-    if (rows.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
+    if (rows.length === 0) break;
+    from += rows.length;
+    if (count !== null && all.length >= count) break;
   }
   return all;
 }
@@ -44,7 +52,7 @@ async function fetchAllPages<T>(
 export async function listProfiles(): Promise<Profile[]> {
   if (isDemoMode) return mock.demoListProfiles();
   return fetchAllPages<Profile>((from, to) =>
-    supabase!.from("profiles").select("*").range(from, to)
+    supabase!.from("profiles").select("*", { count: "exact" }).range(from, to)
   );
 }
 
@@ -60,7 +68,11 @@ export async function updateProfile(id: string, patch: Partial<Profile>): Promis
 export async function listAnimals(): Promise<Animal[]> {
   if (isDemoMode) return mock.demoListAnimals();
   return fetchAllPages<Animal>((from, to) =>
-    supabase!.from("animals").select("*").order("created_at", { ascending: false }).range(from, to)
+    supabase!
+      .from("animals")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to)
   );
 }
 
@@ -110,7 +122,10 @@ export async function createAnimalsBulk(
 export async function listMastitisTreatments(animalId?: string): Promise<MastitisTreatment[]> {
   if (isDemoMode) return mock.demoListMastitisTreatments(animalId);
   return fetchAllPages<MastitisTreatment>((from, to) => {
-    let query = supabase!.from("mastitis_treatments").select("*").order("start_date", { ascending: false });
+    let query = supabase!
+      .from("mastitis_treatments")
+      .select("*", { count: "exact" })
+      .order("start_date", { ascending: false });
     if (animalId) query = query.eq("animal_id", animalId);
     return query.range(from, to);
   });
@@ -147,7 +162,7 @@ export async function listMastitisDoses(treatmentId: string): Promise<MastitisDo
   return fetchAllPages<MastitisDose>((from, to) =>
     supabase!
       .from("mastitis_doses")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("mastitis_treatment_id", treatmentId)
       .order("day_number", { ascending: true })
       .range(from, to)
@@ -224,7 +239,11 @@ export async function clearMastitisWithdrawal(
 export async function listMastitisProtocols(): Promise<MastitisProtocol[]> {
   if (isDemoMode) return mock.demoListMastitisProtocols();
   return fetchAllPages<MastitisProtocol>((from, to) =>
-    supabase!.from("mastitis_protocols").select("*").order("created_at", { ascending: false }).range(from, to)
+    supabase!
+      .from("mastitis_protocols")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to)
   );
 }
 
@@ -244,7 +263,11 @@ export async function saveMastitisProtocolIfNew(
 export async function listTasks(): Promise<Task[]> {
   if (isDemoMode) return mock.demoListTasks();
   return fetchAllPages<Task>((from, to) =>
-    supabase!.from("tasks").select("*").order("due_date", { ascending: true }).range(from, to)
+    supabase!
+      .from("tasks")
+      .select("*", { count: "exact" })
+      .order("due_date", { ascending: true })
+      .range(from, to)
   );
 }
 
@@ -300,7 +323,7 @@ export async function reopenTask(id: string): Promise<Task | undefined> {
 export async function listBulls(): Promise<Bull[]> {
   if (isDemoMode) return mock.demoListBulls();
   return fetchAllPages<Bull>((from, to) =>
-    supabase!.from("bulls").select("*").order("name", { ascending: true }).range(from, to)
+    supabase!.from("bulls").select("*", { count: "exact" }).order("name", { ascending: true }).range(from, to)
   );
 }
 
@@ -314,7 +337,7 @@ export async function createBull(input: Omit<Bull, "id" | "created_at">): Promis
 export async function listSemenInventory(): Promise<SemenInventory[]> {
   if (isDemoMode) return mock.demoListSemenInventory();
   return fetchAllPages<SemenInventory>((from, to) =>
-    supabase!.from("semen_inventory").select("*").range(from, to)
+    supabase!.from("semen_inventory").select("*", { count: "exact" }).range(from, to)
   );
 }
 
@@ -365,7 +388,10 @@ async function adjustSemenStock(
 export async function listInseminations(animalId?: string): Promise<Insemination[]> {
   if (isDemoMode) return mock.demoListInseminations(animalId);
   return fetchAllPages<Insemination>((from, to) => {
-    let query = supabase!.from("inseminations").select("*").order("insemination_date", { ascending: false });
+    let query = supabase!
+      .from("inseminations")
+      .select("*", { count: "exact" })
+      .order("insemination_date", { ascending: false });
     if (animalId) query = query.eq("animal_id", animalId);
     return query.range(from, to);
   });
@@ -398,7 +424,11 @@ export async function updateInsemination(
 export async function listOpuSessions(): Promise<OpuSession[]> {
   if (isDemoMode) return mock.demoListOpuSessions();
   return fetchAllPages<OpuSession>((from, to) =>
-    supabase!.from("opu_sessions").select("*").order("session_date", { ascending: false }).range(from, to)
+    supabase!
+      .from("opu_sessions")
+      .select("*", { count: "exact" })
+      .order("session_date", { ascending: false })
+      .range(from, to)
   );
 }
 
@@ -431,7 +461,7 @@ export async function updateOpuSession(
 export async function listEmbryos(opuSessionId?: string): Promise<Embryo[]> {
   if (isDemoMode) return mock.demoListEmbryos(opuSessionId);
   return fetchAllPages<Embryo>((from, to) => {
-    let query = supabase!.from("embryos").select("*").order("label", { ascending: true });
+    let query = supabase!.from("embryos").select("*", { count: "exact" }).order("label", { ascending: true });
     if (opuSessionId) query = query.eq("opu_session_id", opuSessionId);
     return query.range(from, to);
   });
@@ -440,7 +470,7 @@ export async function listEmbryos(opuSessionId?: string): Promise<Embryo[]> {
 export async function listEmbryosForRecipient(animalId: string): Promise<Embryo[]> {
   if (isDemoMode) return mock.demoListEmbryosForRecipient(animalId);
   return fetchAllPages<Embryo>((from, to) =>
-    supabase!.from("embryos").select("*").eq("recipient_animal_id", animalId).range(from, to)
+    supabase!.from("embryos").select("*", { count: "exact" }).eq("recipient_animal_id", animalId).range(from, to)
   );
 }
 
@@ -472,7 +502,10 @@ export async function updateEmbryo(id: string, patch: Partial<Embryo>): Promise<
 export async function listCalfFeedings(animalId?: string): Promise<CalfFeeding[]> {
   if (isDemoMode) return mock.demoListCalfFeedings(animalId);
   return fetchAllPages<CalfFeeding>((from, to) => {
-    let query = supabase!.from("calf_feedings").select("*").order("fed_at", { ascending: false });
+    let query = supabase!
+      .from("calf_feedings")
+      .select("*", { count: "exact" })
+      .order("fed_at", { ascending: false });
     if (animalId) query = query.eq("animal_id", animalId);
     return query.range(from, to);
   });
@@ -508,7 +541,11 @@ export async function setCalfFeedingExam(
 export async function listMedicines(): Promise<Medicine[]> {
   if (isDemoMode) return mock.demoListMedicines();
   return fetchAllPages<Medicine>((from, to) =>
-    supabase!.from("medicines").select("*").order("name", { ascending: true }).range(from, to)
+    supabase!
+      .from("medicines")
+      .select("*", { count: "exact" })
+      .order("name", { ascending: true })
+      .range(from, to)
   );
 }
 
