@@ -1,5 +1,12 @@
-# Retrigger: initial Pages deployment hit a transient "try again later" error.
 name: Deploy Farm App to GitHub Pages
+
+# This repo is a <user>.github.io repo, which GitHub auto-enables Pages for
+# with source "Deploy from a branch: main / (root)" the moment it's created.
+# That legacy branch-based Jekyll build keeps running on every push and wins
+# over an Actions-based Pages deployment, so instead of fighting it we build
+# farm-app and publish the compiled output directly into the repo root (the
+# branch/path Pages is actually configured to serve), with a .nojekyll file
+# so GitHub serves it as static files instead of Jekyll-processing it.
 
 on:
   push:
@@ -10,16 +17,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,19 +39,27 @@ jobs:
       - name: Build
         working-directory: farm-app
         run: npm run build
-      - name: Disable Jekyll processing
-        run: touch farm-app/out/.nojekyll
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: farm-app/out
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish build output to repo root
+        run: |
+          set -eu
+          find . -maxdepth 1 -mindepth 1 \
+            ! -name farm-app \
+            ! -name .github \
+            ! -name .git \
+            ! -name README.md \
+            ! -name app-ads.txt \
+            ! -name .gitignore \
+            -exec rm -rf {} +
+          cp -r farm-app/out/. .
+          touch .nojekyll
+      - name: Commit and push published site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish farm-app build output"
+            git push
+          else
+            echo "No changes to publish"
+          fi
