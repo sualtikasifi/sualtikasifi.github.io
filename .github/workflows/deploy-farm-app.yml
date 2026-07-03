@@ -38,6 +38,9 @@ jobs:
         run: npm ci
       - name: Build
         working-directory: farm-app
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://zxedysamcbeytikhqpii.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_2DNgRqokZEzOO_CcYO7Fgg_gIJFV8lt
         run: npm run build
       - name: Publish build output to repo root
         run: |
