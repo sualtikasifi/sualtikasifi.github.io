@@ -18,13 +18,34 @@ import {
 
 export { isDemoMode };
 
+// Supabase/PostgREST caps a single select() at 1000 rows by default. Any list
+// that can plausibly grow past that (e.g. a full animal herd) needs to page
+// through with .range() instead of silently truncating.
+const PAGE_SIZE = 1000;
+
+async function fetchAllPages<T>(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
 // --- Profiles ---
 
 export async function listProfiles(): Promise<Profile[]> {
   if (isDemoMode) return mock.demoListProfiles();
-  const { data, error } = await supabase!.from("profiles").select("*");
-  if (error) throw error;
-  return data as Profile[];
+  return fetchAllPages<Profile>((from, to) =>
+    supabase!.from("profiles").select("*").range(from, to)
+  );
 }
 
 export async function updateProfile(id: string, patch: Partial<Profile>): Promise<Profile | undefined> {
@@ -38,12 +59,9 @@ export async function updateProfile(id: string, patch: Partial<Profile>): Promis
 
 export async function listAnimals(): Promise<Animal[]> {
   if (isDemoMode) return mock.demoListAnimals();
-  const { data, error } = await supabase!
-    .from("animals")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data as Animal[];
+  return fetchAllPages<Animal>((from, to) =>
+    supabase!.from("animals").select("*").order("created_at", { ascending: false }).range(from, to)
+  );
 }
 
 export async function getAnimal(id: string): Promise<Animal | undefined> {
@@ -91,11 +109,11 @@ export async function createAnimalsBulk(
 
 export async function listMastitisTreatments(animalId?: string): Promise<MastitisTreatment[]> {
   if (isDemoMode) return mock.demoListMastitisTreatments(animalId);
-  let query = supabase!.from("mastitis_treatments").select("*").order("start_date", { ascending: false });
-  if (animalId) query = query.eq("animal_id", animalId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as MastitisTreatment[];
+  return fetchAllPages<MastitisTreatment>((from, to) => {
+    let query = supabase!.from("mastitis_treatments").select("*").order("start_date", { ascending: false });
+    if (animalId) query = query.eq("animal_id", animalId);
+    return query.range(from, to);
+  });
 }
 
 export async function getMastitisTreatment(id: string): Promise<MastitisTreatment | undefined> {
@@ -126,13 +144,14 @@ export async function createMastitisTreatment(
 
 export async function listMastitisDoses(treatmentId: string): Promise<MastitisDose[]> {
   if (isDemoMode) return mock.demoListMastitisDoses(treatmentId);
-  const { data, error } = await supabase!
-    .from("mastitis_doses")
-    .select("*")
-    .eq("mastitis_treatment_id", treatmentId)
-    .order("day_number", { ascending: true });
-  if (error) throw error;
-  return data as MastitisDose[];
+  return fetchAllPages<MastitisDose>((from, to) =>
+    supabase!
+      .from("mastitis_doses")
+      .select("*")
+      .eq("mastitis_treatment_id", treatmentId)
+      .order("day_number", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function completeMastitisDose(
@@ -204,12 +223,9 @@ export async function clearMastitisWithdrawal(
 
 export async function listMastitisProtocols(): Promise<MastitisProtocol[]> {
   if (isDemoMode) return mock.demoListMastitisProtocols();
-  const { data, error } = await supabase!
-    .from("mastitis_protocols")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data as MastitisProtocol[];
+  return fetchAllPages<MastitisProtocol>((from, to) =>
+    supabase!.from("mastitis_protocols").select("*").order("created_at", { ascending: false }).range(from, to)
+  );
 }
 
 export async function saveMastitisProtocolIfNew(
@@ -227,9 +243,9 @@ export async function saveMastitisProtocolIfNew(
 
 export async function listTasks(): Promise<Task[]> {
   if (isDemoMode) return mock.demoListTasks();
-  const { data, error } = await supabase!.from("tasks").select("*").order("due_date", { ascending: true });
-  if (error) throw error;
-  return data as Task[];
+  return fetchAllPages<Task>((from, to) =>
+    supabase!.from("tasks").select("*").order("due_date", { ascending: true }).range(from, to)
+  );
 }
 
 export async function createTask(input: Omit<Task, "id" | "created_at">): Promise<Task> {
@@ -283,9 +299,9 @@ export async function reopenTask(id: string): Promise<Task | undefined> {
 
 export async function listBulls(): Promise<Bull[]> {
   if (isDemoMode) return mock.demoListBulls();
-  const { data, error } = await supabase!.from("bulls").select("*").order("name", { ascending: true });
-  if (error) throw error;
-  return data as Bull[];
+  return fetchAllPages<Bull>((from, to) =>
+    supabase!.from("bulls").select("*").order("name", { ascending: true }).range(from, to)
+  );
 }
 
 export async function createBull(input: Omit<Bull, "id" | "created_at">): Promise<Bull> {
@@ -297,9 +313,9 @@ export async function createBull(input: Omit<Bull, "id" | "created_at">): Promis
 
 export async function listSemenInventory(): Promise<SemenInventory[]> {
   if (isDemoMode) return mock.demoListSemenInventory();
-  const { data, error } = await supabase!.from("semen_inventory").select("*");
-  if (error) throw error;
-  return data as SemenInventory[];
+  return fetchAllPages<SemenInventory>((from, to) =>
+    supabase!.from("semen_inventory").select("*").range(from, to)
+  );
 }
 
 export async function setSemenStock(
@@ -348,11 +364,11 @@ async function adjustSemenStock(
 
 export async function listInseminations(animalId?: string): Promise<Insemination[]> {
   if (isDemoMode) return mock.demoListInseminations(animalId);
-  let query = supabase!.from("inseminations").select("*").order("insemination_date", { ascending: false });
-  if (animalId) query = query.eq("animal_id", animalId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as Insemination[];
+  return fetchAllPages<Insemination>((from, to) => {
+    let query = supabase!.from("inseminations").select("*").order("insemination_date", { ascending: false });
+    if (animalId) query = query.eq("animal_id", animalId);
+    return query.range(from, to);
+  });
 }
 
 export async function createInsemination(
@@ -381,12 +397,9 @@ export async function updateInsemination(
 
 export async function listOpuSessions(): Promise<OpuSession[]> {
   if (isDemoMode) return mock.demoListOpuSessions();
-  const { data, error } = await supabase!
-    .from("opu_sessions")
-    .select("*")
-    .order("session_date", { ascending: false });
-  if (error) throw error;
-  return data as OpuSession[];
+  return fetchAllPages<OpuSession>((from, to) =>
+    supabase!.from("opu_sessions").select("*").order("session_date", { ascending: false }).range(from, to)
+  );
 }
 
 export async function getOpuSession(id: string): Promise<OpuSession | undefined> {
@@ -417,18 +430,18 @@ export async function updateOpuSession(
 
 export async function listEmbryos(opuSessionId?: string): Promise<Embryo[]> {
   if (isDemoMode) return mock.demoListEmbryos(opuSessionId);
-  let query = supabase!.from("embryos").select("*").order("label", { ascending: true });
-  if (opuSessionId) query = query.eq("opu_session_id", opuSessionId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as Embryo[];
+  return fetchAllPages<Embryo>((from, to) => {
+    let query = supabase!.from("embryos").select("*").order("label", { ascending: true });
+    if (opuSessionId) query = query.eq("opu_session_id", opuSessionId);
+    return query.range(from, to);
+  });
 }
 
 export async function listEmbryosForRecipient(animalId: string): Promise<Embryo[]> {
   if (isDemoMode) return mock.demoListEmbryosForRecipient(animalId);
-  const { data, error } = await supabase!.from("embryos").select("*").eq("recipient_animal_id", animalId);
-  if (error) throw error;
-  return data as Embryo[];
+  return fetchAllPages<Embryo>((from, to) =>
+    supabase!.from("embryos").select("*").eq("recipient_animal_id", animalId).range(from, to)
+  );
 }
 
 export async function getEmbryo(id: string): Promise<Embryo | undefined> {
@@ -458,11 +471,11 @@ export async function updateEmbryo(id: string, patch: Partial<Embryo>): Promise<
 
 export async function listCalfFeedings(animalId?: string): Promise<CalfFeeding[]> {
   if (isDemoMode) return mock.demoListCalfFeedings(animalId);
-  let query = supabase!.from("calf_feedings").select("*").order("fed_at", { ascending: false });
-  if (animalId) query = query.eq("animal_id", animalId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as CalfFeeding[];
+  return fetchAllPages<CalfFeeding>((from, to) => {
+    let query = supabase!.from("calf_feedings").select("*").order("fed_at", { ascending: false });
+    if (animalId) query = query.eq("animal_id", animalId);
+    return query.range(from, to);
+  });
 }
 
 export async function createCalfFeeding(
@@ -494,9 +507,9 @@ export async function setCalfFeedingExam(
 
 export async function listMedicines(): Promise<Medicine[]> {
   if (isDemoMode) return mock.demoListMedicines();
-  const { data, error } = await supabase!.from("medicines").select("*").order("name", { ascending: true });
-  if (error) throw error;
-  return data as Medicine[];
+  return fetchAllPages<Medicine>((from, to) =>
+    supabase!.from("medicines").select("*").order("name", { ascending: true }).range(from, to)
+  );
 }
 
 export async function createMedicine(
