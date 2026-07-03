@@ -1,0 +1,139 @@
+import { Animal, Profile, Task, Treatment } from "@/lib/types";
+
+export const DEMO_USER_ID = "demo-user-1";
+
+export const seedProfiles: Profile[] = [
+  { id: "demo-user-1", full_name: "Ahmet Yilmaz (Yonetici)", role: "yonetici", created_at: new Date().toISOString() },
+  { id: "demo-user-2", full_name: "Dr. Ayse Kaya (Veteriner)", role: "veteriner", created_at: new Date().toISOString() },
+  { id: "demo-user-3", full_name: "Mehmet Demir (Saha)", role: "calisan", created_at: new Date().toISOString() },
+];
+
+const today = new Date();
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+const daysAgo = (n: number) => {
+  const d = new Date(today);
+  d.setDate(d.getDate() - n);
+  return iso(d);
+};
+const daysFromNow = (n: number) => {
+  const d = new Date(today);
+  d.setDate(d.getDate() + n);
+  return iso(d);
+};
+
+export const seedAnimals: Animal[] = [
+  {
+    id: "animal-1",
+    ear_tag: "TR-1042",
+    name: "Sarikiz",
+    birth_date: daysAgo(45),
+    breed: "Holstein",
+    gender: "disi",
+    status: "aktif",
+    mother_ear_tag: "TR-0891",
+    weaned_at: null,
+    notes: "Buzagi, gunluk mama takibi yapiliyor.",
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(45),
+    updated_at: daysAgo(1),
+  },
+  {
+    id: "animal-2",
+    ear_tag: "TR-0891",
+    name: "Benekli",
+    birth_date: daysAgo(900),
+    breed: "Holstein",
+    gender: "disi",
+    status: "aktif",
+    mother_ear_tag: null,
+    weaned_at: daysAgo(850),
+    notes: null,
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(900),
+    updated_at: daysAgo(5),
+  },
+  {
+    id: "animal-3",
+    ear_tag: "TR-0755",
+    name: "Boncuk",
+    birth_date: daysAgo(1200),
+    breed: "Simental",
+    gender: "disi",
+    status: "aktif",
+    mother_ear_tag: null,
+    weaned_at: daysAgo(1150),
+    notes: "Mastitis gecmisi mevcut, takip ediliyor.",
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(1200),
+    updated_at: daysAgo(2),
+  },
+];
+
+export const seedTreatments: Treatment[] = [
+  {
+    id: "treat-1",
+    animal_id: "animal-1",
+    treatment_date: daysAgo(2),
+    category: "buzagi_beslenme",
+    diagnosis: "Rutin mama kontrolu",
+    medication: null,
+    dose: "2 litre buzagi mamasi",
+    udder_quarter: null,
+    vet_name: null,
+    outcome: "iyilesti",
+    notes: "Istahli sekilde icti.",
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(2),
+  },
+  {
+    id: "treat-2",
+    animal_id: "animal-3",
+    treatment_date: daysAgo(1),
+    category: "mastitis",
+    diagnosis: "Klinik mastitis",
+    medication: "Antibiyotik enjeksiyon",
+    dose: "1 doz / gun, 3 gun",
+    udder_quarter: "arka_sag",
+    vet_name: "Dr. Ayse Kaya",
+    outcome: "devam_ediyor",
+    notes: "Sutu ayri sagiliyor, atilacak.",
+    created_by: "demo-user-2",
+    created_at: daysAgo(1),
+  },
+];
+
+export const seedTasks: Task[] = [
+  {
+    id: "task-1",
+    title: "Revirdeki hayvanlarin sabah kontrolu",
+    description: "Mastitis tedavisi goren hayvanlarin meme durumunu kontrol et.",
+    assigned_to: "demo-user-3",
+    assigned_by: "demo-user-1",
+    due_date: iso(today),
+    due_time: "08:00",
+    status: "bekliyor",
+    created_at: daysAgo(1),
+  },
+  {
+    id: "task-2",
+    title: "Sperma stok sayimi",
+    description: "Tanktaki straw sayilarini kontrol edip sisteme gir.",
+    assigned_to: "demo-user-1",
+    assigned_by: "demo-user-1",
+    due_date: daysFromNow(3),
+    due_time: "14:00",
+    status: "bekliyor",
+    created_at: daysAgo(1),
+  },
+  {
+    id: "task-3",
+    title: "TR-1042 mama kontrolu",
+    description: null,
+    assigned_to: "demo-user-3",
+    assigned_by: "demo-user-2",
+    due_date: daysAgo(1),
+    due_time: null,
+    status: "yapildi",
+    created_at: daysAgo(2),
+  },
+];
