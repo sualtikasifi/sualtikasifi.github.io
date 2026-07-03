@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getAnimal, listTreatments, updateAnimal } from "@/lib/data";
-import { Animal, AnimalStatus, Treatment } from "@/lib/types";
+import { getAnimal, listBulls, listInseminations, listTreatments, updateAnimal } from "@/lib/data";
+import { Animal, AnimalStatus, Bull, Insemination, Treatment } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate } from "@/lib/format";
 
@@ -21,15 +21,21 @@ function AnimalDetailContent() {
   const id = params.get("id");
   const [animal, setAnimal] = useState<Animal | null>(null);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [inseminations, setInseminations] = useState<Insemination[]>([]);
+  const [bulls, setBulls] = useState<Bull[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([getAnimal(id), listTreatments(id)]).then(([a, t]) => {
-      setAnimal(a ?? null);
-      setTreatments(t);
-      setLoading(false);
-    });
+    Promise.all([getAnimal(id), listTreatments(id), listInseminations(id), listBulls()]).then(
+      ([a, t, ins, b]) => {
+        setAnimal(a ?? null);
+        setTreatments(t);
+        setInseminations(ins);
+        setBulls(b);
+        setLoading(false);
+      }
+    );
   }, [id]);
 
   async function handleStatusChange(status: AnimalStatus) {
@@ -57,12 +63,20 @@ function AnimalDetailContent() {
           </h1>
           <div className="mt-1"><Badge value={animal.status} /></div>
         </div>
-        <Link
-          href={`/treatments/new?animalId=${animal.id}`}
-          className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
-        >
-          Tedavi ekle
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href={`/inseminations/new?animalId=${animal.id}`}
+            className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50"
+          >
+            Tohumlama ekle
+          </Link>
+          <Link
+            href={`/treatments/new?animalId=${animal.id}`}
+            className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800"
+          >
+            Tedavi ekle
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 rounded-lg border border-neutral-200 bg-white p-4 text-sm sm:grid-cols-4">
@@ -127,6 +141,31 @@ function AnimalDetailContent() {
                 <p className="mt-1 text-neutral-700">{t.diagnosis}</p>
                 {t.medication && <p className="text-neutral-500">Ilac: {t.medication} {t.dose && `(${t.dose})`}</p>}
                 {t.notes && <p className="text-neutral-500">{t.notes}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-800">Tohumlama gecmisi</h2>
+        {inseminations.length === 0 ? (
+          <p className="text-sm text-neutral-400">Kayit yok.</p>
+        ) : (
+          <div className="divide-y divide-neutral-100">
+            {inseminations.map((i) => (
+              <div key={i.id} className="py-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-neutral-700">
+                    {bulls.find((b) => b.id === i.bull_id)?.name ?? "-"}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-neutral-400">{formatDate(i.insemination_date)}</span>
+                    <Badge value={i.pregnancy_result} />
+                  </div>
+                </div>
+                {i.technician_name && <p className="text-neutral-500">Teknisyen: {i.technician_name}</p>}
+                {i.notes && <p className="text-neutral-500">{i.notes}</p>}
               </div>
             ))}
           </div>

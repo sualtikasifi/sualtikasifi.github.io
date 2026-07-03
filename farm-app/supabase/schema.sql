@@ -80,11 +80,54 @@ create table if not exists tasks (
 create index if not exists tasks_assigned_to_idx on tasks (assigned_to);
 create index if not exists tasks_due_date_idx on tasks (due_date);
 
+-- 5. Bogalar (tohumlamada kullanilan sperma sahibi bogalar)
+create table if not exists bulls (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  code text,
+  breed text,
+  notes text,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+-- 6. Sperma stogu (her boga icin guncel straw adedi)
+create table if not exists semen_inventory (
+  id uuid primary key default gen_random_uuid(),
+  bull_id uuid not null references bulls (id) on delete cascade unique,
+  straw_count integer not null default 0 check (straw_count >= 0),
+  tank_location text,
+  notes text,
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists semen_inventory_bull_idx on semen_inventory (bull_id);
+
+-- 7. Tohumlamalar (OPU/embriyo degil, dogrudan tohumlama kayitlari)
+create table if not exists inseminations (
+  id uuid primary key default gen_random_uuid(),
+  animal_id uuid not null references animals (id) on delete cascade,
+  bull_id uuid references bulls (id),
+  insemination_date date not null default current_date,
+  technician_name text,
+  pregnancy_check_date date,
+  pregnancy_result text not null default 'bekleniyor' check (pregnancy_result in ('bekleniyor', 'gebe', 'gebe_degil')),
+  notes text,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists inseminations_animal_idx on inseminations (animal_id);
+create index if not exists inseminations_date_idx on inseminations (insemination_date);
+
 -- Row Level Security: giris yapmis herkes (10 kisilik guvenilir ekip) okuyup yazabilir
 alter table profiles enable row level security;
 alter table animals enable row level security;
 alter table treatments enable row level security;
 alter table tasks enable row level security;
+alter table bulls enable row level security;
+alter table semen_inventory enable row level security;
+alter table inseminations enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
@@ -92,3 +135,6 @@ create policy "profiles_update_own" on profiles for update to authenticated usin
 create policy "animals_all_authenticated" on animals for all to authenticated using (true) with check (true);
 create policy "treatments_all_authenticated" on treatments for all to authenticated using (true) with check (true);
 create policy "tasks_all_authenticated" on tasks for all to authenticated using (true) with check (true);
+create policy "bulls_all_authenticated" on bulls for all to authenticated using (true) with check (true);
+create policy "semen_inventory_all_authenticated" on semen_inventory for all to authenticated using (true) with check (true);
+create policy "inseminations_all_authenticated" on inseminations for all to authenticated using (true) with check (true);

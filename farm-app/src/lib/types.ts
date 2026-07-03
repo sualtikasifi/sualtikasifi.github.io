@@ -9,6 +9,8 @@ export type UdderQuarter = "on_sol" | "on_sag" | "arka_sol" | "arka_sag";
 
 export type TaskStatus = "bekliyor" | "yapildi" | "iptal";
 
+export type PregnancyResult = "bekleniyor" | "gebe" | "gebe_degil";
+
 export interface Profile {
   id: string;
   full_name: string;
@@ -57,5 +59,37 @@ export interface Task {
   due_date: string;
   due_time: string | null;
   status: TaskStatus;
+  created_at: string;
+}
+
+export interface Bull {
+  id: string;
+  name: string;
+  code: string | null;
+  breed: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SemenInventory {
+  id: string;
+  bull_id: string;
+  straw_count: number;
+  tank_location: string | null;
+  notes: string | null;
+  updated_at: string;
+}
+
+export interface Insemination {
+  id: string;
+  animal_id: string;
+  bull_id: string | null;
+  insemination_date: string;
+  technician_name: string | null;
+  pregnancy_check_date: string | null;
+  pregnancy_result: PregnancyResult;
+  notes: string | null;
+  created_by: string | null;
   created_at: string;
 }

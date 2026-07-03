@@ -2,42 +2,45 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createTreatment, listAnimals } from "@/lib/data";
-import { Animal, TreatmentCategory, UdderQuarter } from "@/lib/types";
+import { createInsemination, listAnimals, listBulls, listSemenInventory } from "@/lib/data";
+import { Animal, Bull, PregnancyResult, SemenInventory } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 
-export default function NewTreatmentPage() {
+export default function NewInseminationPage() {
   return (
     <Suspense fallback={<p className="text-sm text-neutral-500">Yukleniyor...</p>}>
-      <NewTreatmentContent />
+      <NewInseminationContent />
     </Suspense>
   );
 }
 
-function NewTreatmentContent() {
+function NewInseminationContent() {
   const router = useRouter();
   const params = useSearchParams();
   const { profile } = useAuth();
   const preselectedAnimalId = params.get("animalId") ?? "";
 
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [bulls, setBulls] = useState<Bull[]>([]);
+  const [inventory, setInventory] = useState<SemenInventory[]>([]);
   const [animalSearch, setAnimalSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     animal_id: preselectedAnimalId,
-    treatment_date: new Date().toISOString().slice(0, 10),
-    category: "genel" as TreatmentCategory,
-    diagnosis: "",
-    medication: "",
-    dose: "",
-    udder_quarter: "" as UdderQuarter | "",
-    vet_name: "",
-    outcome: "devam_ediyor" as "devam_ediyor" | "iyilesti" | "olum",
+    bull_id: "",
+    insemination_date: new Date().toISOString().slice(0, 10),
+    technician_name: "",
+    pregnancy_result: "bekleniyor" as PregnancyResult,
     notes: "",
   });
 
   useEffect(() => {
-    listAnimals().then(setAnimals);
+    Promise.all([listAnimals(), listBulls(), listSemenInventory()]).then(([a, b, i]) => {
+      setAnimals(a);
+      setBulls(b);
+      setInventory(i);
+      setForm((f) => ({ ...f, bull_id: f.bull_id || b[0]?.id || "" }));
+    });
   }, []);
 
   const filteredAnimals = useMemo(() => {
@@ -50,20 +53,21 @@ function NewTreatmentContent() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function stockFor(bullId: string) {
+    return inventory.find((i) => i.bull_id === bullId)?.straw_count ?? 0;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.animal_id) return;
     setSubmitting(true);
-    await createTreatment({
+    await createInsemination({
       animal_id: form.animal_id,
-      treatment_date: form.treatment_date,
-      category: form.category,
-      diagnosis: form.diagnosis.trim() || null,
-      medication: form.medication.trim() || null,
-      dose: form.dose.trim() || null,
-      udder_quarter: form.category === "mastitis" && form.udder_quarter ? form.udder_quarter : null,
-      vet_name: form.vet_name.trim() || null,
-      outcome: form.outcome,
+      bull_id: form.bull_id || null,
+      insemination_date: form.insemination_date,
+      technician_name: form.technician_name.trim() || null,
+      pregnancy_check_date: null,
+      pregnancy_result: form.pregnancy_result,
       notes: form.notes.trim() || null,
       created_by: profile?.id ?? null,
     });
@@ -73,7 +77,7 @@ function NewTreatmentContent() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">Yeni tedavi kaydi</h1>
+      <h1 className="text-lg font-semibold text-neutral-900">Yeni tohumlama kaydi</h1>
       <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
         <FieldBlock label="Hayvan *">
           {form.animal_id ? (
@@ -107,58 +111,40 @@ function NewTreatmentContent() {
           )}
         </FieldBlock>
 
+        <Field label="Boga / sperma">
+          <select value={form.bull_id} onChange={(e) => update("bull_id", e.target.value)} className="input">
+            <option value="">Secilmedi</option>
+            {bulls.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name} ({stockFor(b.id)} straw kaldi)
+              </option>
+            ))}
+          </select>
+        </Field>
+
         <div className="grid grid-cols-2 gap-3">
           <Field label="Tarih">
             <input
               type="date"
-              value={form.treatment_date}
-              onChange={(e) => update("treatment_date", e.target.value)}
+              value={form.insemination_date}
+              onChange={(e) => update("insemination_date", e.target.value)}
               className="input"
             />
           </Field>
-          <Field label="Kategori">
-            <select value={form.category} onChange={(e) => update("category", e.target.value as TreatmentCategory)} className="input">
-              <option value="genel">Genel</option>
-              <option value="mastitis">Mastitis</option>
-              <option value="buzagi_beslenme">Buzagi Beslenme</option>
-            </select>
+          <Field label="Teknisyen">
+            <input value={form.technician_name} onChange={(e) => update("technician_name", e.target.value)} className="input" />
           </Field>
         </div>
 
-        {form.category === "mastitis" && (
-          <Field label="Meme">
-            <select value={form.udder_quarter} onChange={(e) => update("udder_quarter", e.target.value as UdderQuarter)} className="input">
-              <option value="">Secin</option>
-              <option value="on_sol">On Sol</option>
-              <option value="on_sag">On Sag</option>
-              <option value="arka_sol">Arka Sol</option>
-              <option value="arka_sag">Arka Sag</option>
-            </select>
-          </Field>
-        )}
-
-        <Field label="Tani / aciklama">
-          <input value={form.diagnosis} onChange={(e) => update("diagnosis", e.target.value)} className="input" />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Ilac">
-            <input value={form.medication} onChange={(e) => update("medication", e.target.value)} className="input" />
-          </Field>
-          <Field label="Doz">
-            <input value={form.dose} onChange={(e) => update("dose", e.target.value)} className="input" />
-          </Field>
-        </div>
-
-        <Field label="Veteriner">
-          <input value={form.vet_name} onChange={(e) => update("vet_name", e.target.value)} className="input" />
-        </Field>
-
-        <Field label="Durum">
-          <select value={form.outcome} onChange={(e) => update("outcome", e.target.value as typeof form.outcome)} className="input">
-            <option value="devam_ediyor">Devam ediyor</option>
-            <option value="iyilesti">Iyilesti</option>
-            <option value="olum">Olum</option>
+        <Field label="Gebelik durumu">
+          <select
+            value={form.pregnancy_result}
+            onChange={(e) => update("pregnancy_result", e.target.value as PregnancyResult)}
+            className="input"
+          >
+            <option value="bekleniyor">Bekleniyor</option>
+            <option value="gebe">Gebe</option>
+            <option value="gebe_degil">Gebe degil</option>
           </select>
         </Field>
 

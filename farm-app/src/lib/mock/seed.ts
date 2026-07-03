@@ -1,4 +1,4 @@
-import { Animal, Profile, Task, Treatment } from "@/lib/types";
+import { Animal, Bull, Insemination, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -135,5 +135,72 @@ export const seedTasks: Task[] = [
     due_time: null,
     status: "yapildi",
     created_at: daysAgo(2),
+  },
+];
+
+export const seedBulls: Bull[] = [
+  {
+    id: "bull-1",
+    name: "Alparslan",
+    code: "TR-BOGA-001",
+    breed: "Holstein",
+    notes: "Yuksek sut verimi hatti",
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(200),
+  },
+  {
+    id: "bull-2",
+    name: "Karayel",
+    code: "TR-BOGA-002",
+    breed: "Simental",
+    notes: null,
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(150),
+  },
+];
+
+export const seedSemenInventory: SemenInventory[] = [
+  {
+    id: "semen-1",
+    bull_id: "bull-1",
+    straw_count: 24,
+    tank_location: "Tank 1 - Kanister 2",
+    notes: null,
+    updated_at: daysAgo(3),
+  },
+  {
+    id: "semen-2",
+    bull_id: "bull-2",
+    straw_count: 5,
+    tank_location: "Tank 1 - Kanister 4",
+    notes: "Stok azaliyor, siparis verilecek.",
+    updated_at: daysAgo(1),
+  },
+];
+
+export const seedInseminations: Insemination[] = [
+  {
+    id: "insem-1",
+    animal_id: "animal-2",
+    bull_id: "bull-1",
+    insemination_date: daysAgo(20),
+    technician_name: "Dr. Ayse Kaya",
+    pregnancy_check_date: daysAgo(5),
+    pregnancy_result: "gebe",
+    notes: null,
+    created_by: "demo-user-2",
+    created_at: daysAgo(20),
+  },
+  {
+    id: "insem-2",
+    animal_id: "animal-3",
+    bull_id: "bull-2",
+    insemination_date: daysAgo(4),
+    technician_name: "Dr. Ayse Kaya",
+    pregnancy_check_date: null,
+    pregnancy_result: "bekleniyor",
+    notes: "Kontrol icin 30 gun sonra tekrar bakilacak.",
+    created_by: "demo-user-2",
+    created_at: daysAgo(4),
   },
 ];

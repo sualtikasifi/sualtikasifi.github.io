@@ -8,6 +8,9 @@ const COLORS: Record<string, string> = {
   devam_ediyor: "bg-amber-100 text-amber-800",
   iyilesti: "bg-green-100 text-green-800",
   olum: "bg-red-100 text-red-800",
+  bekleniyor: "bg-amber-100 text-amber-800",
+  gebe: "bg-green-100 text-green-800",
+  gebe_degil: "bg-neutral-200 text-neutral-600",
 };
 
 const LABELS: Record<string, string> = {
@@ -23,6 +26,9 @@ const LABELS: Record<string, string> = {
   genel: "Genel",
   mastitis: "Mastitis",
   buzagi_beslenme: "Buzagi Beslenme",
+  bekleniyor: "Bekleniyor",
+  gebe: "Gebe",
+  gebe_degil: "Gebe degil",
 };
 
 export function Badge({ value }: { value: string }) {

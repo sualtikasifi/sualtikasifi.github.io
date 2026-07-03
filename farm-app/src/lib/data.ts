@@ -1,6 +1,6 @@
 import { isDemoMode, supabase } from "./supabaseClient";
 import * as mock from "./mock/store";
-import { Animal, Profile, Task, Treatment } from "./types";
+import { Animal, Bull, Insemination, Profile, SemenInventory, Task, Treatment } from "./types";
 
 export { isDemoMode };
 
@@ -87,4 +87,93 @@ export async function updateTaskStatus(id: string, status: Task["status"]): Prom
   const { data, error } = await supabase!.from("tasks").update({ status }).eq("id", id).select().single();
   if (error) throw error;
   return data as Task;
+}
+
+// --- Bulls & semen inventory ---
+
+export async function listBulls(): Promise<Bull[]> {
+  if (isDemoMode) return mock.demoListBulls();
+  const { data, error } = await supabase!.from("bulls").select("*").order("name", { ascending: true });
+  if (error) throw error;
+  return data as Bull[];
+}
+
+export async function createBull(input: Omit<Bull, "id" | "created_at">): Promise<Bull> {
+  if (isDemoMode) return mock.demoCreateBull(input);
+  const { data, error } = await supabase!.from("bulls").insert(input).select().single();
+  if (error) throw error;
+  return data as Bull;
+}
+
+export async function listSemenInventory(): Promise<SemenInventory[]> {
+  if (isDemoMode) return mock.demoListSemenInventory();
+  const { data, error } = await supabase!.from("semen_inventory").select("*");
+  if (error) throw error;
+  return data as SemenInventory[];
+}
+
+export async function setSemenStock(
+  bullId: string,
+  patch: Partial<Omit<SemenInventory, "id" | "bull_id">>
+): Promise<SemenInventory> {
+  if (isDemoMode) return mock.demoUpsertSemenInventory(bullId, patch);
+  const { data, error } = await supabase!
+    .from("semen_inventory")
+    .upsert({ bull_id: bullId, ...patch, updated_at: new Date().toISOString() }, { onConflict: "bull_id" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as SemenInventory;
+}
+
+async function adjustSemenStock(bullId: string, delta: number): Promise<void> {
+  if (isDemoMode) {
+    mock.demoAdjustSemenStock(bullId, delta);
+    return;
+  }
+  const { data: existing } = await supabase!
+    .from("semen_inventory")
+    .select("*")
+    .eq("bull_id", bullId)
+    .maybeSingle();
+  const nextCount = Math.max(0, (existing?.straw_count ?? 0) + delta);
+  await supabase!
+    .from("semen_inventory")
+    .upsert(
+      { bull_id: bullId, straw_count: nextCount, updated_at: new Date().toISOString() },
+      { onConflict: "bull_id" }
+    );
+}
+
+// --- Inseminations ---
+
+export async function listInseminations(animalId?: string): Promise<Insemination[]> {
+  if (isDemoMode) return mock.demoListInseminations(animalId);
+  let query = supabase!.from("inseminations").select("*").order("insemination_date", { ascending: false });
+  if (animalId) query = query.eq("animal_id", animalId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as Insemination[];
+}
+
+export async function createInsemination(
+  input: Omit<Insemination, "id" | "created_at">
+): Promise<Insemination> {
+  if (isDemoMode) return mock.demoCreateInsemination(input);
+  const { data, error } = await supabase!.from("inseminations").insert(input).select().single();
+  if (error) throw error;
+  if (input.bull_id) {
+    await adjustSemenStock(input.bull_id, -1);
+  }
+  return data as Insemination;
+}
+
+export async function updateInsemination(
+  id: string,
+  patch: Partial<Insemination>
+): Promise<Insemination | undefined> {
+  if (isDemoMode) return mock.demoUpdateInsemination(id, patch);
+  const { data, error } = await supabase!.from("inseminations").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data as Insemination;
 }

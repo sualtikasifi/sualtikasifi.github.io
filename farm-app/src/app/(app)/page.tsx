@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listAnimals, listTasks, listTreatments } from "@/lib/data";
-import { Animal, Task, Treatment } from "@/lib/types";
+import { listAnimals, listBulls, listSemenInventory, listTasks, listTreatments } from "@/lib/data";
+import { Animal, Bull, SemenInventory, Task, Treatment } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate, todayIso } from "@/lib/format";
 
@@ -11,15 +11,21 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [bulls, setBulls] = useState<Bull[]>([]);
+  const [inventory, setInventory] = useState<SemenInventory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([listTasks(), listTreatments(), listAnimals()]).then(([t, tr, a]) => {
-      setTasks(t);
-      setTreatments(tr);
-      setAnimals(a);
-      setLoading(false);
-    });
+    Promise.all([listTasks(), listTreatments(), listAnimals(), listBulls(), listSemenInventory()]).then(
+      ([t, tr, a, b, inv]) => {
+        setTasks(t);
+        setTreatments(tr);
+        setAnimals(a);
+        setBulls(b);
+        setInventory(inv);
+        setLoading(false);
+      }
+    );
   }, []);
 
   if (loading) {
@@ -32,16 +38,18 @@ export default function DashboardPage() {
   const overdueTasks = pending.filter((t) => t.due_date < today);
   const activeAnimals = animals.filter((a) => a.status === "aktif");
   const inTreatment = treatments.filter((t) => t.outcome === "devam_ediyor");
+  const lowStockBulls = bulls.filter((b) => (inventory.find((i) => i.bull_id === b.id)?.straw_count ?? 0) <= 5);
 
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900">Panel</h1>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <StatCard label="Aktif hayvan" value={activeAnimals.length} />
         <StatCard label="Bugunku gorev" value={todayTasks.length} />
         <StatCard label="Geciken gorev" value={overdueTasks.length} tone={overdueTasks.length > 0 ? "warn" : undefined} />
         <StatCard label="Devam eden tedavi" value={inTreatment.length} />
+        <StatCard label="Dusuk sperma stogu" value={lowStockBulls.length} tone={lowStockBulls.length > 0 ? "warn" : undefined} />
       </div>
 
       <Section title="Bugunun gorevleri" href="/tasks">

@@ -1,5 +1,14 @@
-import { Animal, Profile, Task, Treatment } from "@/lib/types";
-import { DEMO_USER_ID, seedAnimals, seedProfiles, seedTasks, seedTreatments } from "./seed";
+import { Animal, Bull, Insemination, Profile, SemenInventory, Task, Treatment } from "@/lib/types";
+import {
+  DEMO_USER_ID,
+  seedAnimals,
+  seedBulls,
+  seedInseminations,
+  seedProfiles,
+  seedSemenInventory,
+  seedTasks,
+  seedTreatments,
+} from "./seed";
 
 const STORAGE_KEY = "farm_app_demo_db_v1";
 const SESSION_KEY = "farm_app_demo_session_v1";
@@ -9,24 +18,43 @@ interface DemoDb {
   animals: Animal[];
   treatments: Treatment[];
   tasks: Task[];
+  bulls: Bull[];
+  semenInventory: SemenInventory[];
+  inseminations: Insemination[];
+}
+
+function initialDb(): DemoDb {
+  return {
+    profiles: seedProfiles,
+    animals: seedAnimals,
+    treatments: seedTreatments,
+    tasks: seedTasks,
+    bulls: seedBulls,
+    semenInventory: seedSemenInventory,
+    inseminations: seedInseminations,
+  };
 }
 
 function loadDb(): DemoDb {
   if (typeof window === "undefined") {
-    return { profiles: seedProfiles, animals: seedAnimals, treatments: seedTreatments, tasks: seedTasks };
+    return initialDb();
   }
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) {
-    const initial: DemoDb = {
-      profiles: seedProfiles,
-      animals: seedAnimals,
-      treatments: seedTreatments,
-      tasks: seedTasks,
-    };
+    const initial = initialDb();
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
     return initial;
   }
-  return JSON.parse(raw) as DemoDb;
+  const parsed = JSON.parse(raw) as Partial<DemoDb>;
+  return {
+    profiles: parsed.profiles ?? seedProfiles,
+    animals: parsed.animals ?? seedAnimals,
+    treatments: parsed.treatments ?? seedTreatments,
+    tasks: parsed.tasks ?? seedTasks,
+    bulls: parsed.bulls ?? seedBulls,
+    semenInventory: parsed.semenInventory ?? seedSemenInventory,
+    inseminations: parsed.inseminations ?? seedInseminations,
+  };
 }
 
 function saveDb(db: DemoDb) {
@@ -128,4 +156,105 @@ export function demoUpdateTaskStatus(id: string, status: Task["status"]): Task |
   db.tasks[idx] = { ...db.tasks[idx], status };
   saveDb(db);
   return db.tasks[idx];
+}
+
+// --- Bulls & semen inventory ---
+
+export function demoListBulls(): Bull[] {
+  return loadDb().bulls.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function demoCreateBull(input: Omit<Bull, "id" | "created_at">): Bull {
+  const db = loadDb();
+  const bull: Bull = { ...input, id: newId("bull"), created_at: new Date().toISOString() };
+  db.bulls.push(bull);
+  saveDb(db);
+  return bull;
+}
+
+export function demoListSemenInventory(): SemenInventory[] {
+  return loadDb().semenInventory;
+}
+
+export function demoGetSemenInventoryForBull(bullId: string): SemenInventory | undefined {
+  return loadDb().semenInventory.find((s) => s.bull_id === bullId);
+}
+
+export function demoUpsertSemenInventory(
+  bullId: string,
+  patch: Partial<Omit<SemenInventory, "id" | "bull_id">>
+): SemenInventory {
+  const db = loadDb();
+  const idx = db.semenInventory.findIndex((s) => s.bull_id === bullId);
+  const now = new Date().toISOString();
+  if (idx === -1) {
+    const created: SemenInventory = {
+      id: newId("semen"),
+      bull_id: bullId,
+      straw_count: 0,
+      tank_location: null,
+      notes: null,
+      ...patch,
+      updated_at: now,
+    };
+    db.semenInventory.push(created);
+    saveDb(db);
+    return created;
+  }
+  db.semenInventory[idx] = { ...db.semenInventory[idx], ...patch, updated_at: now };
+  saveDb(db);
+  return db.semenInventory[idx];
+}
+
+export function demoAdjustSemenStock(bullId: string, delta: number): SemenInventory {
+  const db = loadDb();
+  const idx = db.semenInventory.findIndex((s) => s.bull_id === bullId);
+  const now = new Date().toISOString();
+  if (idx === -1) {
+    const created: SemenInventory = {
+      id: newId("semen"),
+      bull_id: bullId,
+      straw_count: Math.max(0, delta),
+      tank_location: null,
+      notes: null,
+      updated_at: now,
+    };
+    db.semenInventory.push(created);
+    saveDb(db);
+    return created;
+  }
+  db.semenInventory[idx] = {
+    ...db.semenInventory[idx],
+    straw_count: Math.max(0, db.semenInventory[idx].straw_count + delta),
+    updated_at: now,
+  };
+  saveDb(db);
+  return db.semenInventory[idx];
+}
+
+// --- Inseminations ---
+
+export function demoListInseminations(animalId?: string): Insemination[] {
+  const all = loadDb().inseminations.sort((a, b) => b.insemination_date.localeCompare(a.insemination_date));
+  return animalId ? all.filter((i) => i.animal_id === animalId) : all;
+}
+
+export function demoCreateInsemination(input: Omit<Insemination, "id" | "created_at">): Insemination {
+  const db = loadDb();
+  const insemination: Insemination = { ...input, id: newId("insem"), created_at: new Date().toISOString() };
+  db.inseminations.push(insemination);
+  saveDb(db);
+  if (input.bull_id) {
+    demoAdjustSemenStock(input.bull_id, -1);
+  }
+  return insemination;
+}
+
+export function demoUpdateInsemination(id: string, patch: Partial<Insemination>): Insemination | undefined {
+  const db = loadDb();
+  const idx = db.inseminations.findIndex((i) => i.id === id);
+  if (idx === -1) return undefined;
+  db.inseminations[idx] = { ...db.inseminations[idx], ...patch };
+  saveDb(db);
+  return db.inseminations[idx];
 }

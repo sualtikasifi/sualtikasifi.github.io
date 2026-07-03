@@ -8,6 +8,8 @@ const links = [
   { href: "/", label: "Panel" },
   { href: "/animals", label: "Hayvanlar" },
   { href: "/treatments", label: "Tedaviler" },
+  { href: "/inseminations", label: "Tohumlama" },
+  { href: "/bulls", label: "Bogalar" },
   { href: "/tasks", label: "Gorevler" },
 ];
 
@@ -23,23 +25,8 @@ export function NavBar() {
 
   return (
     <header className="border-b border-neutral-200 bg-white">
-      <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+      <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-2.5">
         <span className="text-sm font-semibold text-green-800">Marder Ciftlik</span>
-        <nav className="flex gap-1 text-sm">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`rounded-md px-2.5 py-1.5 ${
-                pathname === link.href
-                  ? "bg-green-700 text-white"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
         <div className="flex items-center gap-2 text-sm text-neutral-500">
           <span className="hidden sm:inline">{profile?.full_name}</span>
           <button onClick={handleSignOut} className="rounded-md px-2 py-1 hover:bg-neutral-100">
@@ -47,6 +34,21 @@ export function NavBar() {
           </button>
         </div>
       </div>
+      <nav className="mx-auto flex max-w-4xl gap-1 overflow-x-auto px-4 pb-2 text-sm">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={`shrink-0 rounded-md px-2.5 py-1.5 ${
+              pathname === link.href
+                ? "bg-green-700 text-white"
+                : "text-neutral-600 hover:bg-neutral-100"
+            }`}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }
