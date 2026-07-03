@@ -16,9 +16,21 @@ function formatDateTime(iso: string): string {
   });
 }
 
+function tenureText(startDate: string): string {
+  const days = Math.max(0, Math.floor((Date.now() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)));
+  const years = Math.floor(days / 365);
+  const remainingDays = days % 365;
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} yıl`);
+  parts.push(`${remainingDays} gün`);
+  return `${days} gündür bu çiftlikte çalışıyor (${parts.join(", ")})`;
+}
+
 export default function ProfilePage() {
   const { profile, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
+  const [title, setTitle] = useState(profile?.title ?? "");
+  const [startDate, setStartDate] = useState(profile?.start_date ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
@@ -45,7 +57,11 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!profile || !fullName.trim()) return;
     setSaving(true);
-    await updateProfile(profile.id, { full_name: fullName.trim() });
+    await updateProfile(profile.id, {
+      full_name: fullName.trim(),
+      title: title.trim() || null,
+      start_date: startDate || null,
+    });
     await refreshProfile();
     setSaving(false);
     setSaved(true);
@@ -57,6 +73,18 @@ export default function ProfilePage() {
     <div className="max-w-lg space-y-4">
       <h1 className="text-lg font-semibold text-neutral-900">Profilim</h1>
       <form onSubmit={handleSubmit} className="card space-y-3">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-neutral-700">Unvan</span>
+          <input
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setSaved(false);
+            }}
+            placeholder="örn. Veteriner"
+            className="input"
+          />
+        </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-neutral-700">Unvan + Ad Soyad</span>
           <input
@@ -73,6 +101,19 @@ export default function ProfilePage() {
           Bu isim görevlerde, mastitis kayıtlarında ve diğer kayıtlarda &quot;kim yaptı&quot; bilgisi olarak
           gösterilir. E-posta yerine unvan + ad soyad şeklinde girmeniz önerilir.
         </p>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-neutral-700">İşe başlama tarihi</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              setSaved(false);
+            }}
+            className="input"
+          />
+        </label>
+        {startDate && <p className="text-xs text-neutral-500">{tenureText(startDate)}</p>}
         <button type="submit" disabled={saving || !fullName.trim()} className="btn-primary">
           {saving ? "Kaydediliyor..." : "Kaydet"}
         </button>

@@ -21,6 +21,8 @@ export type EmbryoStatus = "gelisiyor" | "dondu" | "transfer_edildi" | "atildi";
 export interface Profile {
   id: string;
   full_name: string;
+  title: string | null;
+  start_date: string | null;
   role: UserRole;
   created_at: string;
 }

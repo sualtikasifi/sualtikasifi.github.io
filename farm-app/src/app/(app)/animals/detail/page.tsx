@@ -163,6 +163,7 @@ function AnimalDetailContent() {
             <MastitisTreatmentCard
               key={t.id}
               treatmentId={t.id}
+              onDeleted={() => setMastitisTreatments((prev) => prev.filter((x) => x.id !== t.id))}
               profiles={profiles}
               currentProfileId={profile?.id ?? null}
             />

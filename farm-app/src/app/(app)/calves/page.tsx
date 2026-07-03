@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { createAnimal, createCalfFeeding, listAnimals, listCalfFeedings, setCalfFeedingExam } from "@/lib/data";
 import { Animal, CalfFeeding } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
@@ -155,9 +154,6 @@ export default function CalvesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Buzağılar</h1>
-        <Link href="/animals/import" className="text-xs font-medium text-green-700 hover:underline">
-          Excel&apos;den toplu aktar
-        </Link>
       </div>
 
       <section className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 shadow-sm">

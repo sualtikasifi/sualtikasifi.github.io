@@ -224,10 +224,33 @@ export function demoCreateMastitisTreatment(
   return treatment;
 }
 
+export function demoUpdateMastitisTreatment(
+  id: string,
+  patch: Partial<Omit<MastitisTreatment, "id" | "created_at">>
+): MastitisTreatment | undefined {
+  const db = loadDb();
+  const idx = db.mastitisTreatments.findIndex((t) => t.id === id);
+  if (idx === -1) return undefined;
+  db.mastitisTreatments[idx] = { ...db.mastitisTreatments[idx], ...patch };
+  saveDb(db);
+  return db.mastitisTreatments[idx];
+}
+
+export function demoDeleteMastitisTreatment(id: string): void {
+  const db = loadDb();
+  db.mastitisTreatments = db.mastitisTreatments.filter((t) => t.id !== id);
+  db.mastitisDoses = db.mastitisDoses.filter((d) => d.mastitis_treatment_id !== id);
+  saveDb(db);
+}
+
 export function demoListMastitisDoses(treatmentId: string): MastitisDose[] {
   return loadDb()
     .mastitisDoses.filter((d) => d.mastitis_treatment_id === treatmentId)
     .sort((a, b) => a.day_number - b.day_number);
+}
+
+export function demoListAllMastitisDoses(): MastitisDose[] {
+  return loadDb().mastitisDoses;
 }
 
 export function demoCompleteMastitisDose(
@@ -472,6 +495,12 @@ export function demoUpdateInsemination(id: string, patch: Partial<Insemination>)
   db.inseminations[idx] = { ...db.inseminations[idx], ...patch };
   saveDb(db);
   return db.inseminations[idx];
+}
+
+export function demoDeleteInsemination(id: string): void {
+  const db = loadDb();
+  db.inseminations = db.inseminations.filter((i) => i.id !== id);
+  saveDb(db);
 }
 
 // --- OPU sessions & embryos ---

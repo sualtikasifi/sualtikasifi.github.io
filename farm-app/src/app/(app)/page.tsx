@@ -2,30 +2,46 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listAnimals, listEmbryos, listMastitisTreatments, listSemenInventory, listTasks } from "@/lib/data";
-import { Animal, Embryo, MastitisTreatment, SemenInventory, Task } from "@/lib/types";
+import {
+  listAllMastitisDoses,
+  listAnimals,
+  listEmbryos,
+  listMastitisTreatments,
+  listSemenInventory,
+  listTasks,
+} from "@/lib/data";
+import { Animal, Embryo, MastitisDose, MastitisTreatment, SemenInventory, Task } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate, todayIso } from "@/lib/format";
+import { getTodaysMastitisReminders, isMastitisReminderActive, isMastitisWarningActive } from "@/lib/mastitisReminder";
+import { MastitisReminderCard } from "@/components/MastitisReminderCard";
 
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [mastitisTreatments, setMastitisTreatments] = useState<MastitisTreatment[]>([]);
+  const [mastitisDoses, setMastitisDoses] = useState<MastitisDose[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [inventory, setInventory] = useState<SemenInventory[]>([]);
   const [embryos, setEmbryos] = useState<Embryo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([listTasks(), listMastitisTreatments(), listAnimals(), listSemenInventory(), listEmbryos()]).then(
-      ([t, mt, a, inv, emb]) => {
-        setTasks(t);
-        setMastitisTreatments(mt);
-        setAnimals(a);
-        setInventory(inv);
-        setEmbryos(emb);
-        setLoading(false);
-      }
-    );
+    Promise.all([
+      listTasks(),
+      listMastitisTreatments(),
+      listAllMastitisDoses(),
+      listAnimals(),
+      listSemenInventory(),
+      listEmbryos(),
+    ]).then(([t, mt, doses, a, inv, emb]) => {
+      setTasks(t);
+      setMastitisTreatments(mt);
+      setMastitisDoses(doses);
+      setAnimals(a);
+      setInventory(inv);
+      setEmbryos(emb);
+      setLoading(false);
+    });
   }, []);
 
   if (loading) {
@@ -40,10 +56,15 @@ export default function DashboardPage() {
   const inTreatment = mastitisTreatments.filter((t) => !t.ended_at);
   const lowStockRows = inventory.filter((i) => i.straw_count <= 5);
   const developingEmbryos = embryos.filter((e) => e.status === "gelisiyor");
+  const mastitisReminders = getTodaysMastitisReminders(mastitisTreatments, mastitisDoses, animals);
 
   return (
     <div className="space-y-6">
       <h1 className="text-lg font-semibold text-neutral-900">Panel</h1>
+
+      {isMastitisReminderActive() && mastitisReminders.length > 0 && (
+        <MastitisReminderCard reminders={mastitisReminders} warning={isMastitisWarningActive()} />
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
         <StatCard label="Aktif hayvan" value={activeAnimals.length} />

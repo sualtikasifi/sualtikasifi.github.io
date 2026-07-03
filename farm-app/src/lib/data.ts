@@ -157,6 +157,27 @@ export async function createMastitisTreatment(
   return treatment;
 }
 
+export async function updateMastitisTreatment(
+  id: string,
+  patch: Partial<Omit<MastitisTreatment, "id" | "created_at">>
+): Promise<MastitisTreatment | undefined> {
+  if (isDemoMode) return mock.demoUpdateMastitisTreatment(id, patch);
+  const { data, error } = await supabase!
+    .from("mastitis_treatments")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as MastitisTreatment;
+}
+
+export async function deleteMastitisTreatment(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteMastitisTreatment(id);
+  const { error } = await supabase!.from("mastitis_treatments").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function listMastitisDoses(treatmentId: string): Promise<MastitisDose[]> {
   if (isDemoMode) return mock.demoListMastitisDoses(treatmentId);
   return fetchAllPages<MastitisDose>((from, to) =>
@@ -166,6 +187,13 @@ export async function listMastitisDoses(treatmentId: string): Promise<MastitisDo
       .eq("mastitis_treatment_id", treatmentId)
       .order("day_number", { ascending: true })
       .range(from, to)
+  );
+}
+
+export async function listAllMastitisDoses(): Promise<MastitisDose[]> {
+  if (isDemoMode) return mock.demoListAllMastitisDoses();
+  return fetchAllPages<MastitisDose>((from, to) =>
+    supabase!.from("mastitis_doses").select("*", { count: "exact" }).range(from, to)
   );
 }
 
@@ -417,6 +445,12 @@ export async function updateInsemination(
   const { data, error } = await supabase!.from("inseminations").update(patch).eq("id", id).select().single();
   if (error) throw error;
   return data as Insemination;
+}
+
+export async function deleteInsemination(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteInsemination(id);
+  const { error } = await supabase!.from("inseminations").delete().eq("id", id);
+  if (error) throw error;
 }
 
 // --- OPU sessions & embryos ---
