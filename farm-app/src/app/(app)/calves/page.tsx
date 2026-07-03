@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createCalfFeeding, listAnimals, listCalfFeedings, setCalfFeedingExam } from "@/lib/data";
+import { createAnimal, createCalfFeeding, listAnimals, listCalfFeedings, setCalfFeedingExam } from "@/lib/data";
 import { Animal, CalfFeeding } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 
@@ -117,23 +117,38 @@ export default function CalvesPage() {
     if (!profile) return;
     const tag = quickEarTag.trim();
     if (!tag) return;
-    const calf = calves.find((c) => c.ear_tag.toLowerCase() === tag.toLowerCase());
-    if (!calf) {
-      setQuickError(`"${tag}" kupe numarali buzagi bulunamadi.`);
-      return;
-    }
     setQuickError(null);
     setQuickAdding(true);
-    await createCalfFeeding({
-      animal_id: calf.id,
-      fed_at: new Date().toISOString(),
-      drank: false,
-      notes: null,
-      created_by: profile.id,
-    });
-    await refresh();
-    setQuickAdding(false);
-    setQuickEarTag("");
+    try {
+      let calf = animals.find((c) => c.ear_tag.toLowerCase() === tag.toLowerCase());
+      if (!calf) {
+        calf = await createAnimal({
+          ear_tag: tag,
+          name: null,
+          birth_date: null,
+          breed: null,
+          gender: null,
+          status: "aktif",
+          mother_ear_tag: null,
+          weaned_at: null,
+          notes: null,
+          created_by: profile.id,
+        });
+      }
+      await createCalfFeeding({
+        animal_id: calf.id,
+        fed_at: new Date().toISOString(),
+        drank: false,
+        notes: null,
+        created_by: profile.id,
+      });
+      await refresh();
+      setQuickEarTag("");
+    } catch (err) {
+      setQuickError(err instanceof Error ? err.message : "Eklenirken bir hata olustu.");
+    } finally {
+      setQuickAdding(false);
+    }
   }
 
   return (
