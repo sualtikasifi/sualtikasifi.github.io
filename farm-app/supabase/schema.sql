@@ -10,14 +10,24 @@ create table if not exists profiles (
 );
 
 -- Yeni kullanici kaydolunca otomatik profil olustur
+-- (profil eklemede beklenmedik bir hata olursa kullanici olusturmayi engellemesin diye
+-- exception yakalayip sadece uyari loglar)
 create or replace function handle_new_user()
-returns trigger as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
-  insert into profiles (id, full_name, role)
-  values (new.id, coalesce(new.raw_user_meta_data ->> 'full_name', new.email), 'calisan');
+  insert into public.profiles (id, full_name, role)
+  values (new.id, coalesce(new.raw_user_meta_data ->> 'full_name', new.email), 'calisan')
+  on conflict (id) do nothing;
+  return new;
+exception when others then
+  raise warning 'handle_new_user failed: %', sqlerrm;
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
