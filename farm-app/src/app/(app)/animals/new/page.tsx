@@ -27,7 +27,7 @@ export default function NewAnimalPage() {
     e.preventDefault();
     if (!form.ear_tag.trim()) return;
     setSubmitting(true);
-    await createAnimal({
+    const animal = await createAnimal({
       ear_tag: form.ear_tag.trim(),
       name: form.name.trim() || null,
       birth_date: form.birth_date || null,
@@ -40,7 +40,7 @@ export default function NewAnimalPage() {
       created_by: profile?.id ?? null,
     });
     setSubmitting(false);
-    router.push("/animals");
+    router.push(`/animals/detail?id=${animal.id}`);
   }
 
   return (

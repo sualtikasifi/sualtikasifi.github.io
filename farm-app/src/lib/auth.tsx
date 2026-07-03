@@ -10,6 +10,7 @@ interface AuthState {
   profile: Profile | null;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -75,8 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   }
 
+  async function refreshProfile() {
+    if (profile) await loadProfile(profile.id);
+  }
+
   return (
-    <AuthContext.Provider value={{ loading, profile, signIn, signOut }}>
+    <AuthContext.Provider value={{ loading, profile, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

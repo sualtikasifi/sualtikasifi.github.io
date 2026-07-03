@@ -111,7 +111,12 @@ export default function CalvesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold text-neutral-900">Buzagilar</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-neutral-900">Buzagilar</h1>
+        <Link href="/animals/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-800">
+          Yeni buzagi ekle
+        </Link>
+      </div>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-neutral-700">Son Ogunde Mamasini Icmeyenler</h2>

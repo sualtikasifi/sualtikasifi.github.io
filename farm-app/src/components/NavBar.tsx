@@ -29,7 +29,9 @@ export function NavBar() {
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-2.5">
         <span className="text-sm font-semibold text-green-800">Marder Ciftlik</span>
         <div className="flex items-center gap-2 text-sm text-neutral-500">
-          <span className="hidden sm:inline">{profile?.full_name}</span>
+          <Link href="/profile" className="hidden hover:underline sm:inline">
+            {profile?.full_name}
+          </Link>
           <button onClick={handleSignOut} className="rounded-md px-2 py-1 hover:bg-neutral-100">
             Cikis
           </button>

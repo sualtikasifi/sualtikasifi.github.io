@@ -25,6 +25,13 @@ export async function listProfiles(): Promise<Profile[]> {
   return data as Profile[];
 }
 
+export async function updateProfile(id: string, patch: Partial<Profile>): Promise<Profile | undefined> {
+  if (isDemoMode) return mock.demoUpdateProfile(id, patch);
+  const { data, error } = await supabase!.from("profiles").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data as Profile;
+}
+
 // --- Animals ---
 
 export async function listAnimals(): Promise<Animal[]> {

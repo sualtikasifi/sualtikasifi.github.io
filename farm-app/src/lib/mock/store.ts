@@ -120,6 +120,15 @@ export function demoListProfiles(): Profile[] {
   return loadDb().profiles;
 }
 
+export function demoUpdateProfile(id: string, patch: Partial<Profile>): Profile | undefined {
+  const db = loadDb();
+  const idx = db.profiles.findIndex((p) => p.id === id);
+  if (idx === -1) return undefined;
+  db.profiles[idx] = { ...db.profiles[idx], ...patch };
+  saveDb(db);
+  return db.profiles[idx];
+}
+
 // --- Animals ---
 
 export function demoListAnimals(): Animal[] {
