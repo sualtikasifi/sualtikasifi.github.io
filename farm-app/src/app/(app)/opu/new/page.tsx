@@ -18,7 +18,6 @@ export default function NewOpuSessionPage() {
     technician_name: "",
     follicle_count_right: "",
     follicle_count_left: "",
-    oocyte_count: "",
     notes: "",
   });
 
@@ -46,7 +45,7 @@ export default function NewOpuSessionPage() {
       technician_name: form.technician_name.trim() || null,
       follicle_count_right: form.follicle_count_right ? Number(form.follicle_count_right) : null,
       follicle_count_left: form.follicle_count_left ? Number(form.follicle_count_left) : null,
-      oocyte_count: form.oocyte_count ? Number(form.oocyte_count) : null,
+      oocyte_count: null,
       cleaved_count: null,
       embryo_count: null,
       notes: form.notes.trim() || null,
@@ -59,6 +58,10 @@ export default function NewOpuSessionPage() {
   return (
     <div className="max-w-lg space-y-4">
       <h1 className="text-lg font-semibold text-neutral-900">Yeni OPU seansi</h1>
+      <p className="text-sm text-neutral-500">
+        Bu ilk kayit asamasi: donor hayvan ve folikul sayilarini gir. Oosit, bolunme ve embriyo
+        sayilari laboratuvar sonuclari geldikce ayri ayri sorulacak.
+      </p>
       <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
         <FieldBlock label="Donor hayvan *">
           {form.donor_animal_id ? (
@@ -121,16 +124,6 @@ export default function NewOpuSessionPage() {
             />
           </Field>
         </div>
-
-        <Field label="Toplanan oosit sayisi">
-          <input
-            type="number"
-            min={0}
-            value={form.oocyte_count}
-            onChange={(e) => update("oocyte_count", e.target.value)}
-            className="input"
-          />
-        </Field>
 
         <Field label="Teknisyen">
           <input value={form.technician_name} onChange={(e) => update("technician_name", e.target.value)} className="input" />
