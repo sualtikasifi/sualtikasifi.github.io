@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getAnimal, getOpuSession, listEmbryos, updateOpuSession } from "@/lib/data";
+import { getAnimal, getOpuSession, listEmbryos, listOpuSessions, updateOpuSession } from "@/lib/data";
 import { Animal, Embryo, OpuSession } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { OpuFunnel } from "@/components/OpuFunnel";
@@ -24,6 +24,7 @@ function OpuSessionDetailContent() {
   const [session, setSession] = useState<OpuSession | null>(null);
   const [donor, setDonor] = useState<Animal | null>(null);
   const [embryos, setEmbryos] = useState<Embryo[]>([]);
+  const [priorSessions, setPriorSessions] = useState<OpuSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
@@ -35,11 +36,18 @@ function OpuSessionDetailContent() {
         return;
       }
       setSession(s);
-      Promise.all([getAnimal(s.donor_animal_id), listEmbryos(s.id)]).then(([d, e]) => {
-        setDonor(d ?? null);
-        setEmbryos(e);
-        setLoading(false);
-      });
+      Promise.all([getAnimal(s.donor_animal_id), listEmbryos(s.id), listOpuSessions()]).then(
+        ([d, e, allSessions]) => {
+          setDonor(d ?? null);
+          setEmbryos(e);
+          setPriorSessions(
+            allSessions
+              .filter((other) => other.donor_animal_id === s.donor_animal_id && other.id !== s.id)
+              .sort((a, b) => b.session_date.localeCompare(a.session_date))
+          );
+          setLoading(false);
+        }
+      );
     });
   }, [id]);
 
@@ -115,6 +123,35 @@ function OpuSessionDetailContent() {
           </div>
         )}
       </div>
+
+      {priorSessions.length > 0 && (
+        <div className="card">
+          <h2 className="mb-2 text-sm font-semibold text-neutral-800">
+            {donor?.ear_tag ?? "Bu hayvan"}&apos;ın Önceki OPU Kayıtları &middot; {priorSessions.length}
+          </h2>
+          <div className="divide-y divide-neutral-100">
+            {priorSessions.map((p) => {
+              const totalFollicles =
+                p.follicle_count_right !== null || p.follicle_count_left !== null
+                  ? (p.follicle_count_right ?? 0) + (p.follicle_count_left ?? 0)
+                  : null;
+              return (
+                <Link
+                  key={p.id}
+                  href={`/opu/detail?id=${p.id}`}
+                  className="flex items-center justify-between py-2 text-sm hover:bg-neutral-50"
+                >
+                  <span className="text-neutral-600">
+                    {totalFollicles ?? "-"} folikül &middot; {p.oocyte_count ?? "-"} oosit &middot;{" "}
+                    {p.cleaved_count ?? "-"} bölünen &middot; {p.embryo_count ?? "-"} embriyo
+                  </span>
+                  <span className="text-xs text-neutral-400">{formatDate(p.session_date)}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

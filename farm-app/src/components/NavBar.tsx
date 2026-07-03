@@ -30,6 +30,9 @@ export function NavBar() {
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
         <span className="text-sm font-semibold tracking-tight text-green-800">🐄 Marder Çiftlik</span>
         <div className="flex items-center gap-2 text-sm text-neutral-500">
+          <Link href="/herd" className="rounded-md px-2 py-1 hover:bg-neutral-100 hover:underline">
+            Sürü Bilgileri
+          </Link>
           <Link href="/profile" className="max-w-[35vw] truncate rounded-md px-2 py-1 hover:bg-neutral-100 hover:underline">
             {profile?.full_name}
           </Link>

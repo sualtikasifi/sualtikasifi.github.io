@@ -5,6 +5,7 @@ import Link from "next/link";
 import { adjustMedicineStock, listMedicines } from "@/lib/data";
 import { Medicine } from "@/lib/types";
 import { formatDate } from "@/lib/format";
+import { exportRowsToExcel } from "@/lib/excelExport";
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -12,6 +13,7 @@ export default function MedicinesPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     listMedicines().then((m) => {
@@ -28,13 +30,40 @@ export default function MedicinesPage() {
     !search.trim() || m.name.toLowerCase().includes(search.trim().toLowerCase())
   );
 
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await exportRowsToExcel(
+        `ilac-stogu-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        "İlaç Stoğu",
+        ["İlaç/Aşı Adı", "Birim", "Stok Miktarı", "Notlar", "Son Güncelleme"],
+        medicines.map((m) => [m.name, m.unit, m.stock_count, m.notes ?? "", formatDate(m.updated_at.slice(0, 10))])
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Aşı/İlaç Stok Takibi</h1>
-        <Link href="/medicines/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-          Yeni ilaç ekle
-        </Link>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting || medicines.length === 0}
+            className="btn-secondary"
+          >
+            {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
+          </button>
+          <Link href="/medicines/add-stock" className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50">
+            Stok Ekle
+          </Link>
+          <Link href="/medicines/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+            Yeni İlaç Ekle
+          </Link>
+        </div>
       </div>
 
       <input
@@ -71,10 +100,10 @@ function MedicineCard({
   const [busy, setBusy] = useState(false);
   const low = medicine.stock_count <= LOW_STOCK_THRESHOLD;
 
-  async function adjust(sign: 1 | -1) {
+  async function handleUse() {
     const n = Math.max(1, Number(amount) || 1);
     setBusy(true);
-    const updated = await adjustMedicineStock(medicine.id, sign * n);
+    const updated = await adjustMedicineStock(medicine.id, -n);
     if (updated) onUpdated(updated);
     setBusy(false);
   }
@@ -106,16 +135,8 @@ function MedicineCard({
         />
         <button
           type="button"
-          disabled={busy}
-          onClick={() => adjust(1)}
-          className="rounded-md border border-green-600 px-3 py-1.5 text-xs font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50 disabled:opacity-50"
-        >
-          Alım Ekle
-        </button>
-        <button
-          type="button"
           disabled={busy || medicine.stock_count === 0}
-          onClick={() => adjust(-1)}
+          onClick={handleUse}
           className="rounded-md border border-red-400 px-3 py-1.5 text-xs font-medium text-red-600 shadow-sm transition-colors hover:bg-red-50 disabled:opacity-50"
         >
           Kullanıldı, Düş

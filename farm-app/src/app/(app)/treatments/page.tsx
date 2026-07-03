@@ -47,6 +47,7 @@ export default function MastitisPage() {
               earTag={earTagFor(t.animal_id)}
               profiles={profiles}
               currentProfileId={profile?.id ?? null}
+              onDeleted={() => setTreatments((prev) => prev.filter((x) => x.id !== t.id))}
             />
           ))}
         </div>
