@@ -121,15 +121,22 @@ create index if not exists inseminations_animal_idx on inseminations (animal_id)
 create index if not exists inseminations_date_idx on inseminations (insemination_date);
 
 -- 8. OPU (Ovum Pick Up) seanslari
+-- Laboratuvar huni takibi birden fazla gunde tamamlanir: OPU gununde folikul/oosit
+-- sayilari, birkac gun sonra bolunme (cleavage) sayisi, D5-D8 arasinda embriyo sayisi.
 create table if not exists opu_sessions (
   id uuid primary key default gen_random_uuid(),
   donor_animal_id uuid not null references animals (id) on delete cascade,
   session_date date not null default current_date,
   technician_name text,
+  follicle_count_right integer check (follicle_count_right >= 0),
+  follicle_count_left integer check (follicle_count_left >= 0),
   oocyte_count integer check (oocyte_count >= 0),
+  cleaved_count integer check (cleaved_count >= 0),
+  embryo_count integer check (embryo_count >= 0),
   notes text,
   created_by uuid references profiles (id),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists opu_sessions_donor_idx on opu_sessions (donor_animal_id);

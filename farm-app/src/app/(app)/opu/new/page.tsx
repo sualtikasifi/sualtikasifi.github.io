@@ -16,6 +16,8 @@ export default function NewOpuSessionPage() {
     donor_animal_id: "",
     session_date: new Date().toISOString().slice(0, 10),
     technician_name: "",
+    follicle_count_right: "",
+    follicle_count_left: "",
     oocyte_count: "",
     notes: "",
   });
@@ -42,7 +44,11 @@ export default function NewOpuSessionPage() {
       donor_animal_id: form.donor_animal_id,
       session_date: form.session_date,
       technician_name: form.technician_name.trim() || null,
+      follicle_count_right: form.follicle_count_right ? Number(form.follicle_count_right) : null,
+      follicle_count_left: form.follicle_count_left ? Number(form.follicle_count_left) : null,
       oocyte_count: form.oocyte_count ? Number(form.oocyte_count) : null,
+      cleaved_count: null,
+      embryo_count: null,
       notes: form.notes.trim() || null,
       created_by: profile?.id ?? null,
     });
@@ -86,25 +92,45 @@ export default function NewOpuSessionPage() {
           )}
         </FieldBlock>
 
+        <Field label="Tarih">
+          <input
+            type="date"
+            value={form.session_date}
+            onChange={(e) => update("session_date", e.target.value)}
+            className="input"
+          />
+        </Field>
+
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Tarih">
-            <input
-              type="date"
-              value={form.session_date}
-              onChange={(e) => update("session_date", e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Toplanan oosit sayisi">
+          <Field label="Sag folikul">
             <input
               type="number"
               min={0}
-              value={form.oocyte_count}
-              onChange={(e) => update("oocyte_count", e.target.value)}
+              value={form.follicle_count_right}
+              onChange={(e) => update("follicle_count_right", e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="Sol folikul">
+            <input
+              type="number"
+              min={0}
+              value={form.follicle_count_left}
+              onChange={(e) => update("follicle_count_left", e.target.value)}
               className="input"
             />
           </Field>
         </div>
+
+        <Field label="Toplanan oosit sayisi">
+          <input
+            type="number"
+            min={0}
+            value={form.oocyte_count}
+            onChange={(e) => update("oocyte_count", e.target.value)}
+            className="input"
+          />
+        </Field>
 
         <Field label="Teknisyen">
           <input value={form.technician_name} onChange={(e) => update("technician_name", e.target.value)} className="input" />

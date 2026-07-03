@@ -198,10 +198,20 @@ export async function getOpuSession(id: string): Promise<OpuSession | undefined>
 }
 
 export async function createOpuSession(
-  input: Omit<OpuSession, "id" | "created_at">
+  input: Omit<OpuSession, "id" | "created_at" | "updated_at">
 ): Promise<OpuSession> {
   if (isDemoMode) return mock.demoCreateOpuSession(input);
   const { data, error } = await supabase!.from("opu_sessions").insert(input).select().single();
+  if (error) throw error;
+  return data as OpuSession;
+}
+
+export async function updateOpuSession(
+  id: string,
+  patch: Partial<OpuSession>
+): Promise<OpuSession | undefined> {
+  if (isDemoMode) return mock.demoUpdateOpuSession(id, patch);
+  const { data, error } = await supabase!.from("opu_sessions").update(patch).eq("id", id).select().single();
   if (error) throw error;
   return data as OpuSession;
 }

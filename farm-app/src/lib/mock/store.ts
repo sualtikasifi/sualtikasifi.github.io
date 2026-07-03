@@ -277,12 +277,24 @@ export function demoGetOpuSession(id: string): OpuSession | undefined {
   return loadDb().opuSessions.find((s) => s.id === id);
 }
 
-export function demoCreateOpuSession(input: Omit<OpuSession, "id" | "created_at">): OpuSession {
+export function demoCreateOpuSession(
+  input: Omit<OpuSession, "id" | "created_at" | "updated_at">
+): OpuSession {
   const db = loadDb();
-  const session: OpuSession = { ...input, id: newId("opu"), created_at: new Date().toISOString() };
+  const now = new Date().toISOString();
+  const session: OpuSession = { ...input, id: newId("opu"), created_at: now, updated_at: now };
   db.opuSessions.push(session);
   saveDb(db);
   return session;
+}
+
+export function demoUpdateOpuSession(id: string, patch: Partial<OpuSession>): OpuSession | undefined {
+  const db = loadDb();
+  const idx = db.opuSessions.findIndex((s) => s.id === id);
+  if (idx === -1) return undefined;
+  db.opuSessions[idx] = { ...db.opuSessions[idx], ...patch, updated_at: new Date().toISOString() };
+  saveDb(db);
+  return db.opuSessions[idx];
 }
 
 export function demoListEmbryos(opuSessionId?: string): Embryo[] {

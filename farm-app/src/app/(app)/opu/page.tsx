@@ -23,6 +23,10 @@ export default function OpuSessionsPage() {
 
   const earTagFor = (animalId: string) => animals.find((a) => a.id === animalId)?.ear_tag ?? "?";
   const embryoCountFor = (sessionId: string) => embryos.filter((e) => e.opu_session_id === sessionId).length;
+  const totalFollicles = (s: OpuSession) =>
+    s.follicle_count_right !== null || s.follicle_count_left !== null
+      ? (s.follicle_count_right ?? 0) + (s.follicle_count_left ?? 0)
+      : null;
 
   return (
     <div className="space-y-4">
@@ -51,7 +55,10 @@ export default function OpuSessionsPage() {
                 {s.technician_name && <p className="text-xs text-neutral-400">{s.technician_name}</p>}
               </div>
               <div className="text-right">
-                <p className="text-neutral-600">{s.oocyte_count ?? "-"} oosit &middot; {embryoCountFor(s.id)} embriyo</p>
+                <p className="text-neutral-600">
+                  {totalFollicles(s) ?? "-"} folikul &middot; {s.oocyte_count ?? "-"} oosit &middot;{" "}
+                  {s.cleaved_count ?? "-"} bolunen &middot; {s.embryo_count ?? embryoCountFor(s.id)} embriyo
+                </p>
                 <p className="text-xs text-neutral-400">{formatDate(s.session_date)}</p>
               </div>
             </Link>

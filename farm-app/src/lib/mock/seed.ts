@@ -211,10 +211,15 @@ export const seedOpuSessions: OpuSession[] = [
     donor_animal_id: "animal-2",
     session_date: daysAgo(10),
     technician_name: "Dr. Ayse Kaya",
+    follicle_count_right: 9,
+    follicle_count_left: 8,
     oocyte_count: 14,
+    cleaved_count: 10,
+    embryo_count: 3,
     notes: "Donor hayvan iyi tepki verdi.",
     created_by: "demo-user-2",
     created_at: daysAgo(10),
+    updated_at: daysAgo(3),
   },
 ];
 

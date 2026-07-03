@@ -108,10 +108,15 @@ export interface OpuSession {
   donor_animal_id: string;
   session_date: string;
   technician_name: string | null;
+  follicle_count_right: number | null;
+  follicle_count_left: number | null;
   oocyte_count: number | null;
+  cleaved_count: number | null;
+  embryo_count: number | null;
   notes: string | null;
   created_by: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Embryo {
