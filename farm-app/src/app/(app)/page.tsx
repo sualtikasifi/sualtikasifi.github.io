@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listAnimals, listBulls, listEmbryos, listSemenInventory, listTasks, listTreatments } from "@/lib/data";
-import { Animal, Bull, Embryo, SemenInventory, Task, Treatment } from "@/lib/types";
+import { listAnimals, listEmbryos, listSemenInventory, listTasks, listTreatments } from "@/lib/data";
+import { Animal, Embryo, SemenInventory, Task, Treatment } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate, todayIso } from "@/lib/format";
 
@@ -11,28 +11,21 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
-  const [bulls, setBulls] = useState<Bull[]>([]);
   const [inventory, setInventory] = useState<SemenInventory[]>([]);
   const [embryos, setEmbryos] = useState<Embryo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      listTasks(),
-      listTreatments(),
-      listAnimals(),
-      listBulls(),
-      listSemenInventory(),
-      listEmbryos(),
-    ]).then(([t, tr, a, b, inv, emb]) => {
-      setTasks(t);
-      setTreatments(tr);
-      setAnimals(a);
-      setBulls(b);
-      setInventory(inv);
-      setEmbryos(emb);
-      setLoading(false);
-    });
+    Promise.all([listTasks(), listTreatments(), listAnimals(), listSemenInventory(), listEmbryos()]).then(
+      ([t, tr, a, inv, emb]) => {
+        setTasks(t);
+        setTreatments(tr);
+        setAnimals(a);
+        setInventory(inv);
+        setEmbryos(emb);
+        setLoading(false);
+      }
+    );
   }, []);
 
   if (loading) {
@@ -45,7 +38,7 @@ export default function DashboardPage() {
   const overdueTasks = pending.filter((t) => t.due_date < today);
   const activeAnimals = animals.filter((a) => a.status === "aktif");
   const inTreatment = treatments.filter((t) => t.outcome === "devam_ediyor");
-  const lowStockBulls = bulls.filter((b) => (inventory.find((i) => i.bull_id === b.id)?.straw_count ?? 0) <= 5);
+  const lowStockRows = inventory.filter((i) => i.straw_count <= 5);
   const developingEmbryos = embryos.filter((e) => e.status === "gelisiyor");
 
   return (
@@ -57,7 +50,7 @@ export default function DashboardPage() {
         <StatCard label="Bugunku gorev" value={todayTasks.length} />
         <StatCard label="Geciken gorev" value={overdueTasks.length} tone={overdueTasks.length > 0 ? "warn" : undefined} />
         <StatCard label="Devam eden tedavi" value={inTreatment.length} />
-        <StatCard label="Dusuk sperma stogu" value={lowStockBulls.length} tone={lowStockBulls.length > 0 ? "warn" : undefined} />
+        <StatCard label="Dusuk sperma stogu" value={lowStockRows.length} tone={lowStockRows.length > 0 ? "warn" : undefined} />
         <StatCard label="Gelisen embriyo" value={developingEmbryos.length} />
       </div>
 

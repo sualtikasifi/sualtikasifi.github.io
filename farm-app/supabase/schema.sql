@@ -74,6 +74,9 @@ create table if not exists tasks (
   due_date date not null,
   due_time time,
   status text not null default 'bekliyor' check (status in ('bekliyor', 'yapildi', 'iptal')),
+  completed_by uuid references profiles (id),
+  completed_at timestamptz,
+  completion_note text,
   created_at timestamptz not null default now()
 );
 
@@ -91,14 +94,17 @@ create table if not exists bulls (
   created_at timestamptz not null default now()
 );
 
--- 6. Sperma stogu (her boga icin guncel straw adedi)
+-- 6. Sperma stogu (her boga + sperma turu icin ayri guncel straw adedi)
+-- semen_type: konvansiyonel (normal) veya disi (cinsiyeti belirlenmis/sexed semen)
 create table if not exists semen_inventory (
   id uuid primary key default gen_random_uuid(),
-  bull_id uuid not null references bulls (id) on delete cascade unique,
+  bull_id uuid not null references bulls (id) on delete cascade,
+  semen_type text not null default 'konvansiyonel' check (semen_type in ('konvansiyonel', 'disi')),
   straw_count integer not null default 0 check (straw_count >= 0),
   tank_location text,
   notes text,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (bull_id, semen_type)
 );
 
 create index if not exists semen_inventory_bull_idx on semen_inventory (bull_id);
@@ -108,6 +114,7 @@ create table if not exists inseminations (
   id uuid primary key default gen_random_uuid(),
   animal_id uuid not null references animals (id) on delete cascade,
   bull_id uuid references bulls (id),
+  semen_type text check (semen_type in ('konvansiyonel', 'disi')),
   insemination_date date not null default current_date,
   technician_name text,
   pregnancy_check_date date,

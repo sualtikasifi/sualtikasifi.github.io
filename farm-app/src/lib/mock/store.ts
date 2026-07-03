@@ -166,6 +166,36 @@ export function demoUpdateTaskStatus(id: string, status: Task["status"]): Task |
   return db.tasks[idx];
 }
 
+export function demoCompleteTask(id: string, completedBy: string, note: string | null): Task | undefined {
+  const db = loadDb();
+  const idx = db.tasks.findIndex((t) => t.id === id);
+  if (idx === -1) return undefined;
+  db.tasks[idx] = {
+    ...db.tasks[idx],
+    status: "yapildi",
+    completed_by: completedBy,
+    completed_at: new Date().toISOString(),
+    completion_note: note,
+  };
+  saveDb(db);
+  return db.tasks[idx];
+}
+
+export function demoReopenTask(id: string): Task | undefined {
+  const db = loadDb();
+  const idx = db.tasks.findIndex((t) => t.id === id);
+  if (idx === -1) return undefined;
+  db.tasks[idx] = {
+    ...db.tasks[idx],
+    status: "bekliyor",
+    completed_by: null,
+    completed_at: null,
+    completion_note: null,
+  };
+  saveDb(db);
+  return db.tasks[idx];
+}
+
 // --- Bulls & semen inventory ---
 
 export function demoListBulls(): Bull[] {
@@ -184,21 +214,23 @@ export function demoListSemenInventory(): SemenInventory[] {
   return loadDb().semenInventory;
 }
 
-export function demoGetSemenInventoryForBull(bullId: string): SemenInventory | undefined {
-  return loadDb().semenInventory.find((s) => s.bull_id === bullId);
+export function demoListSemenInventoryForBull(bullId: string): SemenInventory[] {
+  return loadDb().semenInventory.filter((s) => s.bull_id === bullId);
 }
 
 export function demoUpsertSemenInventory(
   bullId: string,
-  patch: Partial<Omit<SemenInventory, "id" | "bull_id">>
+  semenType: SemenInventory["semen_type"],
+  patch: Partial<Omit<SemenInventory, "id" | "bull_id" | "semen_type">>
 ): SemenInventory {
   const db = loadDb();
-  const idx = db.semenInventory.findIndex((s) => s.bull_id === bullId);
+  const idx = db.semenInventory.findIndex((s) => s.bull_id === bullId && s.semen_type === semenType);
   const now = new Date().toISOString();
   if (idx === -1) {
     const created: SemenInventory = {
       id: newId("semen"),
       bull_id: bullId,
+      semen_type: semenType,
       straw_count: 0,
       tank_location: null,
       notes: null,
@@ -214,14 +246,19 @@ export function demoUpsertSemenInventory(
   return db.semenInventory[idx];
 }
 
-export function demoAdjustSemenStock(bullId: string, delta: number): SemenInventory {
+export function demoAdjustSemenStock(
+  bullId: string,
+  semenType: SemenInventory["semen_type"],
+  delta: number
+): SemenInventory {
   const db = loadDb();
-  const idx = db.semenInventory.findIndex((s) => s.bull_id === bullId);
+  const idx = db.semenInventory.findIndex((s) => s.bull_id === bullId && s.semen_type === semenType);
   const now = new Date().toISOString();
   if (idx === -1) {
     const created: SemenInventory = {
       id: newId("semen"),
       bull_id: bullId,
+      semen_type: semenType,
       straw_count: Math.max(0, delta),
       tank_location: null,
       notes: null,
@@ -252,8 +289,8 @@ export function demoCreateInsemination(input: Omit<Insemination, "id" | "created
   const insemination: Insemination = { ...input, id: newId("insem"), created_at: new Date().toISOString() };
   db.inseminations.push(insemination);
   saveDb(db);
-  if (input.bull_id) {
-    demoAdjustSemenStock(input.bull_id, -1);
+  if (input.bull_id && input.semen_type) {
+    demoAdjustSemenStock(input.bull_id, input.semen_type, -1);
   }
   return insemination;
 }

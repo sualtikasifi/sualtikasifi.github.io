@@ -42,6 +42,9 @@ export default function NewTaskPage() {
       due_date: form.due_date,
       due_time: form.due_time || null,
       status: "bekliyor",
+      completed_by: null,
+      completed_at: null,
+      completion_note: null,
     });
     setSubmitting(false);
     router.push("/tasks");

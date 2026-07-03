@@ -179,9 +179,12 @@ function AnimalDetailContent() {
             {inseminations.map((i) => (
               <div key={i.id} className="py-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-neutral-700">
-                    {bulls.find((b) => b.id === i.bull_id)?.name ?? "-"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-neutral-700">
+                      {bulls.find((b) => b.id === i.bull_id)?.name ?? "-"}
+                    </span>
+                    {i.semen_type && <Badge value={i.semen_type} />}
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-neutral-400">{formatDate(i.insemination_date)}</span>
                     <Badge value={i.pregnancy_result} />

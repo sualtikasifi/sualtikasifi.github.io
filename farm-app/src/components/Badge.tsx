@@ -15,6 +15,8 @@ const COLORS: Record<string, string> = {
   dondu: "bg-blue-100 text-blue-800",
   transfer_edildi: "bg-green-100 text-green-800",
   atildi: "bg-neutral-200 text-neutral-600",
+  konvansiyonel: "bg-neutral-200 text-neutral-700",
+  disi: "bg-pink-100 text-pink-800",
 };
 
 const LABELS: Record<string, string> = {
@@ -42,6 +44,8 @@ const LABELS: Record<string, string> = {
   blastosist: "Blastosist",
   genisleyen_blastosist: "Genisleyen Blastosist",
   yumurtadan_cikan_blastosist: "Yumurtadan Cikan Blastosist",
+  konvansiyonel: "Konvansiyonel",
+  disi: "Disi",
 };
 
 export function Badge({ value }: { value: string }) {

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createInsemination, listAnimals, listBulls, listSemenInventory } from "@/lib/data";
-import { Animal, Bull, PregnancyResult, SemenInventory } from "@/lib/types";
+import { Animal, Bull, PregnancyResult, SemenInventory, SemenType } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 
 export default function NewInseminationPage() {
@@ -28,6 +28,7 @@ function NewInseminationContent() {
   const [form, setForm] = useState({
     animal_id: preselectedAnimalId,
     bull_id: "",
+    semen_type: "konvansiyonel" as SemenType,
     insemination_date: new Date().toISOString().slice(0, 10),
     technician_name: "",
     pregnancy_result: "bekleniyor" as PregnancyResult,
@@ -53,8 +54,8 @@ function NewInseminationContent() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  function stockFor(bullId: string) {
-    return inventory.find((i) => i.bull_id === bullId)?.straw_count ?? 0;
+  function stockFor(bullId: string, semenType: SemenType) {
+    return inventory.find((i) => i.bull_id === bullId && i.semen_type === semenType)?.straw_count ?? 0;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -64,6 +65,7 @@ function NewInseminationContent() {
     await createInsemination({
       animal_id: form.animal_id,
       bull_id: form.bull_id || null,
+      semen_type: form.bull_id ? form.semen_type : null,
       insemination_date: form.insemination_date,
       technician_name: form.technician_name.trim() || null,
       pregnancy_check_date: null,
@@ -111,16 +113,33 @@ function NewInseminationContent() {
           )}
         </FieldBlock>
 
-        <Field label="Boga / sperma">
-          <select value={form.bull_id} onChange={(e) => update("bull_id", e.target.value)} className="input">
-            <option value="">Secilmedi</option>
-            {bulls.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name} ({stockFor(b.id)} straw kaldi)
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Boga">
+            <select value={form.bull_id} onChange={(e) => update("bull_id", e.target.value)} className="input">
+              <option value="">Secilmedi</option>
+              {bulls.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} {b.breed && `(${b.breed})`}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Sperma turu">
+            <select
+              value={form.semen_type}
+              onChange={(e) => update("semen_type", e.target.value as SemenType)}
+              disabled={!form.bull_id}
+              className="input"
+            >
+              <option value="konvansiyonel">
+                Konvansiyonel {form.bull_id && `(${stockFor(form.bull_id, "konvansiyonel")} straw kaldi)`}
               </option>
-            ))}
-          </select>
-        </Field>
+              <option value="disi">
+                Disi {form.bull_id && `(${stockFor(form.bull_id, "disi")} straw kaldi)`}
+              </option>
+            </select>
+          </Field>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Tarih">

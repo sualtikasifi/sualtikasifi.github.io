@@ -2,15 +2,31 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { listProfiles, listTasks, updateTaskStatus } from "@/lib/data";
+import { completeTask, listProfiles, listTasks, reopenTask } from "@/lib/data";
 import { Profile, Task } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate } from "@/lib/format";
+import { useAuth } from "@/lib/auth";
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function TasksPage() {
+  const { profile } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
 
   function loadData() {
     return Promise.all([listTasks(), listProfiles()]);
@@ -24,12 +40,35 @@ export default function TasksPage() {
     });
   }, []);
 
-  async function toggleDone(task: Task) {
-    const next = task.status === "yapildi" ? "bekliyor" : "yapildi";
-    await updateTaskStatus(task.id, next);
+  async function refresh() {
     const [t, p] = await loadData();
     setTasks(t);
     setProfiles(p);
+  }
+
+  function startConfirm(task: Task) {
+    setConfirmingId(task.id);
+    setNote("");
+  }
+
+  function cancelConfirm() {
+    setConfirmingId(null);
+    setNote("");
+  }
+
+  async function confirmDone(task: Task) {
+    if (!profile) return;
+    setSaving(true);
+    await completeTask(task.id, profile.id, note.trim() || null);
+    setSaving(false);
+    setConfirmingId(null);
+    setNote("");
+    await refresh();
+  }
+
+  async function handleReopen(task: Task) {
+    await reopenTask(task.id);
+    await refresh();
   }
 
   const nameFor = (id: string | null) => profiles.find((p) => p.id === id)?.full_name ?? "-";
@@ -50,30 +89,79 @@ export default function TasksPage() {
       ) : (
         <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
           {tasks.map((t) => (
-            <div key={t.id} className="flex items-center justify-between gap-3 border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={t.status === "yapildi"}
-                  onChange={() => toggleDone(t)}
-                  className="mt-1 h-4 w-4"
-                />
-                <div>
-                  <p className={`font-medium ${t.status === "yapildi" ? "text-neutral-400 line-through" : "text-neutral-900"}`}>
-                    {t.title}
-                  </p>
-                  {t.description && <p className="text-neutral-500">{t.description}</p>}
-                  <p className="text-xs text-neutral-400">
-                    {nameFor(t.assigned_to)} tarafindan yapilacak &middot; {nameFor(t.assigned_by)} atadi
-                  </p>
+            <div key={t.id} className="border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={t.status === "yapildi"}
+                    onChange={() => (t.status === "yapildi" ? handleReopen(t) : startConfirm(t))}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <div>
+                    <p className={`font-medium ${t.status === "yapildi" ? "text-neutral-400 line-through" : "text-neutral-900"}`}>
+                      {t.title}
+                    </p>
+                    {t.description && <p className="text-neutral-500">{t.description}</p>}
+                    <p className="text-xs text-neutral-400">
+                      {nameFor(t.assigned_to)} tarafindan yapilacak &middot; {nameFor(t.assigned_by)} atadi
+                    </p>
+                    {t.status === "yapildi" && t.completed_at && (
+                      <p className="mt-1 text-xs text-green-700">
+                        {nameFor(t.completed_by)} tarafindan {formatDateTime(t.completed_at)} tarihinde onaylandi
+                        {t.completion_note && (
+                          <span className="ml-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
+                            Not var
+                          </span>
+                        )}
+                      </p>
+                    )}
+                    {t.status === "yapildi" && t.completion_note && (
+                      <p className="mt-0.5 text-xs text-neutral-500">Not: {t.completion_note}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-neutral-500">
+                    {formatDate(t.due_date)} {t.due_time && t.due_time.slice(0, 5)}
+                  </span>
+                  <Badge value={t.status} />
                 </div>
               </div>
-              <div className="flex shrink-0 flex-col items-end gap-1">
-                <span className="text-neutral-500">
-                  {formatDate(t.due_date)} {t.due_time && t.due_time.slice(0, 5)}
-                </span>
-                <Badge value={t.status} />
-              </div>
+
+              {confirmingId === t.id && (
+                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-sm font-medium text-neutral-800">
+                    &quot;{t.title}&quot; gorevini tamamladiginizi onayliyor musunuz?
+                  </p>
+                  <label className="mt-2 block">
+                    <span className="mb-1 block text-xs font-medium text-neutral-600">Not (opsiyonel)</span>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      className="input"
+                      rows={2}
+                      autoFocus
+                    />
+                  </label>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => confirmDone(t)}
+                      disabled={saving}
+                      className="rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-60"
+                    >
+                      {saving ? "Kaydediliyor..." : "Onayla"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelConfirm}
+                      className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs hover:bg-neutral-50"
+                    >
+                      Vazgec
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

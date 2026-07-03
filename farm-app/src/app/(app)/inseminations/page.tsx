@@ -50,6 +50,7 @@ export default function InseminationsPage() {
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{earTagFor(i.animal_id)}</span>
                   <span className="text-neutral-500">{bullNameFor(i.bull_id)}</span>
+                  {i.semen_type && <Badge value={i.semen_type} />}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-neutral-400">{formatDate(i.insemination_date)}</span>

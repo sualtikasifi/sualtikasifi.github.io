@@ -68,6 +68,9 @@ export interface Task {
   due_date: string;
   due_time: string | null;
   status: TaskStatus;
+  completed_by: string | null;
+  completed_at: string | null;
+  completion_note: string | null;
   created_at: string;
 }
 
@@ -81,9 +84,12 @@ export interface Bull {
   created_at: string;
 }
 
+export type SemenType = "konvansiyonel" | "disi";
+
 export interface SemenInventory {
   id: string;
   bull_id: string;
+  semen_type: SemenType;
   straw_count: number;
   tank_location: string | null;
   notes: string | null;
@@ -94,6 +100,7 @@ export interface Insemination {
   id: string;
   animal_id: string;
   bull_id: string | null;
+  semen_type: SemenType | null;
   insemination_date: string;
   technician_name: string | null;
   pregnancy_check_date: string | null;
