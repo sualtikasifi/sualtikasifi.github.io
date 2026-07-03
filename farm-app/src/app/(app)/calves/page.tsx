@@ -153,7 +153,12 @@ export default function CalvesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold text-neutral-900">Buzagilar</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-neutral-900">Buzagilar</h1>
+        <Link href="/animals/import" className="text-xs font-medium text-green-700 hover:underline">
+          Excel&apos;den toplu aktar
+        </Link>
+      </div>
 
       <section className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
         <p className="text-sm font-medium text-red-800">🍼❌ Sutunu icmeyen buzagi ekle</p>

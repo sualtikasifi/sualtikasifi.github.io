@@ -67,6 +67,24 @@ export async function updateAnimal(id: string, patch: Partial<Animal>): Promise<
   return data as Animal;
 }
 
+// Bulk import: skips ear tags that already exist instead of failing the whole batch.
+export async function createAnimalsBulk(
+  inputs: Omit<Animal, "id" | "created_at" | "updated_at">[]
+): Promise<number> {
+  if (isDemoMode) return mock.demoCreateAnimalsBulk(inputs);
+  const CHUNK_SIZE = 500;
+  let inserted = 0;
+  for (let i = 0; i < inputs.length; i += CHUNK_SIZE) {
+    const chunk = inputs.slice(i, i + CHUNK_SIZE);
+    const { error, count } = await supabase!
+      .from("animals")
+      .upsert(chunk, { onConflict: "ear_tag", ignoreDuplicates: true, count: "exact" });
+    if (error) throw error;
+    inserted += count ?? 0;
+  }
+  return inserted;
+}
+
 // --- Mastitis treatments ---
 
 export async function listMastitisTreatments(animalId?: string): Promise<MastitisTreatment[]> {

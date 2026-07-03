@@ -157,6 +157,21 @@ export function demoUpdateAnimal(id: string, patch: Partial<Animal>): Animal | u
   return db.animals[idx];
 }
 
+export function demoCreateAnimalsBulk(inputs: Omit<Animal, "id" | "created_at" | "updated_at">[]): number {
+  const db = loadDb();
+  const existingTags = new Set(db.animals.map((a) => a.ear_tag));
+  let inserted = 0;
+  for (const input of inputs) {
+    if (existingTags.has(input.ear_tag)) continue;
+    const now = new Date().toISOString();
+    db.animals.push({ ...input, id: newId("animal"), created_at: now, updated_at: now });
+    existingTags.add(input.ear_tag);
+    inserted++;
+  }
+  saveDb(db);
+  return inserted;
+}
+
 // --- Mastitis treatments ---
 
 export function demoListMastitisTreatments(animalId?: string): MastitisTreatment[] {
