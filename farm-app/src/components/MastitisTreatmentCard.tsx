@@ -47,6 +47,7 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     Promise.all([getMastitisTreatment(treatmentId), listMastitisDoses(treatmentId)]).then(([t, d]) => {
@@ -143,6 +144,26 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
     );
   }
 
+  if (stats.isEnded && !expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="card flex w-full flex-wrap items-center justify-between gap-2 text-left transition-colors hover:bg-neutral-50"
+      >
+        <div className="flex items-center gap-2">
+          {earTag && <span className="font-medium text-neutral-900">{earTag}</span>}
+          <Badge value={treatment.udder_quarter} />
+          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+            Tedavi tamamlandı
+          </span>
+          {treatment.diagnosis && <span className="text-sm text-neutral-500">{treatment.diagnosis}</span>}
+        </div>
+        <span className="text-xs text-neutral-400">{formatDate(treatment.start_date)}</span>
+      </button>
+    );
+  }
+
   return (
     <div className="card">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -157,7 +178,18 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
             {stats.isEnded ? "Tedavi tamamlandı" : "Devam ediyor"}
           </span>
         </div>
-        <span className="text-xs text-neutral-400">Başlangıç: {formatDate(treatment.start_date)}</span>
+        <div className="flex items-center gap-2">
+          {stats.isEnded && (
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="text-xs text-neutral-500 underline hover:no-underline"
+            >
+              Daralt
+            </button>
+          )}
+          <span className="text-xs text-neutral-400">Başlangıç: {formatDate(treatment.start_date)}</span>
+        </div>
       </div>
 
       {treatment.diagnosis && <p className="mt-2 text-sm text-neutral-700">{treatment.diagnosis}</p>}

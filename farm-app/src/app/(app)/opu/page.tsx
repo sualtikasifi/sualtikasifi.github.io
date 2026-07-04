@@ -16,6 +16,7 @@ export default function OpuSessionsPage() {
   const [exportFrom, setExportFrom] = useState("");
   const [exportTo, setExportTo] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     Promise.all([listOpuSessions(), listAnimals(), listEmbryos()]).then(([s, a, e]) => {
@@ -75,6 +76,7 @@ export default function OpuSessionsPage() {
           ];
         })
       );
+      setShowExportModal(false);
     } finally {
       setExporting(false);
     }
@@ -84,29 +86,54 @@ export default function OpuSessionsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">OPU Seansları</h1>
-        <Link href="/opu/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-          Yeni OPU
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/opu/stats" className="btn-secondary">
+            OPU İstatistikleri
+          </Link>
+          <button type="button" onClick={() => setShowExportModal(true)} className="btn-secondary">
+            Excel&apos;e Aktar
+          </button>
+          <Link href="/opu/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+            Yeni OPU
+          </Link>
+        </div>
       </div>
 
-      <div className="card flex flex-wrap items-end gap-3">
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-600">Başlangıç (opsiyonel)</span>
-          <input type="date" value={exportFrom} onChange={(e) => setExportFrom(e.target.value)} className="input" />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-600">Bitiş (opsiyonel)</span>
-          <input type="date" value={exportTo} onChange={(e) => setExportTo(e.target.value)} className="input" />
-        </label>
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={exporting || exportCandidates.length === 0}
-          className="btn-secondary"
+      {showExportModal && (
+        <div
+          className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShowExportModal(false)}
         >
-          {exporting ? "Hazırlanıyor..." : `Excel'e Aktar (${exportCandidates.length})`}
-        </button>
-      </div>
+          <div className="card w-full max-w-sm space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-sm font-semibold text-neutral-800">Excel&apos;e Aktar</h2>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-neutral-600">Başlangıç (opsiyonel)</span>
+              <input type="date" value={exportFrom} onChange={(e) => setExportFrom(e.target.value)} className="input" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-neutral-600">Bitiş (opsiyonel)</span>
+              <input type="date" value={exportTo} onChange={(e) => setExportTo(e.target.value)} className="input" />
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={exporting || exportCandidates.length === 0}
+                className="btn-primary"
+              >
+                {exporting ? "Hazırlanıyor..." : `Aktar (${exportCandidates.length})`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowExportModal(false)}
+                className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm transition-colors hover:bg-neutral-50"
+              >
+                Vazgeç
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-sm text-neutral-500">Yükleniyor...</p>

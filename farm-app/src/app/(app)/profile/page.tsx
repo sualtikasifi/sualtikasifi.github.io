@@ -29,7 +29,6 @@ function tenureText(startDate: string): string {
 export default function ProfilePage() {
   const { profile, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
-  const [title, setTitle] = useState(profile?.title ?? "");
   const [startDate, setStartDate] = useState(profile?.start_date ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -59,7 +58,6 @@ export default function ProfilePage() {
     setSaving(true);
     await updateProfile(profile.id, {
       full_name: fullName.trim(),
-      title: title.trim() || null,
       start_date: startDate || null,
     });
     await refreshProfile();
@@ -73,18 +71,6 @@ export default function ProfilePage() {
     <div className="max-w-lg space-y-4">
       <h1 className="text-lg font-semibold text-neutral-900">Profilim</h1>
       <form onSubmit={handleSubmit} className="card space-y-3">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-700">Unvan</span>
-          <input
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              setSaved(false);
-            }}
-            placeholder="örn. Veteriner"
-            className="input"
-          />
-        </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-neutral-700">Unvan + Ad Soyad</span>
           <input

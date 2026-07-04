@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getAnimal, getEmbryo, getOpuSession, listAnimals, updateEmbryo } from "@/lib/data";
 import { Animal, Embryo, EmbryoGrade, EmbryoStage, EmbryoStatus, OpuSession } from "@/lib/types";
 import { Badge } from "@/components/Badge";
+import { EarTagPicker } from "@/components/EarTagPicker";
 
 export default function EmbryoDetailPage() {
   return (
@@ -22,7 +23,6 @@ function EmbryoDetailContent() {
   const [session, setSession] = useState<OpuSession | null>(null);
   const [donor, setDonor] = useState<Animal | null>(null);
   const [animals, setAnimals] = useState<Animal[]>([]);
-  const [animalSearch, setAnimalSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -57,12 +57,6 @@ function EmbryoDetailContent() {
       setLoading(false);
     });
   }, [id]);
-
-  const filteredAnimals = useMemo(() => {
-    const q = animalSearch.trim().toLowerCase();
-    if (!q) return animals;
-    return animals.filter((a) => a.ear_tag.toLowerCase().includes(q));
-  }, [animals, animalSearch]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -141,36 +135,12 @@ function EmbryoDetailContent() {
         {status === "transfer_edildi" && (
           <>
             <FieldBlock label="Alıcı hayvan">
-              {recipientId ? (
-                <div className="flex items-center justify-between rounded-md border border-neutral-300 px-3 py-2 text-sm">
-                  <span>{animals.find((a) => a.id === recipientId)?.ear_tag}</span>
-                  <button type="button" onClick={() => setRecipientId(null)} className="text-xs text-green-700">
-                    Değiştir
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <input
-                    placeholder="Küpe Numarası"
-                    value={animalSearch}
-                    onChange={(e) => setAnimalSearch(e.target.value)}
-                    className="input"
-                    autoComplete="off"
-                  />
-                  <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-neutral-200">
-                    {filteredAnimals.slice(0, 20).map((a) => (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => setRecipientId(a.id)}
-                        className="block w-full px-3 py-1.5 text-left text-sm hover:bg-neutral-50"
-                      >
-                        {a.ear_tag} {a.name && `(${a.name})`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <EarTagPicker
+                animals={animals}
+                selectedId={recipientId}
+                onSelect={(id) => setRecipientId(id)}
+                onClear={() => setRecipientId(null)}
+              />
             </FieldBlock>
 
             <Field label="Transfer tarihi">

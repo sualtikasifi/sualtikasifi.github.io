@@ -21,7 +21,6 @@ export type EmbryoStatus = "gelisiyor" | "dondu" | "transfer_edildi" | "atildi";
 export interface Profile {
   id: string;
   full_name: string;
-  title: string | null;
   start_date: string | null;
   role: UserRole;
   created_at: string;
@@ -170,6 +169,21 @@ export interface CalfFeeding {
   exam_result: string | null;
   examined_by: string | null;
   examined_at: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface ShiftNote {
+  id: string;
+  note: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CalfNote {
+  id: string;
+  animal_id: string;
+  note: string;
   created_by: string | null;
   created_at: string;
 }

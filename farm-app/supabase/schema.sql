@@ -5,7 +5,6 @@
 create table if not exists profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text not null,
-  title text,
   start_date date,
   role text not null default 'calisan' check (role in ('yonetici', 'veteriner', 'calisan')),
   created_at timestamptz not null default now()
@@ -244,6 +243,25 @@ create table if not exists medicines (
 
 create index if not exists medicines_name_idx on medicines (name);
 
+-- 12. Vardiya devir notlari (buzagi bakim ekipleri arasi iletisim)
+create table if not exists shift_notes (
+  id uuid primary key default gen_random_uuid(),
+  note text not null,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+-- 13. Buzagi gozlem notlari (besleme kaydindan bagimsiz hastalik/gozlem notlari)
+create table if not exists calf_notes (
+  id uuid primary key default gen_random_uuid(),
+  animal_id uuid not null references animals (id) on delete cascade,
+  note text not null,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists calf_notes_animal_idx on calf_notes (animal_id);
+
 -- Row Level Security: giris yapmis herkes (10 kisilik guvenilir ekip) okuyup yazabilir
 alter table profiles enable row level security;
 alter table animals enable row level security;
@@ -258,6 +276,8 @@ alter table opu_sessions enable row level security;
 alter table embryos enable row level security;
 alter table calf_feedings enable row level security;
 alter table medicines enable row level security;
+alter table shift_notes enable row level security;
+alter table calf_notes enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
@@ -274,3 +294,5 @@ create policy "opu_sessions_all_authenticated" on opu_sessions for all to authen
 create policy "embryos_all_authenticated" on embryos for all to authenticated using (true) with check (true);
 create policy "calf_feedings_all_authenticated" on calf_feedings for all to authenticated using (true) with check (true);
 create policy "medicines_all_authenticated" on medicines for all to authenticated using (true) with check (true);
+create policy "shift_notes_all_authenticated" on shift_notes for all to authenticated using (true) with check (true);
+create policy "calf_notes_all_authenticated" on calf_notes for all to authenticated using (true) with check (true);

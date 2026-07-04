@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createOpuSession, listAnimals, listProfiles } from "@/lib/data";
 import { Animal, Profile } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+import { EarTagPicker } from "@/components/EarTagPicker";
 
 export default function NewOpuSessionPage() {
   const router = useRouter();
   const { profile } = useAuth();
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [animalSearch, setAnimalSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     donor_animal_id: "",
@@ -28,12 +28,6 @@ export default function NewOpuSessionPage() {
       setProfiles(p);
     });
   }, []);
-
-  const filteredAnimals = useMemo(() => {
-    const q = animalSearch.trim().toLowerCase();
-    if (!q) return animals;
-    return animals.filter((a) => a.ear_tag.toLowerCase().includes(q));
-  }, [animals, animalSearch]);
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -68,36 +62,12 @@ export default function NewOpuSessionPage() {
       </p>
       <form onSubmit={handleSubmit} className="card space-y-3">
         <FieldBlock label="Donör hayvan *">
-          {form.donor_animal_id ? (
-            <div className="flex items-center justify-between rounded-md border border-neutral-300 px-3 py-2 text-sm">
-              <span>{animals.find((a) => a.id === form.donor_animal_id)?.ear_tag}</span>
-              <button type="button" onClick={() => update("donor_animal_id", "")} className="text-xs text-green-700">
-                Değiştir
-              </button>
-            </div>
-          ) : (
-            <div>
-              <input
-                placeholder="Küpe Numarası"
-                value={animalSearch}
-                onChange={(e) => setAnimalSearch(e.target.value)}
-                className="input"
-                autoComplete="off"
-              />
-              <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-neutral-200">
-                {filteredAnimals.slice(0, 20).map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => update("donor_animal_id", a.id)}
-                    className="block w-full px-3 py-1.5 text-left text-sm hover:bg-neutral-50"
-                  >
-                    {a.ear_tag} {a.name && `(${a.name})`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <EarTagPicker
+            animals={animals}
+            selectedId={form.donor_animal_id || null}
+            onSelect={(id) => update("donor_animal_id", id)}
+            onClear={() => update("donor_animal_id", "")}
+          />
         </FieldBlock>
 
         <Field label="Tarih">

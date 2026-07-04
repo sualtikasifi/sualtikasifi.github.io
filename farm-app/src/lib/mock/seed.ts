@@ -6,7 +6,6 @@ export const seedProfiles: Profile[] = [
   {
     id: "demo-user-1",
     full_name: "Ahmet Yılmaz (Yönetici)",
-    title: "Yönetici",
     start_date: "2020-03-01",
     role: "yonetici",
     created_at: new Date().toISOString(),
@@ -14,7 +13,6 @@ export const seedProfiles: Profile[] = [
   {
     id: "demo-user-2",
     full_name: "Dr. Ayşe Kaya (Veteriner)",
-    title: "Veteriner",
     start_date: "2021-06-15",
     role: "veteriner",
     created_at: new Date().toISOString(),
@@ -22,7 +20,6 @@ export const seedProfiles: Profile[] = [
   {
     id: "demo-user-3",
     full_name: "Mehmet Demir (Saha)",
-    title: "Saha Çalışanı",
     start_date: "2022-09-10",
     role: "calisan",
     created_at: new Date().toISOString(),

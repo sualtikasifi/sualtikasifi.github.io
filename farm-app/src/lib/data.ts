@@ -4,6 +4,7 @@ import {
   Animal,
   Bull,
   CalfFeeding,
+  CalfNote,
   Embryo,
   Insemination,
   MastitisDose,
@@ -13,6 +14,7 @@ import {
   OpuSession,
   Profile,
   SemenInventory,
+  ShiftNote,
   Task,
 } from "./types";
 
@@ -568,6 +570,77 @@ export async function setCalfFeedingExam(
     .single();
   if (error) throw error;
   return data as CalfFeeding;
+}
+
+export async function updateCalfFeeding(
+  id: string,
+  patch: Partial<Pick<CalfFeeding, "drank" | "notes">>
+): Promise<CalfFeeding | undefined> {
+  if (isDemoMode) return mock.demoUpdateCalfFeeding(id, patch);
+  const { data, error } = await supabase!.from("calf_feedings").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data as CalfFeeding;
+}
+
+export async function deleteCalfFeeding(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteCalfFeeding(id);
+  const { error } = await supabase!.from("calf_feedings").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// --- Vardiya devir notlari ---
+
+export async function listShiftNotes(): Promise<ShiftNote[]> {
+  if (isDemoMode) return mock.demoListShiftNotes();
+  return fetchAllPages<ShiftNote>((from, to) =>
+    supabase!.from("shift_notes").select("*", { count: "exact" }).order("created_at", { ascending: false }).range(from, to)
+  );
+}
+
+export async function createShiftNote(note: string, createdBy: string | null): Promise<ShiftNote> {
+  if (isDemoMode) return mock.demoCreateShiftNote(note, createdBy);
+  const { data, error } = await supabase!
+    .from("shift_notes")
+    .insert({ note, created_by: createdBy })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ShiftNote;
+}
+
+// --- Buzagi gozlem notlari ---
+
+export async function listCalfNotes(animalId?: string): Promise<CalfNote[]> {
+  if (isDemoMode) return mock.demoListCalfNotes(animalId);
+  return fetchAllPages<CalfNote>((from, to) => {
+    let query = supabase!
+      .from("calf_notes")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
+    if (animalId) query = query.eq("animal_id", animalId);
+    return query.range(from, to);
+  });
+}
+
+export async function createCalfNote(
+  animalId: string,
+  note: string,
+  createdBy: string | null
+): Promise<CalfNote> {
+  if (isDemoMode) return mock.demoCreateCalfNote(animalId, note, createdBy);
+  const { data, error } = await supabase!
+    .from("calf_notes")
+    .insert({ animal_id: animalId, note, created_by: createdBy })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfNote;
+}
+
+export async function deleteCalfNote(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteCalfNote(id);
+  const { error } = await supabase!.from("calf_notes").delete().eq("id", id);
+  if (error) throw error;
 }
 
 // --- Medicines (asi/ilac stok takibi) ---
