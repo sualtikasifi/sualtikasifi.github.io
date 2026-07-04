@@ -2,6 +2,7 @@ import {
   Animal,
   Bull,
   CalfFeeding,
+  CalfNote,
   Embryo,
   Insemination,
   MastitisDose,
@@ -11,6 +12,7 @@ import {
   OpuSession,
   Profile,
   SemenInventory,
+  ShiftNote,
   Task,
 } from "@/lib/types";
 import {
@@ -47,6 +49,8 @@ interface DemoDb {
   embryos: Embryo[];
   calfFeedings: CalfFeeding[];
   medicines: Medicine[];
+  shiftNotes: ShiftNote[];
+  calfNotes: CalfNote[];
 }
 
 function initialDb(): DemoDb {
@@ -64,6 +68,8 @@ function initialDb(): DemoDb {
     embryos: seedEmbryos,
     calfFeedings: seedCalfFeedings,
     medicines: seedMedicines,
+    shiftNotes: [],
+    calfNotes: [],
   };
 }
 
@@ -92,6 +98,8 @@ function loadDb(): DemoDb {
     embryos: parsed.embryos ?? seedEmbryos,
     calfFeedings: parsed.calfFeedings ?? seedCalfFeedings,
     medicines: parsed.medicines ?? seedMedicines,
+    shiftNotes: parsed.shiftNotes ?? [],
+    calfNotes: parsed.calfNotes ?? [],
   };
 }
 
@@ -604,6 +612,70 @@ export function demoSetCalfFeedingExam(
   };
   saveDb(db);
   return db.calfFeedings[idx];
+}
+
+export function demoUpdateCalfFeeding(
+  id: string,
+  patch: Partial<Pick<CalfFeeding, "drank" | "notes">>
+): CalfFeeding | undefined {
+  const db = loadDb();
+  const idx = db.calfFeedings.findIndex((f) => f.id === id);
+  if (idx === -1) return undefined;
+  db.calfFeedings[idx] = { ...db.calfFeedings[idx], ...patch };
+  saveDb(db);
+  return db.calfFeedings[idx];
+}
+
+export function demoDeleteCalfFeeding(id: string): void {
+  const db = loadDb();
+  db.calfFeedings = db.calfFeedings.filter((f) => f.id !== id);
+  saveDb(db);
+}
+
+// --- Vardiya devir notlari (demo) ---
+
+export function demoListShiftNotes(): ShiftNote[] {
+  return loadDb().shiftNotes.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function demoCreateShiftNote(note: string, createdBy: string | null): ShiftNote {
+  const db = loadDb();
+  const shiftNote: ShiftNote = {
+    id: newId("shiftnote"),
+    note,
+    created_by: createdBy,
+    created_at: new Date().toISOString(),
+  };
+  db.shiftNotes.push(shiftNote);
+  saveDb(db);
+  return shiftNote;
+}
+
+// --- Buzagi gozlem notlari (demo) ---
+
+export function demoListCalfNotes(animalId?: string): CalfNote[] {
+  const all = loadDb().calfNotes.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return animalId ? all.filter((n) => n.animal_id === animalId) : all;
+}
+
+export function demoCreateCalfNote(animalId: string, note: string, createdBy: string | null): CalfNote {
+  const db = loadDb();
+  const calfNote: CalfNote = {
+    id: newId("calfnote"),
+    animal_id: animalId,
+    note,
+    created_by: createdBy,
+    created_at: new Date().toISOString(),
+  };
+  db.calfNotes.push(calfNote);
+  saveDb(db);
+  return calfNote;
+}
+
+export function demoDeleteCalfNote(id: string): void {
+  const db = loadDb();
+  db.calfNotes = db.calfNotes.filter((n) => n.id !== id);
+  saveDb(db);
 }
 
 // --- Medicines (asi/ilac stok takibi) ---

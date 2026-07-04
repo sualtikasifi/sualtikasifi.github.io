@@ -173,6 +173,21 @@ export interface CalfFeeding {
   created_at: string;
 }
 
+export interface ShiftNote {
+  id: string;
+  note: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CalfNote {
+  id: string;
+  animal_id: string;
+  note: string;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface Medicine {
   id: string;
   name: string;
