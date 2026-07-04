@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createMastitisTreatment,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/data";
 import { Animal, MastitisProtocol, Profile, UdderQuarter } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+import { EarTagPicker } from "@/components/EarTagPicker";
 
 const DIAGNOSIS_OPTIONS = ["Mastitis", "Retensiyo Sekundinarium", "Toksikasyon"] as const;
 type DiagnosisOption = (typeof DIAGNOSIS_OPTIONS)[number] | "Diger";
@@ -32,7 +33,6 @@ function NewMastitisContent() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [protocols, setProtocols] = useState<MastitisProtocol[]>([]);
-  const [animalSearch, setAnimalSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [udderQuarters, setUdderQuarters] = useState<UdderQuarter[]>([]);
@@ -59,12 +59,6 @@ function NewMastitisContent() {
       setProtocols(pr);
     });
   }, []);
-
-  const filteredAnimals = useMemo(() => {
-    const q = animalSearch.trim().toLowerCase();
-    if (!q) return animals;
-    return animals.filter((a) => a.ear_tag.toLowerCase().includes(q));
-  }, [animals, animalSearch]);
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -115,36 +109,12 @@ function NewMastitisContent() {
       <h1 className="text-lg font-semibold text-neutral-900">Yeni mastitis kaydı</h1>
       <form onSubmit={handleSubmit} className="card space-y-3">
         <FieldBlock label="Hayvan *">
-          {form.animal_id ? (
-            <div className="flex items-center justify-between rounded-md border border-neutral-300 px-3 py-2 text-sm">
-              <span>{animals.find((a) => a.id === form.animal_id)?.ear_tag}</span>
-              <button type="button" onClick={() => update("animal_id", "")} className="text-xs text-green-700">
-                Değiştir
-              </button>
-            </div>
-          ) : (
-            <div>
-              <input
-                placeholder="Küpe Numarası"
-                value={animalSearch}
-                onChange={(e) => setAnimalSearch(e.target.value)}
-                className="input"
-                autoComplete="off"
-              />
-              <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-neutral-200">
-                {filteredAnimals.slice(0, 20).map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => update("animal_id", a.id)}
-                    className="block w-full px-3 py-1.5 text-left text-sm hover:bg-neutral-50"
-                  >
-                    {a.ear_tag} {a.name && `(${a.name})`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <EarTagPicker
+            animals={animals}
+            selectedId={form.animal_id || null}
+            onSelect={(id) => update("animal_id", id)}
+            onClear={() => update("animal_id", "")}
+          />
         </FieldBlock>
 
         <FieldBlock label="Meme * (birden fazla seçilebilir)">

@@ -5,7 +5,6 @@
 create table if not exists profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text not null,
-  title text,
   start_date date,
   role text not null default 'calisan' check (role in ('yonetici', 'veteriner', 'calisan')),
   created_at timestamptz not null default now()
