@@ -77,22 +77,18 @@ function NewMastitisContent() {
     setError(null);
     try {
       const medication = form.medication.trim() || null;
-      await Promise.all(
-        udderQuarters.map((udder_quarter) =>
-          createMastitisTreatment({
-            animal_id: form.animal_id,
-            udder_quarter,
-            start_date: form.start_date,
-            protocol_days: form.protocol_days,
-            withdrawal_days: form.withdrawal_days,
-            diagnosis,
-            medication,
-            vet_name: form.vet_name.trim() || null,
-            notes: form.notes.trim() || null,
-            created_by: profile?.id ?? null,
-          })
-        )
-      );
+      await createMastitisTreatment({
+        animal_id: form.animal_id,
+        udder_quarters: udderQuarters,
+        start_date: form.start_date,
+        protocol_days: form.protocol_days,
+        withdrawal_days: form.withdrawal_days,
+        diagnosis,
+        medication,
+        vet_name: form.vet_name.trim() || null,
+        notes: form.notes.trim() || null,
+        created_by: profile?.id ?? null,
+      });
       if (medication) {
         try {
           await saveMastitisProtocolIfNew(medication, profile?.id ?? null);
@@ -149,11 +145,6 @@ function NewMastitisContent() {
               </label>
             ))}
           </div>
-          {udderQuarters.length > 1 && (
-            <p className="mt-1 text-xs text-neutral-500">
-              Seçilen her meme için ayrı bir tedavi kaydı oluşturulacak.
-            </p>
-          )}
         </FieldBlock>
 
         <div className="grid grid-cols-3 gap-3">

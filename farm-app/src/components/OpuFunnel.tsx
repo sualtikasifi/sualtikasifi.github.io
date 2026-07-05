@@ -20,7 +20,18 @@ export function OpuFunnel({ session }: { session: OpuSession }) {
           ? `Sol ${session.follicle_count_left ?? 0} / Sağ ${session.follicle_count_right ?? 0}`
           : undefined,
     },
-    { label: "Oosit", value: session.oocyte_count, rateOf: totalFollicles },
+    {
+      label: "Oosit",
+      value: session.oocyte_count,
+      rateOf: totalFollicles,
+      sub:
+        session.oocyte_grade_a !== null ||
+        session.oocyte_grade_b !== null ||
+        session.oocyte_grade_c !== null ||
+        session.oocyte_grade_d !== null
+          ? `A ${session.oocyte_grade_a ?? 0} · B ${session.oocyte_grade_b ?? 0} · C ${session.oocyte_grade_c ?? 0} · D ${session.oocyte_grade_d ?? 0}`
+          : undefined,
+    },
     { label: "Bölünen", value: session.cleaved_count, rateOf: session.oocyte_count },
     { label: "Embriyo", value: session.embryo_count, rateOf: session.cleaved_count },
   ];
