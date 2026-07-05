@@ -35,8 +35,9 @@ export function MastitisReminderCard({
               warning ? "text-red-900" : "text-amber-900"
             }`}
           >
-            {r.animal?.ear_tag ?? "?"} &middot; {UDDER_LABELS[r.treatment.udder_quarter] ?? r.treatment.udder_quarter}{" "}
-            &middot; Gün {r.dose.day_number}/{r.treatment.protocol_days}
+            {r.animal?.ear_tag ?? "?"} &middot;{" "}
+            {r.treatment.udder_quarters.map((q) => UDDER_LABELS[q] ?? q).join(", ")} &middot; Gün{" "}
+            {r.dose.day_number}/{r.treatment.protocol_days}
           </Link>
         ))}
       </div>

@@ -45,7 +45,7 @@ export interface Animal {
 export interface MastitisTreatment {
   id: string;
   animal_id: string;
-  udder_quarter: UdderQuarter;
+  udder_quarters: UdderQuarter[];
   diagnosis: string | null;
   medication: string | null;
   vet_name: string | null;
@@ -137,7 +137,13 @@ export interface OpuSession {
   follicle_count_right: number | null;
   follicle_count_left: number | null;
   oocyte_count: number | null;
+  oocyte_grade_a: number | null;
+  oocyte_grade_b: number | null;
+  oocyte_grade_c: number | null;
+  oocyte_grade_d: number | null;
   cleaved_count: number | null;
+  fertilization_bull_id: string | null;
+  fertilization_semen_type: SemenType | null;
   embryo_count: number | null;
   notes: string | null;
   created_by: string | null;

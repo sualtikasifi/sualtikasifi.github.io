@@ -105,10 +105,10 @@ export default function TasksPage() {
 
   const pending = [...tasks]
     .filter((t) => t.status !== "yapildi")
-    .sort((a, b) => a.due_date.localeCompare(b.due_date));
+    .sort((a, b) => b.due_date.localeCompare(a.due_date));
   const done = [...tasks]
     .filter((t) => t.status === "yapildi")
-    .sort((a, b) => a.due_date.localeCompare(b.due_date));
+    .sort((a, b) => b.due_date.localeCompare(a.due_date));
   const pendingGroups = groupByDueDate(pending);
   const doneGroups = groupByDueDate(done);
   const mastitisReminders = getTodaysMastitisReminders(mastitisTreatments, mastitisDoses, animals);

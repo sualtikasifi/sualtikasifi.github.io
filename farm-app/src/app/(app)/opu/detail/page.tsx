@@ -3,8 +3,16 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getAnimal, getOpuSession, listEmbryos, listOpuSessions, updateOpuSession } from "@/lib/data";
-import { Animal, Embryo, OpuSession } from "@/lib/types";
+import {
+  getAnimal,
+  getOpuSession,
+  listBulls,
+  listEmbryos,
+  listOpuSessions,
+  listSemenInventory,
+  updateOpuSession,
+} from "@/lib/data";
+import { Animal, Bull, Embryo, OpuSession, SemenInventory, SemenType } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { OpuFunnel } from "@/components/OpuFunnel";
 import { formatDate } from "@/lib/format";
@@ -25,6 +33,8 @@ function OpuSessionDetailContent() {
   const [donor, setDonor] = useState<Animal | null>(null);
   const [embryos, setEmbryos] = useState<Embryo[]>([]);
   const [priorSessions, setPriorSessions] = useState<OpuSession[]>([]);
+  const [bulls, setBulls] = useState<Bull[]>([]);
+  const [inventory, setInventory] = useState<SemenInventory[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
@@ -36,18 +46,24 @@ function OpuSessionDetailContent() {
         return;
       }
       setSession(s);
-      Promise.all([getAnimal(s.donor_animal_id), listEmbryos(s.id), listOpuSessions()]).then(
-        ([d, e, allSessions]) => {
-          setDonor(d ?? null);
-          setEmbryos(e);
-          setPriorSessions(
-            allSessions
-              .filter((other) => other.donor_animal_id === s.donor_animal_id && other.id !== s.id)
-              .sort((a, b) => b.session_date.localeCompare(a.session_date))
-          );
-          setLoading(false);
-        }
-      );
+      Promise.all([
+        getAnimal(s.donor_animal_id),
+        listEmbryos(s.id),
+        listOpuSessions(),
+        listBulls(),
+        listSemenInventory(),
+      ]).then(([d, e, allSessions, b, inv]) => {
+        setDonor(d ?? null);
+        setEmbryos(e);
+        setPriorSessions(
+          allSessions
+            .filter((other) => other.donor_animal_id === s.donor_animal_id && other.id !== s.id)
+            .sort((a, b) => b.session_date.localeCompare(a.session_date))
+        );
+        setBulls(b);
+        setInventory(inv);
+        setLoading(false);
+      });
     });
   }, [id]);
 
@@ -79,6 +95,8 @@ function OpuSessionDetailContent() {
       {editing ? (
         <EditAllForm
           session={session}
+          bulls={bulls}
+          inventory={inventory}
           onCancel={() => setEditing(false)}
           onSaved={(updated) => {
             setSession(updated);
@@ -90,6 +108,8 @@ function OpuSessionDetailContent() {
           key={stage}
           session={session}
           stage={stage}
+          bulls={bulls}
+          inventory={inventory}
           onSaved={(updated) => setSession(updated)}
           onEditAll={() => setEditing(true)}
         />
@@ -156,18 +176,79 @@ function OpuSessionDetailContent() {
   );
 }
 
+function SemenPicker({
+  bulls,
+  inventory,
+  bullId,
+  semenType,
+  onChangeBull,
+  onChangeSemenType,
+}: {
+  bulls: Bull[];
+  inventory: SemenInventory[];
+  bullId: string;
+  semenType: SemenType;
+  onChangeBull: (id: string) => void;
+  onChangeSemenType: (t: SemenType) => void;
+}) {
+  function stockFor(id: string, type: SemenType) {
+    const row = inventory.find((i) => i.bull_id === id && i.semen_type === type);
+    return (row?.straw_count ?? 0) + (row?.tank_straw_count ?? 0);
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-neutral-600">Boğa</span>
+        <select value={bullId} onChange={(e) => onChangeBull(e.target.value)} className="input">
+          <option value="">Seçilmedi</option>
+          {bulls.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name} {b.breed && `(${b.breed})`}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-neutral-600">Sperma türü</span>
+        <select
+          value={semenType}
+          onChange={(e) => onChangeSemenType(e.target.value as SemenType)}
+          disabled={!bullId}
+          className="input"
+        >
+          <option value="konvansiyonel">Konvansiyonel {bullId && `(${stockFor(bullId, "konvansiyonel")} straw)`}</option>
+          <option value="disi">Dişi {bullId && `(${stockFor(bullId, "disi")} straw)`}</option>
+        </select>
+      </label>
+    </div>
+  );
+}
+
 function StageCard({
   session,
   stage,
+  bulls,
+  inventory,
   onSaved,
   onEditAll,
 }: {
   session: OpuSession;
   stage: Stage;
+  bulls: Bull[];
+  inventory: SemenInventory[];
   onSaved: (s: OpuSession) => void;
   onEditAll: () => void;
 }) {
   const [value, setValue] = useState("");
+  const [gradeA, setGradeA] = useState("");
+  const [gradeB, setGradeB] = useState("");
+  const [gradeC, setGradeC] = useState("");
+  const [gradeD, setGradeD] = useState("");
+  const [fertilizationBullId, setFertilizationBullId] = useState(session.fertilization_bull_id ?? "");
+  const [fertilizationSemenType, setFertilizationSemenType] = useState<SemenType>(
+    session.fertilization_semen_type ?? "konvansiyonel"
+  );
   const [notes, setNotes] = useState(session.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -184,12 +265,30 @@ function StageCard({
 
   const q = OPU_STAGE_INFO[stage];
 
+  function toNullableNumber(v: string): number | null {
+    return v.trim() === "" ? null : Number(v);
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (value.trim() === "") return;
     setSaving(true);
     const updated = await updateOpuSession(session.id, {
       [q.field]: Number(value),
+      ...(stage === "oocyte"
+        ? {
+            oocyte_grade_a: toNullableNumber(gradeA),
+            oocyte_grade_b: toNullableNumber(gradeB),
+            oocyte_grade_c: toNullableNumber(gradeC),
+            oocyte_grade_d: toNullableNumber(gradeD),
+          }
+        : {}),
+      ...(stage === "cleaved"
+        ? {
+            fertilization_bull_id: fertilizationBullId || null,
+            fertilization_semen_type: fertilizationBullId ? fertilizationSemenType : null,
+          }
+        : {}),
       notes: notes.trim() || null,
     });
     if (updated) onSaved(updated);
@@ -211,6 +310,45 @@ function StageCard({
         className="input"
         placeholder="Sayı gir"
       />
+
+      {stage === "oocyte" && (
+        <div>
+          <span className="mb-1 block text-xs font-medium text-neutral-600">Oosit kalitesi (opsiyonel)</span>
+          <div className="grid grid-cols-4 gap-2">
+            <label className="block">
+              <span className="mb-1 block text-xs text-neutral-500">A Kalite</span>
+              <input type="number" min={0} value={gradeA} onChange={(e) => setGradeA(e.target.value)} className="input" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs text-neutral-500">B Kalite</span>
+              <input type="number" min={0} value={gradeB} onChange={(e) => setGradeB(e.target.value)} className="input" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs text-neutral-500">C Kalite</span>
+              <input type="number" min={0} value={gradeC} onChange={(e) => setGradeC(e.target.value)} className="input" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs text-neutral-500">D Kalite</span>
+              <input type="number" min={0} value={gradeD} onChange={(e) => setGradeD(e.target.value)} className="input" />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {stage === "cleaved" && value.trim() !== "" && (
+        <div>
+          <span className="mb-1 block text-xs font-medium text-neutral-600">Hangi sperma ile fertilize edildi?</span>
+          <SemenPicker
+            bulls={bulls}
+            inventory={inventory}
+            bullId={fertilizationBullId}
+            semenType={fertilizationSemenType}
+            onChangeBull={setFertilizationBullId}
+            onChangeSemenType={setFertilizationSemenType}
+          />
+        </div>
+      )}
+
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-neutral-600">Not (opsiyonel)</span>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={2} />
@@ -229,10 +367,14 @@ function StageCard({
 
 function EditAllForm({
   session,
+  bulls,
+  inventory,
   onCancel,
   onSaved,
 }: {
   session: OpuSession;
+  bulls: Bull[];
+  inventory: SemenInventory[];
   onCancel: () => void;
   onSaved: (s: OpuSession) => void;
 }) {
@@ -244,8 +386,16 @@ function EditAllForm({
     session.follicle_count_left !== null ? String(session.follicle_count_left) : ""
   );
   const [oocyteCount, setOocyteCount] = useState(session.oocyte_count !== null ? String(session.oocyte_count) : "");
+  const [gradeA, setGradeA] = useState(session.oocyte_grade_a !== null ? String(session.oocyte_grade_a) : "");
+  const [gradeB, setGradeB] = useState(session.oocyte_grade_b !== null ? String(session.oocyte_grade_b) : "");
+  const [gradeC, setGradeC] = useState(session.oocyte_grade_c !== null ? String(session.oocyte_grade_c) : "");
+  const [gradeD, setGradeD] = useState(session.oocyte_grade_d !== null ? String(session.oocyte_grade_d) : "");
   const [cleavedCount, setCleavedCount] = useState(
     session.cleaved_count !== null ? String(session.cleaved_count) : ""
+  );
+  const [fertilizationBullId, setFertilizationBullId] = useState(session.fertilization_bull_id ?? "");
+  const [fertilizationSemenType, setFertilizationSemenType] = useState<SemenType>(
+    session.fertilization_semen_type ?? "konvansiyonel"
   );
   const [embryoCount, setEmbryoCount] = useState(
     session.embryo_count !== null ? String(session.embryo_count) : ""
@@ -265,7 +415,13 @@ function EditAllForm({
       follicle_count_right: toNullableNumber(follicleRight),
       follicle_count_left: toNullableNumber(follicleLeft),
       oocyte_count: toNullableNumber(oocyteCount),
+      oocyte_grade_a: toNullableNumber(gradeA),
+      oocyte_grade_b: toNullableNumber(gradeB),
+      oocyte_grade_c: toNullableNumber(gradeC),
+      oocyte_grade_d: toNullableNumber(gradeD),
       cleaved_count: toNullableNumber(cleavedCount),
+      fertilization_bull_id: fertilizationBullId || null,
+      fertilization_semen_type: fertilizationBullId ? fertilizationSemenType : null,
       embryo_count: toNullableNumber(embryoCount),
       notes: notes.trim() || null,
     });
@@ -295,14 +451,39 @@ function EditAllForm({
         <input type="number" min={0} value={oocyteCount} onChange={(e) => setOocyteCount(e.target.value)} className="input" />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Bölünen (cleavage) sayısı">
-          <input type="number" min={0} value={cleavedCount} onChange={(e) => setCleavedCount(e.target.value)} className="input" />
+      <div className="grid grid-cols-4 gap-3">
+        <Field label="A Kalite">
+          <input type="number" min={0} value={gradeA} onChange={(e) => setGradeA(e.target.value)} className="input" />
         </Field>
-        <Field label="Embriyoya dönüşen sayı">
-          <input type="number" min={0} value={embryoCount} onChange={(e) => setEmbryoCount(e.target.value)} className="input" />
+        <Field label="B Kalite">
+          <input type="number" min={0} value={gradeB} onChange={(e) => setGradeB(e.target.value)} className="input" />
+        </Field>
+        <Field label="C Kalite">
+          <input type="number" min={0} value={gradeC} onChange={(e) => setGradeC(e.target.value)} className="input" />
+        </Field>
+        <Field label="D Kalite">
+          <input type="number" min={0} value={gradeD} onChange={(e) => setGradeD(e.target.value)} className="input" />
         </Field>
       </div>
+
+      <Field label="Bölünen (cleavage) sayısı">
+        <input type="number" min={0} value={cleavedCount} onChange={(e) => setCleavedCount(e.target.value)} className="input" />
+      </Field>
+
+      <Field label="Hangi sperma ile fertilize edildi?">
+        <SemenPicker
+          bulls={bulls}
+          inventory={inventory}
+          bullId={fertilizationBullId}
+          semenType={fertilizationSemenType}
+          onChangeBull={setFertilizationBullId}
+          onChangeSemenType={setFertilizationSemenType}
+        />
+      </Field>
+
+      <Field label="Embriyoya dönüşen sayı">
+        <input type="number" min={0} value={embryoCount} onChange={(e) => setEmbryoCount(e.target.value)} className="input" />
+      </Field>
 
       <Field label="Teknisyen">
         <input value={technicianName} onChange={(e) => setTechnicianName(e.target.value)} className="input" />

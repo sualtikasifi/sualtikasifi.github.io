@@ -153,7 +153,9 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
       >
         <div className="flex items-center gap-2">
           {earTag && <span className="font-medium text-neutral-900">{earTag}</span>}
-          <Badge value={treatment.udder_quarter} />
+          {treatment.udder_quarters.map((q) => (
+            <Badge key={q} value={q} />
+          ))}
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${
               stats.isEnded ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
@@ -173,7 +175,9 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {earTag && <span className="font-medium text-neutral-900">{earTag}</span>}
-          <Badge value={treatment.udder_quarter} />
+          {treatment.udder_quarters.map((q) => (
+            <Badge key={q} value={q} />
+          ))}
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${
               stats.isEnded ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
@@ -383,7 +387,7 @@ function EditMastitisTreatmentForm({
   onCancel: () => void;
   onSaved: (t: MastitisTreatment) => void;
 }) {
-  const [udderQuarter, setUdderQuarter] = useState<UdderQuarter>(treatment.udder_quarter);
+  const [udderQuarters, setUdderQuarters] = useState<UdderQuarter[]>(treatment.udder_quarters);
   const [diagnosis, setDiagnosis] = useState(treatment.diagnosis ?? "");
   const [medication, setMedication] = useState(treatment.medication ?? "");
   const [vetName, setVetName] = useState(treatment.vet_name ?? "");
@@ -393,11 +397,16 @@ function EditMastitisTreatmentForm({
   const [notes, setNotes] = useState(treatment.notes ?? "");
   const [saving, setSaving] = useState(false);
 
+  function toggleUdderQuarter(q: UdderQuarter) {
+    setUdderQuarters((prev) => (prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q]));
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (udderQuarters.length === 0) return;
     setSaving(true);
     const updated = await updateMastitisTreatment(treatment.id, {
-      udder_quarter: udderQuarter,
+      udder_quarters: udderQuarters,
       diagnosis: diagnosis.trim() || null,
       medication: medication.trim() || null,
       vet_name: vetName.trim() || null,
@@ -419,15 +428,36 @@ function EditMastitisTreatmentForm({
         </button>
       </div>
 
-      <label className="block">
-        <span className="mb-1 block text-xs font-medium text-neutral-600">Meme</span>
-        <select value={udderQuarter} onChange={(e) => setUdderQuarter(e.target.value as UdderQuarter)} className="input">
-          <option value="on_sol">Ön Sol</option>
-          <option value="on_sag">Ön Sağ</option>
-          <option value="arka_sol">Arka Sol</option>
-          <option value="arka_sag">Arka Sağ</option>
-        </select>
-      </label>
+      <div>
+        <span className="mb-1 block text-xs font-medium text-neutral-600">Meme (birden fazla seçilebilir)</span>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              ["on_sol", "Ön Sol"],
+              ["on_sag", "Ön Sağ"],
+              ["arka_sol", "Arka Sol"],
+              ["arka_sag", "Arka Sağ"],
+            ] as [UdderQuarter, string][]
+          ).map(([value, label]) => (
+            <label
+              key={value}
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+                udderQuarters.includes(value)
+                  ? "border-green-600 bg-green-50 text-green-800"
+                  : "border-neutral-300 text-neutral-700"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={udderQuarters.includes(value)}
+                onChange={() => toggleUdderQuarter(value)}
+                className="h-4 w-4"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-3 gap-3">
         <label className="block">
@@ -475,7 +505,7 @@ function EditMastitisTreatmentForm({
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={3} />
       </label>
 
-      <button type="submit" disabled={saving} className="btn-primary">
+      <button type="submit" disabled={saving || udderQuarters.length === 0} className="btn-primary">
         {saving ? "Kaydediliyor..." : "Kaydet"}
       </button>
     </form>

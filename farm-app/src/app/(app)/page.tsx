@@ -99,7 +99,9 @@ export default function DashboardPage() {
             <div key={t.id} className="flex items-center justify-between py-2 text-sm">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{animals.find((a) => a.id === t.animal_id)?.ear_tag ?? "?"}</span>
-                <Badge value={t.udder_quarter} />
+                {t.udder_quarters.map((q) => (
+                  <Badge key={q} value={q} />
+                ))}
                 {t.diagnosis && <span className="text-neutral-500">{t.diagnosis}</span>}
               </div>
               <div className="flex items-center gap-2">

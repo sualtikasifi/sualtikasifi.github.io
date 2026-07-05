@@ -2,29 +2,36 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { listBulls, listSemenInventory } from "@/lib/data";
-import { Bull, SemenInventory, SemenType } from "@/lib/types";
+import { listAnimals, listBulls, listOpuSessions, listSemenInventory } from "@/lib/data";
+import { Animal, Bull, OpuSession, SemenInventory, SemenType } from "@/lib/types";
 import { Badge } from "@/components/Badge";
+import { formatDate } from "@/lib/format";
 
 type ViewMode = "toplam" | "tank";
-type SemenFilter = "hepsi" | SemenType;
+type SemenFilter = SemenType | "embriyo";
 
 const LOW_STOCK_THRESHOLD = 5;
 
 export default function BullsPage() {
   const [bulls, setBulls] = useState<Bull[]>([]);
   const [inventory, setInventory] = useState<SemenInventory[]>([]);
+  const [opuSessions, setOpuSessions] = useState<OpuSession[]>([]);
+  const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>("toplam");
   const [breedFilter, setBreedFilter] = useState("hepsi");
-  const [semenFilter, setSemenFilter] = useState<SemenFilter>("hepsi");
+  const [semenFilter, setSemenFilter] = useState<SemenFilter>("konvansiyonel");
 
   useEffect(() => {
-    Promise.all([listBulls(), listSemenInventory()]).then(([b, i]) => {
-      setBulls(b);
-      setInventory(i);
-      setLoading(false);
-    });
+    Promise.all([listBulls(), listSemenInventory(), listOpuSessions(), listAnimals()]).then(
+      ([b, i, s, a]) => {
+        setBulls(b);
+        setInventory(i);
+        setOpuSessions(s);
+        setAnimals(a);
+        setLoading(false);
+      }
+    );
   }, []);
 
   const breeds = useMemo(
@@ -37,33 +44,57 @@ export default function BullsPage() {
     [bulls, breedFilter]
   );
 
+  const earTagFor = (animalId: string) => animals.find((a) => a.id === animalId)?.ear_tag ?? "?";
+
+  // Embryos produced from OPU sessions, attributed to the bull whose semen fertilized them.
+  const embryoSessionsByBull = useMemo(() => {
+    const map = new Map<string, OpuSession[]>();
+    for (const s of opuSessions) {
+      if (!s.fertilization_bull_id || s.embryo_count === null) continue;
+      const arr = map.get(s.fertilization_bull_id) ?? [];
+      arr.push(s);
+      map.set(s.fertilization_bull_id, arr);
+    }
+    return map;
+  }, [opuSessions]);
+
   const filteredInventory = useMemo(() => {
+    if (semenFilter === "embriyo") return [];
     const bullIds = new Set(filteredBulls.map((b) => b.id));
-    return inventory.filter(
-      (i) => bullIds.has(i.bull_id) && (semenFilter === "hepsi" || i.semen_type === semenFilter)
-    );
+    return inventory.filter((i) => bullIds.has(i.bull_id) && i.semen_type === semenFilter);
   }, [inventory, filteredBulls, semenFilter]);
 
-  const totalStraws = filteredInventory.reduce((sum, i) => sum + i.straw_count + i.tank_straw_count, 0);
+  const totalStraws =
+    semenFilter === "embriyo"
+      ? filteredBulls.reduce(
+          (sum, b) => sum + (embryoSessionsByBull.get(b.id) ?? []).reduce((s, o) => s + (o.embryo_count ?? 0), 0),
+          0
+        )
+      : filteredInventory.reduce((sum, i) => sum + i.straw_count + i.tank_straw_count, 0);
 
   const groups = useMemo(() => {
-    const map = new Map<string, { breed: string; semen_type: SemenType; total: number }>();
+    if (semenFilter === "embriyo") {
+      const map = new Map<string, number>();
+      for (const b of filteredBulls) {
+        const total = (embryoSessionsByBull.get(b.id) ?? []).reduce((s, o) => s + (o.embryo_count ?? 0), 0);
+        if (total === 0) continue;
+        const breed = b.breed ?? "Irk belirtilmemiş";
+        map.set(breed, (map.get(breed) ?? 0) + total);
+      }
+      return Array.from(map.entries())
+        .map(([breed, total]) => ({ breed, total }))
+        .sort((a, b) => a.breed.localeCompare(b.breed));
+    }
+    const map = new Map<string, number>();
     for (const inv of filteredInventory) {
       const bull = bulls.find((b) => b.id === inv.bull_id);
       const breed = bull?.breed ?? "Irk belirtilmemiş";
-      const key = `${breed}|${inv.semen_type}`;
-      const existing = map.get(key);
-      const rowTotal = inv.straw_count + inv.tank_straw_count;
-      if (existing) {
-        existing.total += rowTotal;
-      } else {
-        map.set(key, { breed, semen_type: inv.semen_type, total: rowTotal });
-      }
+      map.set(breed, (map.get(breed) ?? 0) + inv.straw_count + inv.tank_straw_count);
     }
-    return Array.from(map.values()).sort(
-      (a, b) => a.breed.localeCompare(b.breed) || a.semen_type.localeCompare(b.semen_type)
-    );
-  }, [filteredInventory, bulls]);
+    return Array.from(map.entries())
+      .map(([breed, total]) => ({ breed, total }))
+      .sort((a, b) => a.breed.localeCompare(b.breed));
+  }, [semenFilter, filteredInventory, filteredBulls, embryoSessionsByBull, bulls]);
 
   return (
     <div className="space-y-4">
@@ -109,9 +140,9 @@ export default function BullsPage() {
           onChange={(e) => setSemenFilter(e.target.value as SemenFilter)}
           className="input w-auto"
         >
-          <option value="hepsi">Konvansiyonel + Dişi</option>
           <option value="konvansiyonel">Konvansiyonel</option>
           <option value="disi">Dişi</option>
+          <option value="embriyo">Embriyo</option>
         </select>
       </div>
 
@@ -123,7 +154,9 @@ export default function BullsPage() {
         <div className="space-y-3">
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
             <p className="text-2xl font-semibold text-green-900">{totalStraws}</p>
-            <p className="text-xs text-green-700">Toplam straw (seçili filtreye göre)</p>
+            <p className="text-xs text-green-700">
+              Toplam {semenFilter === "embriyo" ? "embriyo" : "straw"} (seçili filtreye göre)
+            </p>
           </div>
           {groups.length === 0 ? (
             <p className="text-sm text-neutral-400">Bu filtreye uyan stok yok.</p>
@@ -131,12 +164,12 @@ export default function BullsPage() {
             <div className="card-list">
               {groups.map((g) => (
                 <div
-                  key={`${g.breed}|${g.semen_type}`}
+                  key={g.breed}
                   className="flex items-center justify-between border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0"
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-neutral-900">{g.breed}</span>
-                    <Badge value={g.semen_type} />
+                    <Badge value={semenFilter} />
                   </div>
                   <span className="text-lg font-semibold text-neutral-900">{g.total}</span>
                 </div>
@@ -147,6 +180,42 @@ export default function BullsPage() {
       ) : (
         <div className="card-list">
           {filteredBulls.map((b) => {
+            if (semenFilter === "embriyo") {
+              const sessions = embryoSessionsByBull.get(b.id) ?? [];
+              const total = sessions.reduce((s, o) => s + (o.embryo_count ?? 0), 0);
+              if (total === 0) return null;
+              return (
+                <div key={b.id} className="border-b border-neutral-100 px-4 py-3 last:border-b-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-medium text-neutral-900">{b.name}</span>
+                      {b.code && <span className="ml-2 text-sm text-neutral-500">{b.code}</span>}
+                      <span className="ml-2 text-sm text-neutral-400">{b.breed ?? "-"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge value="embriyo" />
+                      <span className="text-lg font-semibold text-neutral-900">{total}</span>
+                    </div>
+                  </div>
+                  <div className="mt-1 space-y-1">
+                    {sessions.map((s) => (
+                      <Link
+                        key={s.id}
+                        href={`/opu/detail?id=${s.id}`}
+                        className="flex items-center justify-between rounded-md px-2 py-1 text-sm transition-colors hover:bg-neutral-50"
+                      >
+                        <span className="text-neutral-600">
+                          Donör: {earTagFor(s.donor_animal_id)} &middot; {formatDate(s.session_date)}
+                          {s.notes && <span className="text-neutral-400"> &middot; {s.notes}</span>}
+                        </span>
+                        <span className="font-medium text-neutral-900">{s.embryo_count} embriyo</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
             const rows = filteredInventory.filter((i) => i.bull_id === b.id);
             if (rows.length === 0) return null;
             return (
