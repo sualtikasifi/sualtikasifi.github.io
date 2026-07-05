@@ -2,15 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createTask, listProfiles } from "@/lib/data";
-import { Profile } from "@/lib/types";
+import { createTask, createTaskAnimals, listAnimals, listProfiles } from "@/lib/data";
+import { Animal, Profile } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+import { ImageUploadField } from "@/components/ImageUploadField";
+import { EarTagMultiPicker } from "@/components/EarTagMultiPicker";
 
 export default function NewTaskPage() {
   const router = useRouter();
   const { profile } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [animals, setAnimals] = useState<Animal[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [withChecklist, setWithChecklist] = useState(false);
+  const [checklistAnimalIds, setChecklistAnimalIds] = useState<string[]>([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -24,6 +30,7 @@ export default function NewTaskPage() {
       setProfiles(p);
       setForm((f) => ({ ...f, assigned_to: f.assigned_to || p[0]?.id || "" }));
     });
+    listAnimals().then(setAnimals);
   }, []);
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -34,7 +41,7 @@ export default function NewTaskPage() {
     e.preventDefault();
     if (!form.title.trim() || !form.assigned_to) return;
     setSubmitting(true);
-    await createTask({
+    const task = await createTask({
       title: form.title.trim(),
       description: form.description.trim() || null,
       assigned_to: form.assigned_to === "herkes" ? null : form.assigned_to,
@@ -42,10 +49,15 @@ export default function NewTaskPage() {
       due_date: form.due_date,
       due_time: form.due_time || null,
       status: "bekliyor",
+      image_url: imageUrl,
       completed_by: null,
       completed_at: null,
       completion_note: null,
+      completion_image_url: null,
     });
+    if (withChecklist && checklistAnimalIds.length > 0) {
+      await createTaskAnimals(task.id, checklistAnimalIds);
+    }
     setSubmitting(false);
     router.push("/tasks");
   }
@@ -76,6 +88,28 @@ export default function NewTaskPage() {
             <input type="time" value={form.due_time} onChange={(e) => update("due_time", e.target.value)} className="input" />
           </Field>
         </div>
+
+        <ImageUploadField label="Referans fotoğrafı (opsiyonel)" value={imageUrl} onChange={setImageUrl} />
+
+        <div className="rounded-md border border-neutral-200 p-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-neutral-700">
+            <input
+              type="checkbox"
+              checked={withChecklist}
+              onChange={(e) => {
+                setWithChecklist(e.target.checked);
+                if (!e.target.checked) setChecklistAnimalIds([]);
+              }}
+            />
+            Bu göreve hayvan listesi ekle (örn. aşı takibi)
+          </label>
+          {withChecklist && (
+            <div className="mt-3">
+              <EarTagMultiPicker animals={animals} selectedIds={checklistAnimalIds} onChange={setChecklistAnimalIds} />
+            </div>
+          )}
+        </div>
+
         <button type="submit" disabled={submitting} className="btn-primary">
           {submitting ? "Kaydediliyor..." : "Kaydet"}
         </button>

@@ -1,4 +1,4 @@
-import { Animal, Bull, CalfFeeding, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuSession, Profile, SemenInventory, Task } from "@/lib/types";
+import { Animal, Bull, CalfFeeding, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuSession, Profile, SemenInventory, Task, TaskAnimal } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -215,9 +215,11 @@ export const seedTasks: Task[] = [
     due_date: iso(today),
     due_time: "08:00",
     status: "bekliyor",
+    image_url: null,
     completed_by: null,
     completed_at: null,
     completion_note: null,
+    completion_image_url: null,
     created_at: daysAgo(1),
   },
   {
@@ -229,9 +231,11 @@ export const seedTasks: Task[] = [
     due_date: daysFromNow(3),
     due_time: "14:00",
     status: "bekliyor",
+    image_url: null,
     completed_by: null,
     completed_at: null,
     completion_note: null,
+    completion_image_url: null,
     created_at: daysAgo(1),
   },
   {
@@ -243,12 +247,16 @@ export const seedTasks: Task[] = [
     due_date: daysAgo(1),
     due_time: null,
     status: "yapildi",
+    image_url: null,
     completed_by: "demo-user-3",
     completed_at: daysAgo(1),
     completion_note: "İştahlı şekilde içti, sorun yok.",
+    completion_image_url: null,
     created_at: daysAgo(2),
   },
 ];
+
+export const seedTaskAnimals: TaskAnimal[] = [];
 
 export const seedBulls: Bull[] = [
   {

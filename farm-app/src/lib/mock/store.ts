@@ -14,6 +14,7 @@ import {
   SemenInventory,
   ShiftNote,
   Task,
+  TaskAnimal,
 } from "@/lib/types";
 import {
   DEMO_USER_ID,
@@ -29,6 +30,7 @@ import {
   seedOpuSessions,
   seedProfiles,
   seedSemenInventory,
+  seedTaskAnimals,
   seedTasks,
 } from "./seed";
 
@@ -42,6 +44,7 @@ interface DemoDb {
   mastitisDoses: MastitisDose[];
   mastitisProtocols: MastitisProtocol[];
   tasks: Task[];
+  taskAnimals: TaskAnimal[];
   bulls: Bull[];
   semenInventory: SemenInventory[];
   inseminations: Insemination[];
@@ -61,6 +64,7 @@ function initialDb(): DemoDb {
     mastitisDoses: seedMastitisDoses,
     mastitisProtocols: seedMastitisProtocols,
     tasks: seedTasks,
+    taskAnimals: seedTaskAnimals,
     bulls: seedBulls,
     semenInventory: seedSemenInventory,
     inseminations: seedInseminations,
@@ -91,6 +95,7 @@ function loadDb(): DemoDb {
     mastitisDoses: parsed.mastitisDoses ?? seedMastitisDoses,
     mastitisProtocols: parsed.mastitisProtocols ?? seedMastitisProtocols,
     tasks: parsed.tasks ?? seedTasks,
+    taskAnimals: parsed.taskAnimals ?? seedTaskAnimals,
     bulls: parsed.bulls ?? seedBulls,
     semenInventory: parsed.semenInventory ?? seedSemenInventory,
     inseminations: parsed.inseminations ?? seedInseminations,
@@ -367,7 +372,12 @@ export function demoUpdateTaskStatus(id: string, status: Task["status"]): Task |
   return db.tasks[idx];
 }
 
-export function demoCompleteTask(id: string, completedBy: string, note: string | null): Task | undefined {
+export function demoCompleteTask(
+  id: string,
+  completedBy: string,
+  note: string | null,
+  completionImageUrl: string | null = null
+): Task | undefined {
   const db = loadDb();
   const idx = db.tasks.findIndex((t) => t.id === id);
   if (idx === -1) return undefined;
@@ -377,6 +387,7 @@ export function demoCompleteTask(id: string, completedBy: string, note: string |
     completed_by: completedBy,
     completed_at: new Date().toISOString(),
     completion_note: note,
+    completion_image_url: completionImageUrl,
   };
   saveDb(db);
   return db.tasks[idx];
@@ -392,9 +403,61 @@ export function demoReopenTask(id: string): Task | undefined {
     completed_by: null,
     completed_at: null,
     completion_note: null,
+    completion_image_url: null,
   };
   saveDb(db);
   return db.tasks[idx];
+}
+
+// --- Gorev hayvan kontrol listesi ---
+
+export function demoListTaskAnimals(taskId: string): TaskAnimal[] {
+  return loadDb().taskAnimals.filter((ta) => ta.task_id === taskId);
+}
+
+export function demoListAllTaskAnimals(): TaskAnimal[] {
+  return loadDb().taskAnimals;
+}
+
+export function demoCreateTaskAnimals(taskId: string, animalIds: string[]): TaskAnimal[] {
+  const db = loadDb();
+  const rows: TaskAnimal[] = animalIds.map((animalId) => ({
+    id: newId("taskanimal"),
+    task_id: taskId,
+    animal_id: animalId,
+    done: false,
+    done_by: null,
+    done_at: null,
+    created_at: new Date().toISOString(),
+  }));
+  db.taskAnimals.push(...rows);
+  saveDb(db);
+  return rows;
+}
+
+export function demoToggleTaskAnimal(id: string, done: boolean, doneBy: string | null): TaskAnimal | undefined {
+  const db = loadDb();
+  const idx = db.taskAnimals.findIndex((ta) => ta.id === id);
+  if (idx === -1) return undefined;
+  db.taskAnimals[idx] = {
+    ...db.taskAnimals[idx],
+    done,
+    done_by: done ? doneBy : null,
+    done_at: done ? new Date().toISOString() : null,
+  };
+  saveDb(db);
+  return db.taskAnimals[idx];
+}
+
+// --- Gorsel yukleme (demo modda gercek storage olmadigi icin data URL olarak saklanir) ---
+
+export function demoUploadImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 // --- Bulls & semen inventory ---

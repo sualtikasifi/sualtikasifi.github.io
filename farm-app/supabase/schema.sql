@@ -115,14 +115,28 @@ create table if not exists tasks (
   due_date date not null,
   due_time time,
   status text not null default 'bekliyor' check (status in ('bekliyor', 'yapildi', 'iptal')),
+  image_url text,
   completed_by uuid references profiles (id),
   completed_at timestamptz,
   completion_note text,
+  completion_image_url text,
   created_at timestamptz not null default now()
 );
 
 create index if not exists tasks_assigned_to_idx on tasks (assigned_to);
 create index if not exists tasks_due_date_idx on tasks (due_date);
+
+-- Bir goreve baglanan hayvan kontrol listesi (orn. "bu 20 buzagiya asi yapilacak")
+create table if not exists task_animals (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references tasks (id) on delete cascade,
+  animal_id uuid not null references animals (id) on delete cascade,
+  done boolean not null default false,
+  done_by uuid references profiles (id),
+  done_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (task_id, animal_id)
+);
 
 -- 5. Bogalar (tohumlamada kullanilan sperma sahibi bogalar)
 create table if not exists bulls (
@@ -285,6 +299,7 @@ alter table calf_feedings enable row level security;
 alter table medicines enable row level security;
 alter table shift_notes enable row level security;
 alter table calf_notes enable row level security;
+alter table task_animals enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
@@ -303,3 +318,17 @@ create policy "calf_feedings_all_authenticated" on calf_feedings for all to auth
 create policy "medicines_all_authenticated" on medicines for all to authenticated using (true) with check (true);
 create policy "shift_notes_all_authenticated" on shift_notes for all to authenticated using (true) with check (true);
 create policy "calf_notes_all_authenticated" on calf_notes for all to authenticated using (true) with check (true);
+create policy "task_animals_all_authenticated" on task_animals for all to authenticated using (true) with check (true);
+
+-- Gorev fotograflari (referans + tamamlama kaniti) icin storage bucket'i.
+-- Public bucket: link tahmin edilemez (rastgele dosya adi) oldugu icin yeterli,
+-- boylece imzali URL yenileme mantigi gerekmiyor.
+insert into storage.buckets (id, name, public)
+values ('task-images', 'task-images', true)
+on conflict (id) do nothing;
+
+create policy "task_images_insert_authenticated" on storage.objects
+  for insert to authenticated with check (bucket_id = 'task-images');
+
+create policy "task_images_select_public" on storage.objects
+  for select to public using (bucket_id = 'task-images');
