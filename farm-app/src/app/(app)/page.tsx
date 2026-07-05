@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const overdueTasks = pending.filter((t) => t.due_date < today);
   const activeAnimals = animals.filter((a) => a.status === "aktif");
   const inTreatment = mastitisTreatments.filter((t) => !t.ended_at);
-  const lowStockRows = inventory.filter((i) => i.straw_count <= 5);
+  const lowStockRows = inventory.filter((i) => i.straw_count + i.tank_straw_count <= 5);
   const developingEmbryos = embryos.filter((e) => e.status === "gelisiyor");
   const mastitisReminders = getTodaysMastitisReminders(mastitisTreatments, mastitisDoses, animals);
 

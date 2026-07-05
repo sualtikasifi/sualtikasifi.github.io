@@ -1,36 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createMedicine } from "@/lib/data";
+import { adjustMedicineStock, createMedicine, listMedicines } from "@/lib/data";
+import { Medicine } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 
 export default function NewMedicinePage() {
   const router = useRouter();
   const { profile } = useAuth();
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    unit: "adet",
-    stock_count: "0",
+    quantity: "0",
     notes: "",
   });
+
+  useEffect(() => {
+    listMedicines().then(setMedicines);
+  }, []);
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  const existing = medicines.find((m) => m.name.trim().toLowerCase() === form.name.trim().toLowerCase());
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return;
     setSubmitting(true);
-    await createMedicine({
-      name: form.name.trim(),
-      unit: form.unit.trim() || "adet",
-      stock_count: Math.max(0, Number(form.stock_count) || 0),
-      notes: form.notes.trim() || null,
-      created_by: profile?.id ?? null,
-    });
+    const quantity = Math.max(0, Number(form.quantity) || 0);
+    if (existing) {
+      await adjustMedicineStock(existing.id, quantity);
+    } else {
+      await createMedicine({
+        name: form.name.trim(),
+        unit: "adet",
+        stock_count: quantity,
+        notes: form.notes.trim() || null,
+        created_by: profile?.id ?? null,
+      });
+    }
     setSubmitting(false);
     router.push("/medicines");
   }
@@ -41,26 +53,22 @@ export default function NewMedicinePage() {
       <form onSubmit={handleSubmit} className="card space-y-3">
         <Field label="İlaç/Aşı adı *">
           <input required value={form.name} onChange={(e) => update("name", e.target.value)} className="input" />
+          {existing && (
+            <p className="mt-1 text-xs text-amber-700">
+              Bu isimde bir kayıt zaten var (mevcut stok: {existing.stock_count} adet). Girdiğiniz miktar bu stoğun
+              üstüne eklenecek.
+            </p>
+          )}
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Birim">
-            <input
-              value={form.unit}
-              onChange={(e) => update("unit", e.target.value)}
-              placeholder="adet, doz, şişe..."
-              className="input"
-            />
-          </Field>
-          <Field label="Başlangıç stoğu">
-            <input
-              type="number"
-              min={0}
-              value={form.stock_count}
-              onChange={(e) => update("stock_count", e.target.value)}
-              className="input"
-            />
-          </Field>
-        </div>
+        <Field label="Adet">
+          <input
+            type="number"
+            min={0}
+            value={form.quantity}
+            onChange={(e) => update("quantity", e.target.value)}
+            className="input"
+          />
+        </Field>
         <Field label="Notlar">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} className="input" rows={3} />
         </Field>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createInsemination, listAnimals, listBulls, listProfiles, listSemenInventory } from "@/lib/data";
 import { Animal, Bull, Profile, SemenInventory, SemenType } from "@/lib/types";
@@ -26,6 +26,7 @@ function NewInseminationContent() {
   const [inventory, setInventory] = useState<SemenInventory[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [form, setForm] = useState({
     animal_id: preselectedAnimalId,
     bull_id: "",
@@ -50,12 +51,15 @@ function NewInseminationContent() {
   }
 
   function stockFor(bullId: string, semenType: SemenType) {
-    return inventory.find((i) => i.bull_id === bullId && i.semen_type === semenType)?.straw_count ?? 0;
+    const row = inventory.find((i) => i.bull_id === bullId && i.semen_type === semenType);
+    return (row?.straw_count ?? 0) + (row?.tank_straw_count ?? 0);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!form.animal_id) return;
+    submittingRef.current = true;
     setSubmitting(true);
     await createInsemination({
       animal_id: form.animal_id,
@@ -69,7 +73,7 @@ function NewInseminationContent() {
       created_by: profile?.id ?? null,
     });
     setSubmitting(false);
-    router.push(`/animals/detail?id=${form.animal_id}`);
+    router.push("/inseminations");
   }
 
   return (

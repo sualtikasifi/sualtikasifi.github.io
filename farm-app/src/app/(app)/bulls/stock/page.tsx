@@ -126,15 +126,22 @@ function SemenTypeCard({
   onSaved: (s: SemenInventory) => void;
 }) {
   const [strawCount, setStrawCount] = useState(String(stock?.straw_count ?? 0));
+  const [tankStrawCount, setTankStrawCount] = useState(String(stock?.tank_straw_count ?? 0));
   const [tankLocation, setTankLocation] = useState(stock?.tank_location ?? "");
   const [notes, setNotes] = useState(stock?.notes ?? "");
   const [saving, setSaving] = useState(false);
+  const [transferAmount, setTransferAmount] = useState("1");
+  const [transferring, setTransferring] = useState(false);
+
+  const depoTotal = stock?.straw_count ?? 0;
+  const tankTotal = stock?.tank_straw_count ?? 0;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     const updated = await setSemenStock(bullId, semenType, {
       straw_count: Math.max(0, Number(strawCount) || 0),
+      tank_straw_count: Math.max(0, Number(tankStrawCount) || 0),
       tank_location: tankLocation.trim() || null,
       notes: notes.trim() || null,
     });
@@ -142,52 +149,94 @@ function SemenTypeCard({
     setSaving(false);
   }
 
-  async function quickAdjust(delta: number) {
-    const nextCount = Math.max(0, (stock?.straw_count ?? 0) + delta);
-    setStrawCount(String(nextCount));
-    const updated = await setSemenStock(bullId, semenType, { straw_count: nextCount });
+  async function transfer(direction: "depo_to_tank" | "tank_to_depo") {
+    const amount = Math.max(0, Number(transferAmount) || 0);
+    if (amount === 0) return;
+    const available = direction === "depo_to_tank" ? depoTotal : tankTotal;
+    const move = Math.min(amount, available);
+    if (move === 0) return;
+    setTransferring(true);
+    const nextDepo = direction === "depo_to_tank" ? depoTotal - move : depoTotal + move;
+    const nextTank = direction === "depo_to_tank" ? tankTotal + move : tankTotal - move;
+    const updated = await setSemenStock(bullId, semenType, {
+      straw_count: nextDepo,
+      tank_straw_count: nextTank,
+    });
+    setStrawCount(String(nextDepo));
+    setTankStrawCount(String(nextTank));
     onSaved(updated);
+    setTransferring(false);
   }
 
   return (
     <div className="card space-y-3">
       <Badge value={semenType} />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-3xl font-semibold text-neutral-900">{stock?.straw_count ?? 0}</p>
-          <p className="text-xs text-neutral-400">
-            straw {stock?.updated_at && `· son güncelleme ${formatDate(stock.updated_at.slice(0, 10))}`}
-          </p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-md border border-neutral-200 p-3">
+          <p className="text-2xl font-semibold text-neutral-900">{depoTotal}</p>
+          <p className="text-xs text-neutral-400">straw · Depo</p>
         </div>
-        <div className="flex gap-2">
+        <div className="rounded-md border border-neutral-200 p-3">
+          <p className="text-2xl font-semibold text-neutral-900">{tankTotal}</p>
+          <p className="text-xs text-neutral-400">straw · Tank</p>
+        </div>
+      </div>
+      <p className="text-xs text-neutral-400">
+        Toplam {depoTotal + tankTotal} straw
+        {stock?.updated_at && ` · son güncelleme ${formatDate(stock.updated_at.slice(0, 10))}`}
+      </p>
+
+      <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
+        <p className="mb-2 text-xs font-medium text-neutral-600">Depo ⇄ Tank aktarımı</p>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={1}
+            value={transferAmount}
+            onChange={(e) => setTransferAmount(e.target.value)}
+            className="input w-20"
+          />
           <button
             type="button"
-            onClick={() => quickAdjust(-1)}
-            className="h-10 w-10 rounded-md border border-neutral-300 text-lg shadow-sm transition-colors hover:bg-neutral-50"
+            onClick={() => transfer("depo_to_tank")}
+            disabled={transferring || depoTotal === 0}
+            className="rounded-md border border-green-600 px-3 py-1.5 text-xs font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50 disabled:opacity-50"
           >
-            -1
+            Depodan Tanka →
           </button>
           <button
             type="button"
-            onClick={() => quickAdjust(1)}
-            className="h-10 w-10 rounded-md border border-neutral-300 text-lg shadow-sm transition-colors hover:bg-neutral-50"
+            onClick={() => transfer("tank_to_depo")}
+            disabled={transferring || tankTotal === 0}
+            className="rounded-md border border-green-600 px-3 py-1.5 text-xs font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50 disabled:opacity-50"
           >
-            +1
+            ← Tanktan Depoya
           </button>
         </div>
       </div>
 
       <form onSubmit={handleSave} className="space-y-3">
-        <Field label="Kesin straw sayısı">
-          <input
-            type="number"
-            min={0}
-            value={strawCount}
-            onChange={(e) => setStrawCount(e.target.value)}
-            className="input"
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Kesin depo straw sayısı">
+            <input
+              type="number"
+              min={0}
+              value={strawCount}
+              onChange={(e) => setStrawCount(e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="Kesin tank straw sayısı">
+            <input
+              type="number"
+              min={0}
+              value={tankStrawCount}
+              onChange={(e) => setTankStrawCount(e.target.value)}
+              className="input"
+            />
+          </Field>
+        </div>
         <Field label="Tank konumu">
           <input value={tankLocation} onChange={(e) => setTankLocation(e.target.value)} className="input" />
         </Field>

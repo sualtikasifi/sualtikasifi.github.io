@@ -142,6 +142,7 @@ create table if not exists semen_inventory (
   bull_id uuid not null references bulls (id) on delete cascade,
   semen_type text not null default 'konvansiyonel' check (semen_type in ('konvansiyonel', 'disi')),
   straw_count integer not null default 0 check (straw_count >= 0),
+  tank_straw_count integer not null default 0 check (tank_straw_count >= 0),
   tank_location text,
   notes text,
   updated_at timestamptz not null default now(),
