@@ -132,8 +132,11 @@ export default function TasksPage() {
         <p className="text-sm text-neutral-400">Kayıt yok.</p>
       ) : (
         <div className="space-y-5">
-          {[...pendingGroups, ...doneGroups].map((group) => (
-            <div key={group.date}>
+          {[
+            ...pendingGroups.map((g) => ({ ...g, key: `pending-${g.date}` })),
+            ...doneGroups.map((g) => ({ ...g, key: `done-${g.date}` })),
+          ].map((group) => (
+            <div key={group.key}>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                 {formatDate(group.date)}
               </p>

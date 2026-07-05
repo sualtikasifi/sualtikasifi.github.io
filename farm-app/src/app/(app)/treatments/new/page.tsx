@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   createMastitisTreatment,
@@ -38,6 +38,7 @@ function NewMastitisContent() {
   const [udderQuarters, setUdderQuarters] = useState<UdderQuarter[]>([]);
   const [diagnosisOption, setDiagnosisOption] = useState<DiagnosisOption>("Mastitis");
   const [diagnosisCustom, setDiagnosisCustom] = useState("");
+  const submittingRef = useRef(false);
   const [form, setForm] = useState({
     animal_id: preselectedAnimalId,
     start_date: new Date().toISOString().slice(0, 10),
@@ -69,7 +70,9 @@ function NewMastitisContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!form.animal_id || udderQuarters.length === 0 || !diagnosis) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -100,6 +103,7 @@ function NewMastitisContent() {
       router.push("/treatments");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kaydedilirken bir hata oluştu.");
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }

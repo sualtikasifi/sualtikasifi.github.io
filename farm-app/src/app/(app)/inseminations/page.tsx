@@ -176,7 +176,8 @@ function EditInseminationForm({
   const [saving, setSaving] = useState(false);
 
   function stockFor(id: string, type: SemenType) {
-    return inventory.find((i) => i.bull_id === id && i.semen_type === type)?.straw_count ?? 0;
+    const row = inventory.find((i) => i.bull_id === id && i.semen_type === type);
+    return (row?.straw_count ?? 0) + (row?.tank_straw_count ?? 0);
   }
 
   async function handleSave(e: React.FormEvent) {

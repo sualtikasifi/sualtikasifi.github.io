@@ -109,6 +109,7 @@ export interface SemenInventory {
   bull_id: string;
   semen_type: SemenType;
   straw_count: number;
+  tank_straw_count: number;
   tank_location: string | null;
   notes: string | null;
   updated_at: string;

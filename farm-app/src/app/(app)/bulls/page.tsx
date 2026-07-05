@@ -44,7 +44,7 @@ export default function BullsPage() {
     );
   }, [inventory, filteredBulls, semenFilter]);
 
-  const totalStraws = filteredInventory.reduce((sum, i) => sum + i.straw_count, 0);
+  const totalStraws = filteredInventory.reduce((sum, i) => sum + i.straw_count + i.tank_straw_count, 0);
 
   const groups = useMemo(() => {
     const map = new Map<string, { breed: string; semen_type: SemenType; total: number }>();
@@ -53,10 +53,11 @@ export default function BullsPage() {
       const breed = bull?.breed ?? "Irk belirtilmemiş";
       const key = `${breed}|${inv.semen_type}`;
       const existing = map.get(key);
+      const rowTotal = inv.straw_count + inv.tank_straw_count;
       if (existing) {
-        existing.total += inv.straw_count;
+        existing.total += rowTotal;
       } else {
-        map.set(key, { breed, semen_type: inv.semen_type, total: inv.straw_count });
+        map.set(key, { breed, semen_type: inv.semen_type, total: rowTotal });
       }
     }
     return Array.from(map.values()).sort(
@@ -157,7 +158,8 @@ export default function BullsPage() {
                 </Link>
                 <div className="mt-1 space-y-1">
                   {rows.map((r) => {
-                    const low = r.straw_count <= LOW_STOCK_THRESHOLD;
+                    const total = r.straw_count + r.tank_straw_count;
+                    const low = total <= LOW_STOCK_THRESHOLD;
                     return (
                       <Link
                         key={r.id}
@@ -170,9 +172,11 @@ export default function BullsPage() {
                         </div>
                         <div className="text-right">
                           <span className={`font-semibold ${low ? "text-red-600" : "text-neutral-900"}`}>
-                            {r.straw_count}
+                            {total}
                           </span>
-                          <span className="ml-1 text-xs text-neutral-400">straw {low && "(düşük)"}</span>
+                          <span className="ml-1 text-xs text-neutral-400">
+                            straw (depo {r.straw_count} + tank {r.tank_straw_count}) {low && "· düşük"}
+                          </span>
                         </div>
                       </Link>
                     );

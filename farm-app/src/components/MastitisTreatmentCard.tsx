@@ -144,7 +144,7 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
     );
   }
 
-  if (stats.isEnded && !expanded) {
+  if (!expanded) {
     return (
       <button
         type="button"
@@ -154,8 +154,12 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
         <div className="flex items-center gap-2">
           {earTag && <span className="font-medium text-neutral-900">{earTag}</span>}
           <Badge value={treatment.udder_quarter} />
-          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-            Tedavi tamamlandı
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              stats.isEnded ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+            }`}
+          >
+            {stats.isEnded ? "Tedavi tamamlandı" : `Devam ediyor · Gün ${stats.completedCount}/${treatment.protocol_days}`}
           </span>
           {treatment.diagnosis && <span className="text-sm text-neutral-500">{treatment.diagnosis}</span>}
         </div>
@@ -179,15 +183,13 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {stats.isEnded && (
-            <button
-              type="button"
-              onClick={() => setExpanded(false)}
-              className="text-xs text-neutral-500 underline hover:no-underline"
-            >
-              Daralt
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="text-xs text-neutral-500 underline hover:no-underline"
+          >
+            Daralt
+          </button>
           <span className="text-xs text-neutral-400">Başlangıç: {formatDate(treatment.start_date)}</span>
         </div>
       </div>
