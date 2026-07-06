@@ -12,6 +12,7 @@ import {
   listProfiles,
   listTasks,
   reopenTask,
+  sendPushNotification,
   toggleTaskAnimalDone,
 } from "@/lib/data";
 import { Animal, MastitisDose, MastitisTreatment, Profile, Task, TaskAnimal } from "@/lib/types";
@@ -21,6 +22,7 @@ import { useAuth } from "@/lib/auth";
 import { getTodaysMastitisReminders, isMastitisReminderActive, isMastitisWarningActive } from "@/lib/mastitisReminder";
 import { MastitisReminderCard } from "@/components/MastitisReminderCard";
 import { ImageUploadField } from "@/components/ImageUploadField";
+import { ProfileMultiPicker } from "@/components/ProfileMultiPicker";
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -56,6 +58,10 @@ export default function TasksPage() {
   const [note, setNote] = useState("");
   const [completionImageUrl, setCompletionImageUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [remindingId, setRemindingId] = useState<string | null>(null);
+  const [reminderRecipientIds, setReminderRecipientIds] = useState<string[]>([]);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderSentId, setReminderSentId] = useState<string | null>(null);
 
   function loadData() {
     return Promise.all([
@@ -121,6 +127,34 @@ export default function TasksPage() {
   async function handleToggleAnimal(ta: TaskAnimal) {
     await toggleTaskAnimalDone(ta.id, !ta.done, profile?.id ?? null);
     await refresh();
+  }
+
+  function startReminder(task: Task) {
+    setRemindingId(task.id);
+    setReminderRecipientIds(task.assigned_to ? [task.assigned_to] : []);
+    setReminderSentId(null);
+  }
+
+  function cancelReminder() {
+    setRemindingId(null);
+    setReminderRecipientIds([]);
+  }
+
+  async function sendReminder(task: Task) {
+    if (reminderRecipientIds.length === 0) return;
+    setSendingReminder(true);
+    try {
+      await sendPushNotification({
+        title: "Görev hatırlatma",
+        body: `"${task.title}" görevi henüz tamamlanmadı.`,
+        targetProfileIds: reminderRecipientIds,
+        url: "/tasks",
+      });
+      setReminderSentId(task.id);
+      setRemindingId(null);
+    } finally {
+      setSendingReminder(false);
+    }
   }
 
   const nameFor = (id: string | null) => profiles.find((p) => p.id === id)?.full_name ?? "-";
@@ -232,11 +266,53 @@ export default function TasksPage() {
                           task={t}
                           onClick={() => (t.status === "yapildi" ? handleReopen(t) : startConfirm(t))}
                         />
+                        {t.status !== "yapildi" && (
+                          <button
+                            type="button"
+                            onClick={() => startReminder(t)}
+                            className="text-xs font-medium text-blue-700 hover:underline"
+                          >
+                            Hatırlatma Gönder
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     {checklistFor(t.id).length > 0 && (
                       <TaskChecklist items={checklistFor(t.id)} earTagFor={earTagFor} onToggle={handleToggleAnimal} />
+                    )}
+
+                    {remindingId === t.id && (
+                      <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3">
+                        <p className="mb-2 text-sm font-medium text-neutral-800">
+                          &quot;{t.title}&quot; görevi için kime hatırlatma bildirimi gönderilsin?
+                        </p>
+                        <ProfileMultiPicker
+                          profiles={profiles}
+                          selectedIds={reminderRecipientIds}
+                          onChange={setReminderRecipientIds}
+                        />
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={() => sendReminder(t)}
+                            disabled={sendingReminder || reminderRecipientIds.length === 0}
+                            className="rounded-md bg-blue-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-800 disabled:opacity-60"
+                          >
+                            {sendingReminder ? "Gönderiliyor..." : "Gönder"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelReminder}
+                            className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-50"
+                          >
+                            Vazgeç
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {reminderSentId === t.id && (
+                      <p className="mt-2 text-xs text-blue-700">Hatırlatma bildirimi gönderildi.</p>
                     )}
 
                     {confirmingId === t.id && (

@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listProfiles, sendPushNotification } from "@/lib/data";
 import { Profile } from "@/lib/types";
+import { ProfileMultiPicker } from "@/components/ProfileMultiPicker";
 
 export default function NewNotificationPage() {
   const router = useRouter();
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [target, setTarget] = useState("herkes");
+  const [sendToEveryone, setSendToEveryone] = useState(true);
+  const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -19,16 +21,18 @@ export default function NewNotificationPage() {
     listProfiles().then(setProfiles);
   }, []);
 
+  const canSubmit = title.trim() !== "" && body.trim() !== "" && (sendToEveryone || selectedProfileIds.length > 0);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !body.trim()) return;
+    if (!canSubmit) return;
     setSending(true);
     setError(null);
     try {
       await sendPushNotification({
         title: title.trim(),
         body: body.trim(),
-        targetProfileId: target === "herkes" ? null : target,
+        targetProfileIds: sendToEveryone ? null : selectedProfileIds,
       });
       setSent(true);
       setTimeout(() => router.push("/"), 1200);
@@ -43,27 +47,33 @@ export default function NewNotificationPage() {
     <div className="max-w-lg space-y-4">
       <h1 className="text-lg font-semibold text-neutral-900">Duyuru Gönder</h1>
       <p className="text-sm text-neutral-500">
-        Belirli bir kişiye ya da herkese anlık push bildirimi gönder. Bildirimi görebilmeleri için o kişinin
-        profilinden bildirimleri açmış olması gerekir.
+        Belirli bir veya birden fazla kişiye ya da herkese anlık push bildirimi gönder. Bildirimi görebilmeleri için
+        o kişinin profilinden bildirimleri açmış olması gerekir.
       </p>
       <form onSubmit={handleSubmit} className="card space-y-3">
-        <Field label="Kime">
-          <select value={target} onChange={(e) => setTarget(e.target.value)} className="input">
-            <option value="herkes">Herkes</option>
-            {profiles.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <FieldBlock label="Kime">
+          <label className="mb-2 flex items-center gap-2 text-sm text-neutral-700">
+            <input
+              type="checkbox"
+              checked={sendToEveryone}
+              onChange={(e) => {
+                setSendToEveryone(e.target.checked);
+                if (e.target.checked) setSelectedProfileIds([]);
+              }}
+            />
+            Herkese gönder
+          </label>
+          {!sendToEveryone && (
+            <ProfileMultiPicker profiles={profiles} selectedIds={selectedProfileIds} onChange={setSelectedProfileIds} />
+          )}
+        </FieldBlock>
         <Field label="Başlık *">
           <input required value={title} onChange={(e) => setTitle(e.target.value)} className="input" />
         </Field>
         <Field label="Mesaj *">
           <textarea required value={body} onChange={(e) => setBody(e.target.value)} className="input" rows={3} />
         </Field>
-        <button type="submit" disabled={sending || !title.trim() || !body.trim()} className="btn-primary">
+        <button type="submit" disabled={sending || !canSubmit} className="btn-primary">
           {sending ? "Gönderiliyor..." : "Gönder"}
         </button>
         {sent && <p className="text-sm text-green-700">Gönderildi.</p>}
@@ -79,5 +89,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1 block text-sm font-medium text-neutral-700">{label}</span>
       {children}
     </label>
+  );
+}
+
+function FieldBlock({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="block">
+      <span className="mb-1 block text-sm font-medium text-neutral-700">{label}</span>
+      {children}
+    </div>
   );
 }
