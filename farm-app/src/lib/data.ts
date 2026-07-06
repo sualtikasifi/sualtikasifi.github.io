@@ -797,6 +797,7 @@ export async function sendPushNotification(input: {
   body: string;
   targetProfileIds: string[] | null;
   url?: string;
+  kind?: "task" | "announcement";
 }): Promise<void> {
   if (isDemoMode) {
     mock.demoSendPushNotification(input.title, input.body);

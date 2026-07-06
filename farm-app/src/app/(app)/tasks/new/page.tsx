@@ -66,6 +66,7 @@ export default function NewTaskPage() {
           body: task.title,
           targetProfileIds: task.assigned_to ? [task.assigned_to] : null,
           url: "/tasks",
+          kind: "task",
         });
       } catch {
         // Bildirim gönderimi görev oluşturmayı engellemez.

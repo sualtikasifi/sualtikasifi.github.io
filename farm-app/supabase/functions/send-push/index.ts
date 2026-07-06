@@ -4,13 +4,22 @@
 // or to every registered device when targetProfileIds is null ("Herkes").
 // Called from the app via supabase.functions.invoke("send-push", { body: {...} }).
 //
+// kind distinguishes the caller's intent:
+//   "task"         - side effect of creating/assigning a task (already gated
+//                    by the caller's can_manage_tasks permission via RLS on
+//                    the tasks table insert, so no extra check here)
+//   "announcement" - manual "Duyuru Gönder" broadcast or task reminder;
+//                    requires the caller to have can_send_announcements or
+//                    be an admin, checked below using their own JWT.
+//
 // Required secrets (set with `supabase secrets set NAME=value`):
 //   VAPID_PUBLIC_KEY   - same value hardcoded in src/lib/push.ts
 //   VAPID_PRIVATE_KEY  - keep this secret, never commit it
 //   VAPID_SUBJECT      - optional, e.g. "mailto:destek@example.com"
 //
-// SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically by
-// the Edge Functions runtime and do not need to be set manually.
+// SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are provided
+// automatically by the Edge Functions runtime and do not need to be set
+// manually.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
@@ -45,12 +54,42 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { title, body, targetProfileIds, url } = await req.json();
+    const { title, body, targetProfileIds, url, kind } = await req.json();
     if (!title || !body) {
       return new Response(JSON.stringify({ error: "title ve body zorunlu" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Announcements/reminders require can_send_announcements (or admin);
+    // this is checked using the CALLER's own JWT so RLS applies to them,
+    // not with the service role key.
+    if (kind !== "task") {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const {
+        data: { user },
+      } = await userClient.auth.getUser();
+      if (!user) {
+        return new Response(JSON.stringify({ error: "Giriş yapılmamış" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: callerProfile } = await userClient
+        .from("profiles")
+        .select("is_admin, can_send_announcements")
+        .eq("id", user.id)
+        .single();
+      if (!callerProfile?.is_admin && !callerProfile?.can_send_announcements) {
+        return new Response(JSON.stringify({ error: "Duyuru gönderme yetkiniz yok" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const supabase = createClient(

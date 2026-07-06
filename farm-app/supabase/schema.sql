@@ -7,6 +7,19 @@ create table if not exists profiles (
   full_name text not null,
   start_date date,
   role text not null default 'calisan' check (role in ('yonetici', 'veteriner', 'calisan')),
+  -- Kisiye ozel yetkiler: is_admin her seyi yapabilir ve baskalarina yetki
+  -- verebilir; digerleri sadece ilgili modulde olusturma/duzenleme/silme
+  -- yapmaya izin verir (goruntuleme herkese acik kalir).
+  is_admin boolean not null default false,
+  can_manage_animals boolean not null default false,
+  can_manage_mastitis boolean not null default false,
+  can_manage_tasks boolean not null default false,
+  can_manage_bulls_semen boolean not null default false,
+  can_manage_inseminations boolean not null default false,
+  can_manage_opu boolean not null default false,
+  can_manage_calves boolean not null default false,
+  can_manage_medicines boolean not null default false,
+  can_send_announcements boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -296,7 +309,102 @@ create table if not exists push_subscriptions (
 
 create index if not exists push_subscriptions_profile_idx on push_subscriptions (profile_id);
 
--- Row Level Security: giris yapmis herkes (10 kisilik guvenilir ekip) okuyup yazabilir
+-- Row Level Security: giris yapmis herkes okuyabilir, yazma/silme ise
+-- kisiye ozel yetkilere (is_admin veya ilgili can_manage_* alani) bagli.
+
+-- Cagiran kullanicinin yonetici olup olmadigini dondurur.
+create or replace function is_admin_user()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce((select is_admin from profiles where id = auth.uid()), false);
+$$;
+
+-- Cagiran kullanicinin belirtilen modulde yazma yetkisi olup olmadigini
+-- dondurur (yonetici her zaman true doner).
+create or replace function has_perm(p_permission text)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select is_admin_user() or coalesce(
+    (select case p_permission
+      when 'animals' then can_manage_animals
+      when 'mastitis' then can_manage_mastitis
+      when 'tasks' then can_manage_tasks
+      when 'bulls_semen' then can_manage_bulls_semen
+      when 'inseminations' then can_manage_inseminations
+      when 'opu' then can_manage_opu
+      when 'calves' then can_manage_calves
+      when 'medicines' then can_manage_medicines
+      when 'announcements' then can_send_announcements
+      else false
+    end
+    from profiles where id = auth.uid()),
+    false
+  );
+$$;
+
+-- Yonetici olmayan bir kullanici kendi profilini guncellerse, yetki
+-- alanlarinin (is_admin ve can_manage_*) degismesini engeller; sadece
+-- yonetici baskasinin yetkilerini degistirebilir.
+create or replace function enforce_profile_permission_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin_user() then
+    new.is_admin := old.is_admin;
+    new.role := old.role;
+    new.can_manage_animals := old.can_manage_animals;
+    new.can_manage_mastitis := old.can_manage_mastitis;
+    new.can_manage_tasks := old.can_manage_tasks;
+    new.can_manage_bulls_semen := old.can_manage_bulls_semen;
+    new.can_manage_inseminations := old.can_manage_inseminations;
+    new.can_manage_opu := old.can_manage_opu;
+    new.can_manage_calves := old.can_manage_calves;
+    new.can_manage_medicines := old.can_manage_medicines;
+    new.can_send_announcements := old.can_send_announcements;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_profile_update_enforce_permissions on profiles;
+create trigger on_profile_update_enforce_permissions
+  before update on profiles
+  for each row execute function enforce_profile_permission_update();
+
+-- Son yonetici hesabinin yonetici yetkisi yanlislikla/kotu niyetle
+-- kaldirilip herkesin kilitli kalmasini engeller.
+create or replace function prevent_removing_last_admin()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if old.is_admin = true and new.is_admin = false then
+    if (select count(*) from profiles where is_admin = true and id <> old.id) = 0 then
+      raise exception 'Son yönetici hesabının yönetici yetkisi kaldırılamaz.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_profile_prevent_last_admin_removal on profiles;
+create trigger on_profile_prevent_last_admin_removal
+  before update on profiles
+  for each row execute function prevent_removing_last_admin();
+
 alter table profiles enable row level security;
 alter table animals enable row level security;
 alter table mastitis_treatments enable row level security;
@@ -317,23 +425,97 @@ alter table push_subscriptions enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
+create policy "profiles_update_admin" on profiles for update to authenticated using (is_admin_user());
 
-create policy "animals_all_authenticated" on animals for all to authenticated using (true) with check (true);
-create policy "mastitis_treatments_all_authenticated" on mastitis_treatments for all to authenticated using (true) with check (true);
-create policy "mastitis_doses_all_authenticated" on mastitis_doses for all to authenticated using (true) with check (true);
-create policy "mastitis_protocols_all_authenticated" on mastitis_protocols for all to authenticated using (true) with check (true);
-create policy "tasks_all_authenticated" on tasks for all to authenticated using (true) with check (true);
-create policy "bulls_all_authenticated" on bulls for all to authenticated using (true) with check (true);
-create policy "semen_inventory_all_authenticated" on semen_inventory for all to authenticated using (true) with check (true);
-create policy "inseminations_all_authenticated" on inseminations for all to authenticated using (true) with check (true);
-create policy "opu_sessions_all_authenticated" on opu_sessions for all to authenticated using (true) with check (true);
-create policy "embryos_all_authenticated" on embryos for all to authenticated using (true) with check (true);
-create policy "calf_feedings_all_authenticated" on calf_feedings for all to authenticated using (true) with check (true);
-create policy "medicines_all_authenticated" on medicines for all to authenticated using (true) with check (true);
-create policy "shift_notes_all_authenticated" on shift_notes for all to authenticated using (true) with check (true);
-create policy "calf_notes_all_authenticated" on calf_notes for all to authenticated using (true) with check (true);
-create policy "task_animals_all_authenticated" on task_animals for all to authenticated using (true) with check (true);
-create policy "push_subscriptions_all_authenticated" on push_subscriptions for all to authenticated using (true) with check (true);
+create policy "animals_select" on animals for select to authenticated using (true);
+create policy "animals_insert" on animals for insert to authenticated with check (has_perm('animals'));
+create policy "animals_update" on animals for update to authenticated using (has_perm('animals'));
+create policy "animals_delete" on animals for delete to authenticated using (has_perm('animals'));
+
+create policy "mastitis_treatments_select" on mastitis_treatments for select to authenticated using (true);
+create policy "mastitis_treatments_insert" on mastitis_treatments for insert to authenticated with check (has_perm('mastitis'));
+create policy "mastitis_treatments_update" on mastitis_treatments for update to authenticated using (has_perm('mastitis'));
+create policy "mastitis_treatments_delete" on mastitis_treatments for delete to authenticated using (has_perm('mastitis'));
+
+create policy "mastitis_doses_select" on mastitis_doses for select to authenticated using (true);
+create policy "mastitis_doses_insert" on mastitis_doses for insert to authenticated with check (has_perm('mastitis'));
+create policy "mastitis_doses_update" on mastitis_doses for update to authenticated using (has_perm('mastitis'));
+create policy "mastitis_doses_delete" on mastitis_doses for delete to authenticated using (has_perm('mastitis'));
+
+create policy "mastitis_protocols_select" on mastitis_protocols for select to authenticated using (true);
+create policy "mastitis_protocols_insert" on mastitis_protocols for insert to authenticated with check (has_perm('mastitis'));
+create policy "mastitis_protocols_update" on mastitis_protocols for update to authenticated using (has_perm('mastitis'));
+create policy "mastitis_protocols_delete" on mastitis_protocols for delete to authenticated using (has_perm('mastitis'));
+
+-- Gorevler: goruntuleme herkese acik. Olusturma/silme can_manage_tasks
+-- gerektirir, ama bir gorevi tamamlama/yeniden acma (guncelleme) o goreve
+-- atanan kisiye (ya da "Herkes" olarak atanmis gorevlerde herkese) her
+-- zaman aciktir - yoksa calisanlar kendilerine atanan gorevleri bile
+-- tamamlayamaz.
+create policy "tasks_select" on tasks for select to authenticated using (true);
+create policy "tasks_insert" on tasks for insert to authenticated with check (has_perm('tasks'));
+create policy "tasks_update" on tasks for update to authenticated using (
+  has_perm('tasks') or assigned_to = auth.uid() or assigned_to is null
+);
+create policy "tasks_delete" on tasks for delete to authenticated using (has_perm('tasks'));
+
+create policy "task_animals_select" on task_animals for select to authenticated using (true);
+create policy "task_animals_insert" on task_animals for insert to authenticated with check (has_perm('tasks'));
+create policy "task_animals_update" on task_animals for update to authenticated using (true);
+create policy "task_animals_delete" on task_animals for delete to authenticated using (has_perm('tasks'));
+
+create policy "bulls_select" on bulls for select to authenticated using (true);
+create policy "bulls_insert" on bulls for insert to authenticated with check (has_perm('bulls_semen'));
+create policy "bulls_update" on bulls for update to authenticated using (has_perm('bulls_semen'));
+create policy "bulls_delete" on bulls for delete to authenticated using (has_perm('bulls_semen'));
+
+create policy "semen_inventory_select" on semen_inventory for select to authenticated using (true);
+create policy "semen_inventory_insert" on semen_inventory for insert to authenticated with check (has_perm('bulls_semen'));
+create policy "semen_inventory_update" on semen_inventory for update to authenticated using (has_perm('bulls_semen'));
+create policy "semen_inventory_delete" on semen_inventory for delete to authenticated using (has_perm('bulls_semen'));
+
+create policy "inseminations_select" on inseminations for select to authenticated using (true);
+create policy "inseminations_insert" on inseminations for insert to authenticated with check (has_perm('inseminations'));
+create policy "inseminations_update" on inseminations for update to authenticated using (has_perm('inseminations'));
+create policy "inseminations_delete" on inseminations for delete to authenticated using (has_perm('inseminations'));
+
+create policy "opu_sessions_select" on opu_sessions for select to authenticated using (true);
+create policy "opu_sessions_insert" on opu_sessions for insert to authenticated with check (has_perm('opu'));
+create policy "opu_sessions_update" on opu_sessions for update to authenticated using (has_perm('opu'));
+create policy "opu_sessions_delete" on opu_sessions for delete to authenticated using (has_perm('opu'));
+
+create policy "embryos_select" on embryos for select to authenticated using (true);
+create policy "embryos_insert" on embryos for insert to authenticated with check (has_perm('opu'));
+create policy "embryos_update" on embryos for update to authenticated using (has_perm('opu'));
+create policy "embryos_delete" on embryos for delete to authenticated using (has_perm('opu'));
+
+create policy "calf_feedings_select" on calf_feedings for select to authenticated using (true);
+create policy "calf_feedings_insert" on calf_feedings for insert to authenticated with check (has_perm('calves'));
+create policy "calf_feedings_update" on calf_feedings for update to authenticated using (has_perm('calves'));
+create policy "calf_feedings_delete" on calf_feedings for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_notes_select" on calf_notes for select to authenticated using (true);
+create policy "calf_notes_insert" on calf_notes for insert to authenticated with check (has_perm('calves'));
+create policy "calf_notes_update" on calf_notes for update to authenticated using (has_perm('calves'));
+create policy "calf_notes_delete" on calf_notes for delete to authenticated using (has_perm('calves'));
+
+create policy "shift_notes_select" on shift_notes for select to authenticated using (true);
+create policy "shift_notes_insert" on shift_notes for insert to authenticated with check (has_perm('calves'));
+create policy "shift_notes_update" on shift_notes for update to authenticated using (has_perm('calves'));
+create policy "shift_notes_delete" on shift_notes for delete to authenticated using (has_perm('calves'));
+
+create policy "medicines_select" on medicines for select to authenticated using (true);
+create policy "medicines_insert" on medicines for insert to authenticated with check (has_perm('medicines'));
+create policy "medicines_update" on medicines for update to authenticated using (has_perm('medicines'));
+create policy "medicines_delete" on medicines for delete to authenticated using (has_perm('medicines'));
+
+-- Push abonelikleri: herkes sadece kendi cihazini yonetebilir (gonderim
+-- ise Edge Function service-role anahtariyla yapildigi icin bu kisitlama
+-- bildirim gonderimini etkilemez).
+create policy "push_subscriptions_select" on push_subscriptions for select to authenticated using (profile_id = auth.uid());
+create policy "push_subscriptions_insert" on push_subscriptions for insert to authenticated with check (profile_id = auth.uid());
+create policy "push_subscriptions_update" on push_subscriptions for update to authenticated using (profile_id = auth.uid());
+create policy "push_subscriptions_delete" on push_subscriptions for delete to authenticated using (profile_id = auth.uid());
 
 -- Gorev fotograflari (referans + tamamlama kaniti) icin storage bucket'i.
 -- Public bucket: link tahmin edilemez (rastgele dosya adi) oldugu icin yeterli,

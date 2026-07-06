@@ -23,6 +23,16 @@ export interface Profile {
   full_name: string;
   start_date: string | null;
   role: UserRole;
+  is_admin: boolean;
+  can_manage_animals: boolean;
+  can_manage_mastitis: boolean;
+  can_manage_tasks: boolean;
+  can_manage_bulls_semen: boolean;
+  can_manage_inseminations: boolean;
+  can_manage_opu: boolean;
+  can_manage_calves: boolean;
+  can_manage_medicines: boolean;
+  can_send_announcements: boolean;
   created_at: string;
 }
 

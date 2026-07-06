@@ -20,6 +20,7 @@ import { Badge } from "@/components/Badge";
 import { MastitisTreatmentCard } from "@/components/MastitisTreatmentCard";
 import { formatDate } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 export default function AnimalDetailPage() {
   return (
@@ -98,18 +99,22 @@ function AnimalDetailContent() {
           <div className="mt-1"><Badge value={animal.status} /></div>
         </div>
         <div className="flex gap-2">
-          <Link
-            href={`/inseminations/new?animalId=${animal.id}`}
-            className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50"
-          >
-            Tohumlama ekle
-          </Link>
-          <Link
-            href={`/treatments/new?animalId=${animal.id}`}
-            className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800"
-          >
-            Mastitis kaydı ekle
-          </Link>
+          {hasPermission(profile, "can_manage_inseminations") && (
+            <Link
+              href={`/inseminations/new?animalId=${animal.id}`}
+              className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50"
+            >
+              Tohumlama ekle
+            </Link>
+          )}
+          {hasPermission(profile, "can_manage_mastitis") && (
+            <Link
+              href={`/treatments/new?animalId=${animal.id}`}
+              className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800"
+            >
+              Mastitis kaydı ekle
+            </Link>
+          )}
         </div>
       </div>
 
@@ -122,37 +127,39 @@ function AnimalDetailContent() {
         <InfoItem label="Notlar" value={animal.notes ?? "-"} span />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {!animal.weaned_at && (
-          <button onClick={handleWean} className="btn-secondary text-xs">
-            Sütten kesildi olarak işaretle
-          </button>
-        )}
-        {animal.status !== "olu" && (
-          <button
-            onClick={() => handleStatusChange("olu")}
-            className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs text-red-700 shadow-sm transition-colors hover:bg-red-50"
-          >
-            Ölüm kaydet
-          </button>
-        )}
-        {animal.status !== "satildi" && animal.status === "aktif" && (
-          <button
-            onClick={() => handleStatusChange("satildi")}
-            className="rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
-          >
-            Satıldı olarak işaretle
-          </button>
-        )}
-        {animal.status !== "aktif" && (
-          <button
-            onClick={() => handleStatusChange("aktif")}
-            className="rounded-md border border-green-300 bg-white px-3 py-1.5 text-xs text-green-700 shadow-sm transition-colors hover:bg-green-50"
-          >
-            Aktif yap
-          </button>
-        )}
-      </div>
+      {hasPermission(profile, "can_manage_animals") && (
+        <div className="flex flex-wrap gap-2">
+          {!animal.weaned_at && (
+            <button onClick={handleWean} className="btn-secondary text-xs">
+              Sütten kesildi olarak işaretle
+            </button>
+          )}
+          {animal.status !== "olu" && (
+            <button
+              onClick={() => handleStatusChange("olu")}
+              className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-xs text-red-700 shadow-sm transition-colors hover:bg-red-50"
+            >
+              Ölüm kaydet
+            </button>
+          )}
+          {animal.status !== "satildi" && animal.status === "aktif" && (
+            <button
+              onClick={() => handleStatusChange("satildi")}
+              className="rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
+            >
+              Satıldı olarak işaretle
+            </button>
+          )}
+          {animal.status !== "aktif" && (
+            <button
+              onClick={() => handleStatusChange("aktif")}
+              className="rounded-md border border-green-300 bg-white px-3 py-1.5 text-xs text-green-700 shadow-sm transition-colors hover:bg-green-50"
+            >
+              Aktif yap
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-neutral-800">Mastitis geçmişi</h2>
@@ -166,6 +173,7 @@ function AnimalDetailContent() {
               onDeleted={() => setMastitisTreatments((prev) => prev.filter((x) => x.id !== t.id))}
               profiles={profiles}
               currentProfileId={profile?.id ?? null}
+              canManage={hasPermission(profile, "can_manage_mastitis")}
             />
           ))
         )}
