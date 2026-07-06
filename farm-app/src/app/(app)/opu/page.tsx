@@ -52,6 +52,7 @@ export default function OpuSessionsPage() {
           "Küpe No",
           "Donör Adı",
           "Tarih",
+          "Saat",
           "Teknisyen",
           "Sağ Folikül",
           "Sol Folikül",
@@ -66,6 +67,7 @@ export default function OpuSessionsPage() {
             donor?.ear_tag ?? "?",
             donor?.name ?? "",
             formatDate(s.session_date),
+            s.session_time?.slice(0, 5) ?? "",
             s.technician_name ?? "",
             s.follicle_count_right ?? "",
             s.follicle_count_left ?? "",
@@ -160,7 +162,10 @@ export default function OpuSessionsPage() {
                       {totalFollicles(s) ?? "-"} folikül &middot; {s.oocyte_count ?? "-"} oosit &middot;{" "}
                       {s.cleaved_count ?? "-"} bölünen &middot; {s.embryo_count ?? embryoCountFor(s.id)} embriyo
                     </p>
-                    <p className="text-xs text-neutral-400">{formatDate(s.session_date)}</p>
+                    <p className="text-xs text-neutral-400">
+                      {formatDate(s.session_date)}
+                      {s.session_time && ` · ${s.session_time.slice(0, 5)}`}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-2">

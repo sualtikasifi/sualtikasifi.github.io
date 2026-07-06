@@ -145,6 +145,7 @@ export interface OpuSession {
   id: string;
   donor_animal_id: string;
   session_date: string;
+  session_time: string | null;
   technician_name: string | null;
   follicle_count_right: number | null;
   follicle_count_left: number | null;

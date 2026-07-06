@@ -385,6 +385,7 @@ export const seedOpuSessions: OpuSession[] = [
     id: "opu-1",
     donor_animal_id: "animal-2",
     session_date: daysAgo(10),
+    session_time: "09:30",
     technician_name: "Dr. Ayşe Kaya",
     follicle_count_right: 9,
     follicle_count_left: 8,

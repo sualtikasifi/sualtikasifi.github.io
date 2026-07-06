@@ -16,6 +16,7 @@ export default function NewOpuSessionPage() {
   const [form, setForm] = useState({
     donor_animal_id: "",
     session_date: new Date().toISOString().slice(0, 10),
+    session_time: "",
     technician_name: "",
     follicle_count_right: "",
     follicle_count_left: "",
@@ -40,6 +41,7 @@ export default function NewOpuSessionPage() {
     const session = await createOpuSession({
       donor_animal_id: form.donor_animal_id,
       session_date: form.session_date,
+      session_time: form.session_time || null,
       technician_name: form.technician_name.trim() || null,
       follicle_count_right: form.follicle_count_right ? Number(form.follicle_count_right) : null,
       follicle_count_left: form.follicle_count_left ? Number(form.follicle_count_left) : null,
@@ -76,14 +78,24 @@ export default function NewOpuSessionPage() {
           />
         </FieldBlock>
 
-        <Field label="Tarih">
-          <input
-            type="date"
-            value={form.session_date}
-            onChange={(e) => update("session_date", e.target.value)}
-            className="input"
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Tarih">
+            <input
+              type="date"
+              value={form.session_date}
+              onChange={(e) => update("session_date", e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="Saat (opsiyonel)">
+            <input
+              type="time"
+              value={form.session_time}
+              onChange={(e) => update("session_time", e.target.value)}
+              className="input"
+            />
+          </Field>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Sol folikül">
