@@ -19,6 +19,7 @@ import { Animal, MastitisDose, MastitisTreatment, Profile, Task, TaskAnimal } fr
 import { Badge } from "@/components/Badge";
 import { formatDate } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { getTodaysMastitisReminders, isMastitisReminderActive, isMastitisWarningActive } from "@/lib/mastitisReminder";
 import { MastitisReminderCard } from "@/components/MastitisReminderCard";
 import { ImageUploadField } from "@/components/ImageUploadField";
@@ -149,6 +150,7 @@ export default function TasksPage() {
         body: `"${task.title}" görevi henüz tamamlanmadı.`,
         targetProfileIds: reminderRecipientIds,
         url: "/tasks",
+        kind: "announcement",
       });
       setReminderSentId(task.id);
       setRemindingId(null);
@@ -176,9 +178,11 @@ export default function TasksPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Görevler</h1>
-        <Link href="/tasks/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-          Yeni görev
-        </Link>
+        {hasPermission(profile, "can_manage_tasks") && (
+          <Link href="/tasks/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+            Yeni görev
+          </Link>
+        )}
       </div>
 
       {isMastitisReminderActive() && mastitisReminders.length > 0 && (
@@ -266,7 +270,7 @@ export default function TasksPage() {
                           task={t}
                           onClick={() => (t.status === "yapildi" ? handleReopen(t) : startConfirm(t))}
                         />
-                        {t.status !== "yapildi" && (
+                        {t.status !== "yapildi" && hasPermission(profile, "can_send_announcements") && (
                           <button
                             type="button"
                             onClick={() => startReminder(t)}

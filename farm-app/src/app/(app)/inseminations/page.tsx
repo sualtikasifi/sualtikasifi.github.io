@@ -14,8 +14,11 @@ import {
 import { Animal, Bull, Insemination, PregnancyResult, Profile, SemenInventory, SemenType } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate } from "@/lib/format";
+import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 export default function InseminationsPage() {
+  const { profile } = useAuth();
   const [inseminations, setInseminations] = useState<Insemination[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [bulls, setBulls] = useState<Bull[]>([]);
@@ -64,9 +67,11 @@ export default function InseminationsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Tohumlamalar</h1>
-        <Link href="/inseminations/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-          Yeni tohumlama
-        </Link>
+        {hasPermission(profile, "can_manage_inseminations") && (
+          <Link href="/inseminations/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+            Yeni tohumlama
+          </Link>
+        )}
       </div>
 
       {loading ? (
@@ -125,7 +130,7 @@ export default function InseminationsPage() {
                     </button>
                   </div>
                 </div>
-              ) : (
+              ) : hasPermission(profile, "can_manage_inseminations") ? (
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
@@ -142,7 +147,7 @@ export default function InseminationsPage() {
                     Sil
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           ))}
         </div>

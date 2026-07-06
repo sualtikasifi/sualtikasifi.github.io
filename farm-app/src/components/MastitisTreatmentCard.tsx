@@ -32,10 +32,11 @@ interface Props {
   earTag?: string;
   profiles: Profile[];
   currentProfileId: string | null;
+  canManage: boolean;
   onDeleted?: () => void;
 }
 
-export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentProfileId, onDeleted }: Props) {
+export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentProfileId, canManage, onDeleted }: Props) {
   const [treatment, setTreatment] = useState<MastitisTreatment | null>(null);
   const [doses, setDoses] = useState<MastitisDose[]>([]);
   const [loading, setLoading] = useState(true);
@@ -354,7 +355,7 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
             </button>
           </div>
         </div>
-      ) : (
+      ) : canManage ? (
         <div className="mt-3 flex gap-2">
           <button
             type="button"
@@ -371,7 +372,7 @@ export function MastitisTreatmentCard({ treatmentId, earTag, profiles, currentPr
             Sil
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

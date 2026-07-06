@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 const links = [
   { href: "/", label: "Panel" },
@@ -13,7 +14,6 @@ const links = [
   { href: "/opu", label: "OPU/Embriyo" },
   { href: "/tasks", label: "Görevler" },
   { href: "/medicines", label: "İlaç Stoğu" },
-  { href: "/notifications/new", label: "Duyuru" },
 ];
 
 export function NavBar() {
@@ -25,6 +25,12 @@ export function NavBar() {
     await signOut();
     router.push("/login");
   }
+
+  const navLinks = [
+    ...links,
+    ...(hasPermission(profile, "can_send_announcements") ? [{ href: "/notifications/new", label: "Duyuru" }] : []),
+    ...(profile?.is_admin ? [{ href: "/team", label: "Ekip ve Yetkiler" }] : []),
+  ];
 
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 shadow-sm backdrop-blur">
@@ -43,7 +49,7 @@ export function NavBar() {
         </div>
       </div>
       <nav className="mx-auto flex max-w-4xl gap-1 overflow-x-auto px-4 pb-2.5 text-sm">
-        {links.map((link) => (
+        {navLinks.map((link) => (
           <Link
             key={link.href}
             href={link.href}

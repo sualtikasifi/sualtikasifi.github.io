@@ -6,10 +6,13 @@ import { adjustMedicineStock, listMedicines } from "@/lib/data";
 import { Medicine } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { exportRowsToExcel } from "@/lib/excelExport";
+import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 const LOW_STOCK_THRESHOLD = 5;
 
 export default function MedicinesPage() {
+  const { profile } = useAuth();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -57,12 +60,16 @@ export default function MedicinesPage() {
           >
             {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
           </button>
-          <Link href="/medicines/add-stock" className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50">
-            Stok Ekle
-          </Link>
-          <Link href="/medicines/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-            Yeni İlaç Ekle
-          </Link>
+          {hasPermission(profile, "can_manage_medicines") && (
+            <>
+              <Link href="/medicines/add-stock" className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50">
+                Stok Ekle
+              </Link>
+              <Link href="/medicines/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+                Yeni İlaç Ekle
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

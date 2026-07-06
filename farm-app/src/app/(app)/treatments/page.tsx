@@ -5,6 +5,7 @@ import Link from "next/link";
 import { listAnimals, listMastitisTreatments, listProfiles } from "@/lib/data";
 import { Animal, MastitisTreatment, Profile } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { MastitisTreatmentCard } from "@/components/MastitisTreatmentCard";
 
 export default function MastitisPage() {
@@ -29,9 +30,11 @@ export default function MastitisPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Mastitler</h1>
-        <Link href="/treatments/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-          Yeni mastitis kaydı
-        </Link>
+        {hasPermission(profile, "can_manage_mastitis") && (
+          <Link href="/treatments/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+            Yeni mastitis kaydı
+          </Link>
+        )}
       </div>
 
       {loading ? (
@@ -47,6 +50,7 @@ export default function MastitisPage() {
               earTag={earTagFor(t.animal_id)}
               profiles={profiles}
               currentProfileId={profile?.id ?? null}
+              canManage={hasPermission(profile, "can_manage_mastitis")}
               onDeleted={() => setTreatments((prev) => prev.filter((x) => x.id !== t.id))}
             />
           ))}

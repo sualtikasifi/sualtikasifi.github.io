@@ -7,6 +7,8 @@ import { Animal, Bull, Embryo, OpuSession } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { OPU_STAGE_INFO, opuStageFor } from "@/lib/opuStage";
 import { exportOpuReportToExcel } from "@/lib/excelExport";
+import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 function formatDateTime(d: Date): string {
   return d.toLocaleString("tr-TR", {
@@ -24,6 +26,7 @@ const SEMEN_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function OpuSessionsPage() {
+  const { profile } = useAuth();
   const [sessions, setSessions] = useState<OpuSession[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [embryos, setEmbryos] = useState<Embryo[]>([]);
@@ -282,9 +285,11 @@ export default function OpuSessionsPage() {
           <button type="button" onClick={() => setShowExportModal(true)} className="btn-secondary">
             Excel&apos;e Aktar
           </button>
-          <Link href="/opu/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-            Yeni OPU
-          </Link>
+          {hasPermission(profile, "can_manage_opu") && (
+            <Link href="/opu/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
+              Yeni OPU
+            </Link>
+          )}
         </div>
       </div>
 

@@ -18,6 +18,8 @@ import { Badge } from "@/components/Badge";
 import { OpuFunnel } from "@/components/OpuFunnel";
 import { formatDate } from "@/lib/format";
 import { OPU_STAGE_INFO, OpuStage as Stage, opuStageFor as stageFor } from "@/lib/opuStage";
+import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 export default function OpuSessionDetailPage() {
   return (
@@ -28,6 +30,7 @@ export default function OpuSessionDetailPage() {
 }
 
 function OpuSessionDetailContent() {
+  const { profile } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const id = params.get("id");
@@ -96,21 +99,23 @@ function OpuSessionDetailContent() {
             {session.session_time && ` · ${session.session_time.slice(0, 5)}`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setConfirmingDelete(true)}
-            className="text-xs font-medium text-red-600 hover:underline"
-          >
-            Sil
-          </button>
-          <Link
-            href={`/opu/embryos/new?sessionId=${session.id}`}
-            className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800"
-          >
-            Embriyo ekle
-          </Link>
-        </div>
+        {hasPermission(profile, "can_manage_opu") && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="text-xs font-medium text-red-600 hover:underline"
+            >
+              Sil
+            </button>
+            <Link
+              href={`/opu/embryos/new?sessionId=${session.id}`}
+              className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800"
+            >
+              Embriyo ekle
+            </Link>
+          </div>
+        )}
       </div>
 
       {confirmingDelete && (

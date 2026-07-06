@@ -17,6 +17,7 @@ import {
 } from "@/lib/data";
 import { Animal, CalfFeeding, CalfNote, Profile, ShiftNote } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { EarTagPicker } from "@/components/EarTagPicker";
 import { todayIso } from "@/lib/format";
 
@@ -299,52 +300,54 @@ export default function CalvesPage() {
         )}
       </section>
 
-      <section className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 shadow-sm">
-        <p className="text-sm font-medium text-red-800">🍼❌ Sütünü içmeyen buzağı ekle</p>
-        <form onSubmit={handleQuickAdd} className="flex gap-2">
-          <input
-            value={quickEarTag}
-            onChange={(e) => {
-              setQuickEarTag(e.target.value);
-              setQuickError(null);
-            }}
-            placeholder="Küpe no"
-            className="input flex-1"
-          />
-          <button
-            type="submit"
-            disabled={quickAdding || !quickEarTag.trim()}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
-          >
-            {quickAdding ? "Ekleniyor..." : "Ekle"}
-          </button>
-        </form>
-        {quickError && <p className="text-xs text-red-700">{quickError}</p>}
-        {confirmingNewTag && (
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-3">
-            <p className="text-sm font-medium text-amber-800">
-              &quot;{confirmingNewTag}&quot; küpe numarası kayıtlı değil. Yeni buzağı olarak eklensin mi?
-            </p>
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                onClick={confirmCreateNewCalf}
-                disabled={quickAdding}
-                className="rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-800 disabled:opacity-60"
-              >
-                {quickAdding ? "Ekleniyor..." : "Evet, yeni buzağı ekle"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingNewTag(null)}
-                className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-100"
-              >
-                Vazgeç
-              </button>
+      {hasPermission(profile, "can_manage_calves") && (
+        <section className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 shadow-sm">
+          <p className="text-sm font-medium text-red-800">🍼❌ Sütünü içmeyen buzağı ekle</p>
+          <form onSubmit={handleQuickAdd} className="flex gap-2">
+            <input
+              value={quickEarTag}
+              onChange={(e) => {
+                setQuickEarTag(e.target.value);
+                setQuickError(null);
+              }}
+              placeholder="Küpe no"
+              className="input flex-1"
+            />
+            <button
+              type="submit"
+              disabled={quickAdding || !quickEarTag.trim()}
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50"
+            >
+              {quickAdding ? "Ekleniyor..." : "Ekle"}
+            </button>
+          </form>
+          {quickError && <p className="text-xs text-red-700">{quickError}</p>}
+          {confirmingNewTag && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3">
+              <p className="text-sm font-medium text-amber-800">
+                &quot;{confirmingNewTag}&quot; küpe numarası kayıtlı değil. Yeni buzağı olarak eklensin mi?
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={confirmCreateNewCalf}
+                  disabled={quickAdding}
+                  className="rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-800 disabled:opacity-60"
+                >
+                  {quickAdding ? "Ekleniyor..." : "Evet, yeni buzağı ekle"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingNewTag(null)}
+                  className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-100"
+                >
+                  Vazgeç
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-neutral-700">Son Öğünde Mamasını İçmeyenler</h2>
@@ -581,28 +584,30 @@ export default function CalvesPage() {
 
       <section className="card space-y-3">
         <h2 className="text-sm font-semibold text-neutral-800">Buzağı Notu Ekle</h2>
-        <form onSubmit={handleCalfNoteSubmit} className="space-y-2">
-          <EarTagPicker
-            animals={calves}
-            selectedId={noteAnimalId}
-            onSelect={(id) => setNoteAnimalId(id)}
-            onClear={() => setNoteAnimalId(null)}
-          />
-          <textarea
-            value={noteDraft}
-            onChange={(e) => setNoteDraft(e.target.value)}
-            placeholder="örn. Hafif öksürük var, gözlemleniyor"
-            className="input"
-            rows={2}
-          />
-          <button
-            type="submit"
-            disabled={savingCalfNote || !noteAnimalId || !noteDraft.trim()}
-            className="btn-primary"
-          >
-            {savingCalfNote ? "Kaydediliyor..." : "Not Ekle"}
-          </button>
-        </form>
+        {hasPermission(profile, "can_manage_calves") && (
+          <form onSubmit={handleCalfNoteSubmit} className="space-y-2">
+            <EarTagPicker
+              animals={calves}
+              selectedId={noteAnimalId}
+              onSelect={(id) => setNoteAnimalId(id)}
+              onClear={() => setNoteAnimalId(null)}
+            />
+            <textarea
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              placeholder="örn. Hafif öksürük var, gözlemleniyor"
+              className="input"
+              rows={2}
+            />
+            <button
+              type="submit"
+              disabled={savingCalfNote || !noteAnimalId || !noteDraft.trim()}
+              className="btn-primary"
+            >
+              {savingCalfNote ? "Kaydediliyor..." : "Not Ekle"}
+            </button>
+          </form>
+        )}
 
         {calfNotes.length === 0 ? (
           <p className="text-sm text-neutral-400">Henüz gözlem notu yok.</p>
