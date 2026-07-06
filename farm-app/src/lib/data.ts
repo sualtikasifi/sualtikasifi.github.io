@@ -795,7 +795,7 @@ export async function deletePushSubscriptionByEndpoint(endpoint: string): Promis
 export async function sendPushNotification(input: {
   title: string;
   body: string;
-  targetProfileId: string | null;
+  targetProfileIds: string[] | null;
   url?: string;
 }): Promise<void> {
   if (isDemoMode) {

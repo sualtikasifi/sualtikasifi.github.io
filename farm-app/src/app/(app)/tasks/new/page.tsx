@@ -17,6 +17,7 @@ export default function NewTaskPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [withChecklist, setWithChecklist] = useState(false);
   const [checklistAnimalIds, setChecklistAnimalIds] = useState<string[]>([]);
+  const [notifyEnabled, setNotifyEnabled] = useState(true);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -58,15 +59,17 @@ export default function NewTaskPage() {
     if (withChecklist && checklistAnimalIds.length > 0) {
       await createTaskAnimals(task.id, checklistAnimalIds);
     }
-    try {
-      await sendPushNotification({
-        title: task.assigned_to ? "Yeni görev atandı" : "Yeni görev (Herkes)",
-        body: task.title,
-        targetProfileId: task.assigned_to,
-        url: "/tasks",
-      });
-    } catch {
-      // Bildirim gönderimi görev oluşturmayı engellemez.
+    if (notifyEnabled) {
+      try {
+        await sendPushNotification({
+          title: task.assigned_to ? "Yeni görev atandı" : "Yeni görev (Herkes)",
+          body: task.title,
+          targetProfileIds: task.assigned_to ? [task.assigned_to] : null,
+          url: "/tasks",
+        });
+      } catch {
+        // Bildirim gönderimi görev oluşturmayı engellemez.
+      }
     }
     setSubmitting(false);
     router.push("/tasks");
@@ -119,6 +122,15 @@ export default function NewTaskPage() {
             </div>
           )}
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-neutral-700">
+          <input
+            type="checkbox"
+            checked={notifyEnabled}
+            onChange={(e) => setNotifyEnabled(e.target.checked)}
+          />
+          Bu görev için push bildirimi gönder
+        </label>
 
         <button type="submit" disabled={submitting} className="btn-primary">
           {submitting ? "Kaydediliyor..." : "Kaydet"}

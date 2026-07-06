@@ -1,8 +1,8 @@
 // Supabase Edge Function: send-push
 //
-// Sends a Web Push notification to one profile's registered devices, or to
-// every registered device when targetProfileId is null ("Herkes"). Called
-// from the app via supabase.functions.invoke("send-push", { body: {...} }).
+// Sends a Web Push notification to one or more profiles' registered devices,
+// or to every registered device when targetProfileIds is null ("Herkes").
+// Called from the app via supabase.functions.invoke("send-push", { body: {...} }).
 //
 // Required secrets (set with `supabase secrets set NAME=value`):
 //   VAPID_PUBLIC_KEY   - same value hardcoded in src/lib/push.ts
@@ -45,7 +45,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { title, body, targetProfileId, url } = await req.json();
+    const { title, body, targetProfileIds, url } = await req.json();
     if (!title || !body) {
       return new Response(JSON.stringify({ error: "title ve body zorunlu" }), {
         status: 400,
@@ -59,7 +59,9 @@ Deno.serve(async (req: Request) => {
     );
 
     let query = supabase.from("push_subscriptions").select("id, endpoint, p256dh, auth");
-    if (targetProfileId) query = query.eq("profile_id", targetProfileId);
+    if (Array.isArray(targetProfileIds) && targetProfileIds.length > 0) {
+      query = query.in("profile_id", targetProfileIds);
+    }
     const { data: subs, error } = await query;
     if (error) throw error;
 
