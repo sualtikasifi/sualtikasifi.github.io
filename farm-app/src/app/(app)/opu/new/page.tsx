@@ -16,7 +16,7 @@ export default function NewOpuSessionPage() {
   const [form, setForm] = useState({
     donor_animal_id: "",
     session_date: new Date().toISOString().slice(0, 10),
-    session_time: "",
+    session_time: new Date().toTimeString().slice(0, 5),
     technician_name: "",
     follicle_count_right: "",
     follicle_count_left: "",
