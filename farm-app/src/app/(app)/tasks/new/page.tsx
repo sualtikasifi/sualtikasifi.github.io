@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createTask, createTaskAnimals, listAnimals, listProfiles } from "@/lib/data";
+import { createTask, createTaskAnimals, listAnimals, listProfiles, sendPushNotification } from "@/lib/data";
 import { Animal, Profile } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { ImageUploadField } from "@/components/ImageUploadField";
@@ -57,6 +57,16 @@ export default function NewTaskPage() {
     });
     if (withChecklist && checklistAnimalIds.length > 0) {
       await createTaskAnimals(task.id, checklistAnimalIds);
+    }
+    try {
+      await sendPushNotification({
+        title: task.assigned_to ? "Yeni görev atandı" : "Yeni görev (Herkes)",
+        body: task.title,
+        targetProfileId: task.assigned_to,
+        url: "/tasks",
+      });
+    } catch {
+      // Bildirim gönderimi görev oluşturmayı engellemez.
     }
     setSubmitting(false);
     router.push("/tasks");

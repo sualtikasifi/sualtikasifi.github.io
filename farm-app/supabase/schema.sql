@@ -284,6 +284,18 @@ create table if not exists calf_notes (
 
 create index if not exists calf_notes_animal_idx on calf_notes (animal_id);
 
+-- 14. Push bildirim abonelikleri (her cihaz/tarayici icin bir kayit)
+create table if not exists push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references profiles (id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists push_subscriptions_profile_idx on push_subscriptions (profile_id);
+
 -- Row Level Security: giris yapmis herkes (10 kisilik guvenilir ekip) okuyup yazabilir
 alter table profiles enable row level security;
 alter table animals enable row level security;
@@ -301,6 +313,7 @@ alter table medicines enable row level security;
 alter table shift_notes enable row level security;
 alter table calf_notes enable row level security;
 alter table task_animals enable row level security;
+alter table push_subscriptions enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
@@ -320,6 +333,7 @@ create policy "medicines_all_authenticated" on medicines for all to authenticate
 create policy "shift_notes_all_authenticated" on shift_notes for all to authenticated using (true) with check (true);
 create policy "calf_notes_all_authenticated" on calf_notes for all to authenticated using (true) with check (true);
 create policy "task_animals_all_authenticated" on task_animals for all to authenticated using (true) with check (true);
+create policy "push_subscriptions_all_authenticated" on push_subscriptions for all to authenticated using (true) with check (true);
 
 -- Gorev fotograflari (referans + tamamlama kaniti) icin storage bucket'i.
 -- Public bucket: link tahmin edilemez (rastgele dosya adi) oldugu icin yeterli,
