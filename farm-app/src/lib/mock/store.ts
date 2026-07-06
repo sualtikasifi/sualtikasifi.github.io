@@ -11,6 +11,7 @@ import {
   Medicine,
   OpuSession,
   Profile,
+  PushSubscriptionRecord,
   SemenInventory,
   ShiftNote,
   Task,
@@ -54,6 +55,7 @@ interface DemoDb {
   medicines: Medicine[];
   shiftNotes: ShiftNote[];
   calfNotes: CalfNote[];
+  pushSubscriptions: PushSubscriptionRecord[];
 }
 
 function initialDb(): DemoDb {
@@ -74,6 +76,7 @@ function initialDb(): DemoDb {
     medicines: seedMedicines,
     shiftNotes: [],
     calfNotes: [],
+    pushSubscriptions: [],
   };
 }
 
@@ -105,6 +108,7 @@ function loadDb(): DemoDb {
     medicines: parsed.medicines ?? seedMedicines,
     shiftNotes: parsed.shiftNotes ?? [],
     calfNotes: parsed.calfNotes ?? [],
+    pushSubscriptions: parsed.pushSubscriptions ?? [],
   };
 }
 
@@ -785,4 +789,45 @@ export function demoAdjustMedicineStock(id: string, delta: number): Medicine | u
   };
   saveDb(db);
   return db.medicines[idx];
+}
+
+// --- Push bildirim abonelikleri ---
+
+export function demoListPushSubscriptionsForProfile(profileId: string): PushSubscriptionRecord[] {
+  return loadDb().pushSubscriptions.filter((p) => p.profile_id === profileId);
+}
+
+export function demoCreatePushSubscription(
+  profileId: string,
+  endpoint: string,
+  p256dh: string,
+  auth: string
+): PushSubscriptionRecord {
+  const db = loadDb();
+  const existingIdx = db.pushSubscriptions.findIndex((p) => p.endpoint === endpoint);
+  const record: PushSubscriptionRecord = {
+    id: existingIdx !== -1 ? db.pushSubscriptions[existingIdx].id : newId("push"),
+    profile_id: profileId,
+    endpoint,
+    p256dh,
+    auth,
+    created_at: existingIdx !== -1 ? db.pushSubscriptions[existingIdx].created_at : new Date().toISOString(),
+  };
+  if (existingIdx !== -1) db.pushSubscriptions[existingIdx] = record;
+  else db.pushSubscriptions.push(record);
+  saveDb(db);
+  return record;
+}
+
+export function demoDeletePushSubscriptionByEndpoint(endpoint: string): void {
+  const db = loadDb();
+  db.pushSubscriptions = db.pushSubscriptions.filter((p) => p.endpoint !== endpoint);
+  saveDb(db);
+}
+
+// Demo modda gercek bir push sunucusu olmadigi icin bildirim,
+// ayni tarayicida dogrudan Notification API ile tetiklenir.
+export function demoSendPushNotification(title: string, body: string): void {
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  new Notification(title, { body, icon: "/icons/icon-192.png" });
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listTasks, updateProfile } from "@/lib/data";
+import { createPushSubscription, deletePushSubscriptionByEndpoint, listTasks, updateProfile } from "@/lib/data";
 import { Task } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
+import { getPushStatus, PushSupportStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -34,6 +35,41 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [pushStatus, setPushStatus] = useState<PushSupportStatus>("unsubscribed");
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getPushStatus().then(setPushStatus);
+  }, []);
+
+  async function handleEnablePush() {
+    if (!profile) return;
+    setPushBusy(true);
+    setPushError(null);
+    try {
+      const sub = await subscribeToPush();
+      const json = sub.toJSON();
+      await createPushSubscription(profile.id, sub.endpoint, json.keys?.p256dh ?? "", json.keys?.auth ?? "");
+      setPushStatus("subscribed");
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : "Bildirimler açılamadı.");
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function handleDisablePush() {
+    setPushBusy(true);
+    setPushError(null);
+    try {
+      const sub = await unsubscribeFromPush();
+      if (sub) await deletePushSubscriptionByEndpoint(sub.endpoint);
+      setPushStatus("unsubscribed");
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!profile) return;
@@ -105,6 +141,35 @@ export default function ProfilePage() {
         </button>
         {saved && <p className="text-sm text-green-700">Kaydedildi.</p>}
       </form>
+
+      <div className="card">
+        <h2 className="mb-2 text-sm font-semibold text-neutral-800">Bildirimler</h2>
+        {pushStatus === "unsupported" ? (
+          <p className="text-sm text-neutral-400">Bu cihaz/tarayıcı push bildirimlerini desteklemiyor.</p>
+        ) : pushStatus === "denied" ? (
+          <p className="text-sm text-red-600">
+            Bildirim izni reddedilmiş. Bu cihaza bildirim gelmesi için tarayıcı ayarlarından bu site için bildirim
+            iznini açman gerekiyor.
+          </p>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-neutral-600">
+              {pushStatus === "subscribed"
+                ? "Bu cihazda görev ataması ve duyuru bildirimleri açık."
+                : "Bana özel atanan görevlerde ve duyurularda bu cihaza bildirim gelsin mi?"}
+            </p>
+            <button
+              type="button"
+              onClick={pushStatus === "subscribed" ? handleDisablePush : handleEnablePush}
+              disabled={pushBusy}
+              className={pushStatus === "subscribed" ? "btn-secondary shrink-0" : "btn-primary shrink-0"}
+            >
+              {pushBusy ? "..." : pushStatus === "subscribed" ? "Kapat" : "Bildirimleri Aç"}
+            </button>
+          </div>
+        )}
+        {pushError && <p className="mt-2 text-sm text-red-600">{pushError}</p>}
+      </div>
 
       <div className="card">
         <h2 className="mb-2 text-sm font-semibold text-neutral-800">Son 1 Ayda Tamamladığım Görevler</h2>

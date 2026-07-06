@@ -13,6 +13,7 @@ import {
   Medicine,
   OpuSession,
   Profile,
+  PushSubscriptionRecord,
   SemenInventory,
   ShiftNote,
   Task,
@@ -758,4 +759,49 @@ export async function adjustMedicineStock(id: string, delta: number): Promise<Me
     .single();
   if (error) throw error;
   return data as Medicine;
+}
+
+// --- Push bildirimleri ---
+
+export async function listPushSubscriptionsForProfile(profileId: string): Promise<PushSubscriptionRecord[]> {
+  if (isDemoMode) return mock.demoListPushSubscriptionsForProfile(profileId);
+  const { data, error } = await supabase!.from("push_subscriptions").select("*").eq("profile_id", profileId);
+  if (error) throw error;
+  return data as PushSubscriptionRecord[];
+}
+
+export async function createPushSubscription(
+  profileId: string,
+  endpoint: string,
+  p256dh: string,
+  auth: string
+): Promise<PushSubscriptionRecord> {
+  if (isDemoMode) return mock.demoCreatePushSubscription(profileId, endpoint, p256dh, auth);
+  const { data, error } = await supabase!
+    .from("push_subscriptions")
+    .upsert({ profile_id: profileId, endpoint, p256dh, auth }, { onConflict: "endpoint" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as PushSubscriptionRecord;
+}
+
+export async function deletePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeletePushSubscriptionByEndpoint(endpoint);
+  const { error } = await supabase!.from("push_subscriptions").delete().eq("endpoint", endpoint);
+  if (error) throw error;
+}
+
+export async function sendPushNotification(input: {
+  title: string;
+  body: string;
+  targetProfileId: string | null;
+  url?: string;
+}): Promise<void> {
+  if (isDemoMode) {
+    mock.demoSendPushNotification(input.title, input.body);
+    return;
+  }
+  const { error } = await supabase!.functions.invoke("send-push", { body: input });
+  if (error) throw error;
 }
