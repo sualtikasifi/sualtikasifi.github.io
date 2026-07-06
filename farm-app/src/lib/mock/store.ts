@@ -606,6 +606,13 @@ export function demoUpdateOpuSession(id: string, patch: Partial<OpuSession>): Op
   return db.opuSessions[idx];
 }
 
+export function demoDeleteOpuSession(id: string): void {
+  const db = loadDb();
+  db.opuSessions = db.opuSessions.filter((s) => s.id !== id);
+  db.embryos = db.embryos.filter((e) => e.opu_session_id !== id);
+  saveDb(db);
+}
+
 export function demoListEmbryos(opuSessionId?: string): Embryo[] {
   const all = loadDb().embryos.sort((a, b) => a.label.localeCompare(b.label));
   return opuSessionId ? all.filter((e) => e.opu_session_id === opuSessionId) : all;

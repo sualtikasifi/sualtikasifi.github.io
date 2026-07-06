@@ -554,6 +554,12 @@ export async function updateOpuSession(
   return data as OpuSession;
 }
 
+export async function deleteOpuSession(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteOpuSession(id);
+  const { error } = await supabase!.from("opu_sessions").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function listEmbryos(opuSessionId?: string): Promise<Embryo[]> {
   if (isDemoMode) return mock.demoListEmbryos(opuSessionId);
   return fetchAllPages<Embryo>((from, to) => {
