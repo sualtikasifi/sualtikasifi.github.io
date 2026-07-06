@@ -2,8 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
+  deleteOpuSession,
   getAnimal,
   getOpuSession,
   listBulls,
@@ -27,6 +28,7 @@ export default function OpuSessionDetailPage() {
 }
 
 function OpuSessionDetailContent() {
+  const router = useRouter();
   const params = useSearchParams();
   const id = params.get("id");
   const [session, setSession] = useState<OpuSession | null>(null);
@@ -37,6 +39,15 @@ function OpuSessionDetailContent() {
   const [inventory, setInventory] = useState<SemenInventory[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!session) return;
+    setDeleting(true);
+    await deleteOpuSession(session.id);
+    router.push("/opu");
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -82,13 +93,47 @@ function OpuSessionDetailContent() {
           </h1>
           <p className="text-sm text-neutral-500">{formatDate(session.session_date)}</p>
         </div>
-        <Link
-          href={`/opu/embryos/new?sessionId=${session.id}`}
-          className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800"
-        >
-          Embriyo ekle
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setConfirmingDelete(true)}
+            className="text-xs font-medium text-red-600 hover:underline"
+          >
+            Sil
+          </button>
+          <Link
+            href={`/opu/embryos/new?sessionId=${session.id}`}
+            className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800"
+          >
+            Embriyo ekle
+          </Link>
+        </div>
       </div>
+
+      {confirmingDelete && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3">
+          <p className="text-sm font-medium text-red-800">
+            Bu OPU seansını ve bağlı embriyo kayıtlarını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-60"
+            >
+              {deleting ? "Siliniyor..." : "Evet, sil"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(false)}
+              disabled={deleting}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:bg-neutral-50"
+            >
+              Vazgeç
+            </button>
+          </div>
+        </div>
+      )}
 
       <OpuFunnel session={session} />
 

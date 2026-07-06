@@ -2,21 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   completeTask,
   listAllMastitisDoses,
+  listAllTaskAnimals,
   listAnimals,
   listMastitisTreatments,
   listProfiles,
   listTasks,
   reopenTask,
+  toggleTaskAnimalDone,
 } from "@/lib/data";
-import { Animal, MastitisDose, MastitisTreatment, Profile, Task } from "@/lib/types";
+import { Animal, MastitisDose, MastitisTreatment, Profile, Task, TaskAnimal } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { getTodaysMastitisReminders, isMastitisReminderActive, isMastitisWarningActive } from "@/lib/mastitisReminder";
 import { MastitisReminderCard } from "@/components/MastitisReminderCard";
+import { ImageUploadField } from "@/components/ImageUploadField";
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -46,52 +50,66 @@ export default function TasksPage() {
   const [mastitisTreatments, setMastitisTreatments] = useState<MastitisTreatment[]>([]);
   const [mastitisDoses, setMastitisDoses] = useState<MastitisDose[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [taskAnimals, setTaskAnimals] = useState<TaskAnimal[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [completionImageUrl, setCompletionImageUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   function loadData() {
-    return Promise.all([listTasks(), listProfiles(), listMastitisTreatments(), listAllMastitisDoses(), listAnimals()]);
+    return Promise.all([
+      listTasks(),
+      listProfiles(),
+      listMastitisTreatments(),
+      listAllMastitisDoses(),
+      listAnimals(),
+      listAllTaskAnimals(),
+    ]);
   }
 
   useEffect(() => {
-    loadData().then(([t, p, mt, doses, a]) => {
+    loadData().then(([t, p, mt, doses, a, ta]) => {
       setTasks(t);
       setProfiles(p);
       setMastitisTreatments(mt);
       setMastitisDoses(doses);
       setAnimals(a);
+      setTaskAnimals(ta);
       setLoading(false);
     });
   }, []);
 
   async function refresh() {
-    const [t, p, mt, doses, a] = await loadData();
+    const [t, p, mt, doses, a, ta] = await loadData();
     setTasks(t);
     setProfiles(p);
     setMastitisTreatments(mt);
     setMastitisDoses(doses);
     setAnimals(a);
+    setTaskAnimals(ta);
   }
 
   function startConfirm(task: Task) {
     setConfirmingId(task.id);
     setNote("");
+    setCompletionImageUrl(null);
   }
 
   function cancelConfirm() {
     setConfirmingId(null);
     setNote("");
+    setCompletionImageUrl(null);
   }
 
   async function confirmDone(task: Task) {
     if (!profile) return;
     setSaving(true);
-    await completeTask(task.id, profile.id, note.trim() || null);
+    await completeTask(task.id, profile.id, note.trim() || null, completionImageUrl);
     setSaving(false);
     setConfirmingId(null);
     setNote("");
+    setCompletionImageUrl(null);
     await refresh();
   }
 
@@ -100,8 +118,15 @@ export default function TasksPage() {
     await refresh();
   }
 
+  async function handleToggleAnimal(ta: TaskAnimal) {
+    await toggleTaskAnimalDone(ta.id, !ta.done, profile?.id ?? null);
+    await refresh();
+  }
+
   const nameFor = (id: string | null) => profiles.find((p) => p.id === id)?.full_name ?? "-";
   const assigneeFor = (id: string | null) => (id === null ? "Herkes" : nameFor(id));
+  const earTagFor = (id: string) => animals.find((a) => a.id === id)?.ear_tag ?? "?";
+  const checklistFor = (taskId: string) => taskAnimals.filter((ta) => ta.task_id === taskId);
 
   const pending = [...tasks]
     .filter((t) => t.status !== "yapildi")
@@ -157,6 +182,18 @@ export default function TasksPage() {
                         <p className="text-xs text-neutral-400">
                           {assigneeFor(t.assigned_to)} tarafından yapılacak &middot; {nameFor(t.assigned_by)} atadı
                         </p>
+                        {t.image_url && (
+                          <a href={t.image_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block">
+                            <Image
+                              src={t.image_url}
+                              alt=""
+                              width={64}
+                              height={64}
+                              unoptimized
+                              className="h-16 w-16 rounded-md border border-neutral-200 object-cover"
+                            />
+                          </a>
+                        )}
                         {t.status === "yapildi" && t.completed_at && (
                           <p className="mt-1 text-xs text-green-700">
                             {nameFor(t.completed_by)} tarafından {formatDateTime(t.completed_at)} tarihinde onaylandı
@@ -170,6 +207,23 @@ export default function TasksPage() {
                         {t.status === "yapildi" && t.completion_note && (
                           <p className="mt-0.5 text-xs text-neutral-500">Not: {t.completion_note}</p>
                         )}
+                        {t.status === "yapildi" && t.completion_image_url && (
+                          <a
+                            href={t.completion_image_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-block"
+                          >
+                            <Image
+                              src={t.completion_image_url}
+                              alt=""
+                              width={64}
+                              height={64}
+                              unoptimized
+                              className="h-16 w-16 rounded-md border border-neutral-200 object-cover"
+                            />
+                          </a>
+                        )}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
                         <span className="text-neutral-500">{t.due_time && t.due_time.slice(0, 5)}</span>
@@ -180,6 +234,10 @@ export default function TasksPage() {
                         />
                       </div>
                     </div>
+
+                    {checklistFor(t.id).length > 0 && (
+                      <TaskChecklist items={checklistFor(t.id)} earTagFor={earTagFor} onToggle={handleToggleAnimal} />
+                    )}
 
                     {confirmingId === t.id && (
                       <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3">
@@ -196,6 +254,13 @@ export default function TasksPage() {
                             autoFocus
                           />
                         </label>
+                        <div className="mt-2">
+                          <ImageUploadField
+                            label="Kanıt fotoğrafı (opsiyonel)"
+                            value={completionImageUrl}
+                            onChange={setCompletionImageUrl}
+                          />
+                        </div>
                         <div className="mt-2 flex gap-2">
                           <button
                             onClick={() => confirmDone(t)}
@@ -246,5 +311,40 @@ function CompleteButton({ task, onClick }: { task: Task; onClick: () => void }) 
       </span>
       {done ? "Tamamlandı" : "Yapıldı olarak işaretle"}
     </button>
+  );
+}
+
+function TaskChecklist({
+  items,
+  earTagFor,
+  onToggle,
+}: {
+  items: TaskAnimal[];
+  earTagFor: (id: string) => string;
+  onToggle: (ta: TaskAnimal) => void;
+}) {
+  const doneCount = items.filter((i) => i.done).length;
+  return (
+    <div className="mt-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+      <p className="mb-2 text-xs font-semibold text-neutral-600">
+        Hayvan listesi &middot; {doneCount}/{items.length} tamamlandı
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {items.map((ta) => (
+          <label
+            key={ta.id}
+            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              ta.done
+                ? "border-green-600 bg-green-600 text-white"
+                : "border-neutral-300 bg-white text-neutral-600 hover:border-green-600 hover:text-green-700"
+            }`}
+          >
+            <input type="checkbox" checked={ta.done} onChange={() => onToggle(ta)} className="hidden" />
+            {ta.done && "✓ "}
+            {earTagFor(ta.animal_id)}
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }

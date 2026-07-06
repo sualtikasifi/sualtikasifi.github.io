@@ -16,6 +16,7 @@ import {
   SemenInventory,
   ShiftNote,
   Task,
+  TaskAnimal,
 } from "./types";
 
 export { isDemoMode };
@@ -318,9 +319,10 @@ export async function updateTaskStatus(id: string, status: Task["status"]): Prom
 export async function completeTask(
   id: string,
   completedBy: string,
-  note: string | null
+  note: string | null,
+  completionImageUrl: string | null = null
 ): Promise<Task | undefined> {
-  if (isDemoMode) return mock.demoCompleteTask(id, completedBy, note);
+  if (isDemoMode) return mock.demoCompleteTask(id, completedBy, note, completionImageUrl);
   const { data, error } = await supabase!
     .from("tasks")
     .update({
@@ -328,6 +330,7 @@ export async function completeTask(
       completed_by: completedBy,
       completed_at: new Date().toISOString(),
       completion_note: note,
+      completion_image_url: completionImageUrl,
     })
     .eq("id", id)
     .select()
@@ -340,12 +343,69 @@ export async function reopenTask(id: string): Promise<Task | undefined> {
   if (isDemoMode) return mock.demoReopenTask(id);
   const { data, error } = await supabase!
     .from("tasks")
-    .update({ status: "bekliyor", completed_by: null, completed_at: null, completion_note: null })
+    .update({
+      status: "bekliyor",
+      completed_by: null,
+      completed_at: null,
+      completion_note: null,
+      completion_image_url: null,
+    })
     .eq("id", id)
     .select()
     .single();
   if (error) throw error;
   return data as Task;
+}
+
+// --- Gorev hayvan kontrol listesi (orn. asi takibi) ---
+
+export async function listTaskAnimals(taskId: string): Promise<TaskAnimal[]> {
+  if (isDemoMode) return mock.demoListTaskAnimals(taskId);
+  const { data, error } = await supabase!.from("task_animals").select("*").eq("task_id", taskId);
+  if (error) throw error;
+  return data as TaskAnimal[];
+}
+
+export async function listAllTaskAnimals(): Promise<TaskAnimal[]> {
+  if (isDemoMode) return mock.demoListAllTaskAnimals();
+  return fetchAllPages<TaskAnimal>((from, to) =>
+    supabase!.from("task_animals").select("*", { count: "exact" }).range(from, to)
+  );
+}
+
+export async function createTaskAnimals(taskId: string, animalIds: string[]): Promise<TaskAnimal[]> {
+  if (isDemoMode) return mock.demoCreateTaskAnimals(taskId, animalIds);
+  const rows = animalIds.map((animalId) => ({ task_id: taskId, animal_id: animalId, done: false }));
+  const { data, error } = await supabase!.from("task_animals").insert(rows).select();
+  if (error) throw error;
+  return data as TaskAnimal[];
+}
+
+export async function toggleTaskAnimalDone(
+  id: string,
+  done: boolean,
+  doneBy: string | null
+): Promise<TaskAnimal | undefined> {
+  if (isDemoMode) return mock.demoToggleTaskAnimal(id, done, doneBy);
+  const { data, error } = await supabase!
+    .from("task_animals")
+    .update({ done, done_by: done ? doneBy : null, done_at: done ? new Date().toISOString() : null })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as TaskAnimal;
+}
+
+// --- Gorsel yukleme (gorev referans/kanit fotograflari) ---
+
+export async function uploadTaskImage(file: File): Promise<string> {
+  if (isDemoMode) return mock.demoUploadImage(file);
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase!.storage.from("task-images").upload(path, file);
+  if (error) throw error;
+  return supabase!.storage.from("task-images").getPublicUrl(path).data.publicUrl;
 }
 
 // --- Bulls & semen inventory ---
@@ -492,6 +552,12 @@ export async function updateOpuSession(
   const { data, error } = await supabase!.from("opu_sessions").update(patch).eq("id", id).select().single();
   if (error) throw error;
   return data as OpuSession;
+}
+
+export async function deleteOpuSession(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteOpuSession(id);
+  const { error } = await supabase!.from("opu_sessions").delete().eq("id", id);
+  if (error) throw error;
 }
 
 export async function listEmbryos(opuSessionId?: string): Promise<Embryo[]> {

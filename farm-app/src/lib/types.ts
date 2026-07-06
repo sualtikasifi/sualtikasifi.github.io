@@ -86,9 +86,21 @@ export interface Task {
   due_date: string;
   due_time: string | null;
   status: TaskStatus;
+  image_url: string | null;
   completed_by: string | null;
   completed_at: string | null;
   completion_note: string | null;
+  completion_image_url: string | null;
+  created_at: string;
+}
+
+export interface TaskAnimal {
+  id: string;
+  task_id: string;
+  animal_id: string;
+  done: boolean;
+  done_by: string | null;
+  done_at: string | null;
   created_at: string;
 }
 
