@@ -190,6 +190,7 @@ create table if not exists opu_sessions (
   id uuid primary key default gen_random_uuid(),
   donor_animal_id uuid not null references animals (id) on delete cascade,
   session_date date not null default current_date,
+  session_time time,
   technician_name text,
   follicle_count_right integer check (follicle_count_right >= 0),
   follicle_count_left integer check (follicle_count_left >= 0),

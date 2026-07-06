@@ -91,7 +91,10 @@ function OpuSessionDetailContent() {
           <h1 className="text-lg font-semibold text-neutral-900">
             OPU: {donor?.ear_tag ?? "?"} {donor?.name && <span className="text-neutral-500">({donor.name})</span>}
           </h1>
-          <p className="text-sm text-neutral-500">{formatDate(session.session_date)}</p>
+          <p className="text-sm text-neutral-500">
+            {formatDate(session.session_date)}
+            {session.session_time && ` · ${session.session_time.slice(0, 5)}`}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -210,7 +213,10 @@ function OpuSessionDetailContent() {
                     {totalFollicles ?? "-"} folikül &middot; {p.oocyte_count ?? "-"} oosit &middot;{" "}
                     {p.cleaved_count ?? "-"} bölünen &middot; {p.embryo_count ?? "-"} embriyo
                   </span>
-                  <span className="text-xs text-neutral-400">{formatDate(p.session_date)}</span>
+                  <span className="text-xs text-neutral-400">
+                    {formatDate(p.session_date)}
+                    {p.session_time && ` · ${p.session_time.slice(0, 5)}`}
+                  </span>
                 </Link>
               );
             })}
@@ -423,6 +429,8 @@ function EditAllForm({
   onCancel: () => void;
   onSaved: (s: OpuSession) => void;
 }) {
+  const [sessionDate, setSessionDate] = useState(session.session_date);
+  const [sessionTime, setSessionTime] = useState(session.session_time ?? "");
   const [technicianName, setTechnicianName] = useState(session.technician_name ?? "");
   const [follicleRight, setFollicleRight] = useState(
     session.follicle_count_right !== null ? String(session.follicle_count_right) : ""
@@ -456,6 +464,8 @@ function EditAllForm({
     e.preventDefault();
     setSaving(true);
     const updated = await updateOpuSession(session.id, {
+      session_date: sessionDate,
+      session_time: sessionTime || null,
       technician_name: technicianName.trim() || null,
       follicle_count_right: toNullableNumber(follicleRight),
       follicle_count_left: toNullableNumber(follicleLeft),
@@ -481,6 +491,15 @@ function EditAllForm({
         <button type="button" onClick={onCancel} className="text-xs text-neutral-500 underline hover:no-underline">
           Geri dön
         </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Tarih">
+          <input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} className="input" />
+        </Field>
+        <Field label="Saat (opsiyonel)">
+          <input type="time" value={sessionTime} onChange={(e) => setSessionTime(e.target.value)} className="input" />
+        </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
