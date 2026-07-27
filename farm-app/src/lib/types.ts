@@ -240,6 +240,16 @@ export interface CalfHousingSlot {
   created_at: string;
 }
 
+export interface CalfTreatment {
+  id: string;
+  animal_id: string;
+  treatment_date: string;
+  diagnosis: string | null;
+  description: string;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface CalfTreatmentStatus {
   animal_id: string;
   under_treatment: boolean;

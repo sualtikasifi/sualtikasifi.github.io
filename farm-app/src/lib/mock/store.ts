@@ -5,6 +5,7 @@ import {
   CalfHousingSlot,
   CalfHousingStructure,
   CalfNote,
+  CalfTreatment,
   CalfTreatmentStatus,
   Embryo,
   Insemination,
@@ -62,6 +63,7 @@ interface DemoDb {
   calfNotes: CalfNote[];
   calfHousingSlots: CalfHousingSlot[];
   calfTreatmentStatuses: CalfTreatmentStatus[];
+  calfTreatments: CalfTreatment[];
   pushSubscriptions: PushSubscriptionRecord[];
 }
 
@@ -85,6 +87,7 @@ function initialDb(): DemoDb {
     calfNotes: [],
     calfHousingSlots: seedCalfHousingSlots,
     calfTreatmentStatuses: seedCalfTreatmentStatuses,
+    calfTreatments: [],
     pushSubscriptions: [],
   };
 }
@@ -119,6 +122,7 @@ function loadDb(): DemoDb {
     calfNotes: parsed.calfNotes ?? [],
     calfHousingSlots: parsed.calfHousingSlots ?? seedCalfHousingSlots,
     calfTreatmentStatuses: parsed.calfTreatmentStatuses ?? seedCalfTreatmentStatuses,
+    calfTreatments: parsed.calfTreatments ?? [],
     pushSubscriptions: parsed.pushSubscriptions ?? [],
   };
 }
@@ -805,6 +809,19 @@ export function demoSetCalfTreatmentStatus(
   else db.calfTreatmentStatuses[idx] = status;
   saveDb(db);
   return status;
+}
+
+export function demoListCalfTreatments(animalId?: string): CalfTreatment[] {
+  const all = loadDb().calfTreatments.sort((a, b) => b.treatment_date.localeCompare(a.treatment_date));
+  return animalId ? all.filter((t) => t.animal_id === animalId) : all;
+}
+
+export function demoCreateCalfTreatment(input: Omit<CalfTreatment, "id" | "created_at">): CalfTreatment {
+  const db = loadDb();
+  const treatment: CalfTreatment = { ...input, id: newId("calftreatment"), created_at: new Date().toISOString() };
+  db.calfTreatments.push(treatment);
+  saveDb(db);
+  return treatment;
 }
 
 // --- Medicines (asi/ilac stok takibi) ---
