@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   createAnimal,
@@ -265,6 +266,23 @@ export default function CalvesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Buzağılar</h1>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Link
+          href="/calves/buzagilik"
+          className="card flex flex-col items-center justify-center gap-1 py-6 text-center transition-colors hover:bg-neutral-50"
+        >
+          <span className="text-2xl">🏠</span>
+          <span className="text-sm font-semibold text-neutral-800">Buzağılık</span>
+        </Link>
+        <Link
+          href="/calves/iglo"
+          className="card flex flex-col items-center justify-center gap-1 py-6 text-center transition-colors hover:bg-neutral-50"
+        >
+          <span className="text-2xl">🧊</span>
+          <span className="text-sm font-semibold text-neutral-800">İglo</span>
+        </Link>
       </div>
 
       <section className="card space-y-2">

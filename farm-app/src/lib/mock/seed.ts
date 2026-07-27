@@ -1,4 +1,4 @@
-import { Animal, Bull, CalfFeeding, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuSession, Profile, SemenInventory, Task, TaskAnimal } from "@/lib/types";
+import { Animal, Bull, CalfFeeding, CalfHousingSlot, CalfTreatmentStatus, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuSession, Profile, SemenInventory, Task, TaskAnimal } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -119,6 +119,21 @@ export const seedAnimals: Animal[] = [
     created_by: DEMO_USER_ID,
     created_at: daysAgo(1200),
     updated_at: daysAgo(2),
+  },
+  {
+    id: "animal-4",
+    ear_tag: "TR-1108",
+    name: "Minnoş",
+    birth_date: daysAgo(20),
+    breed: "Holstein",
+    gender: "disi",
+    status: "aktif",
+    mother_ear_tag: null,
+    weaned_at: null,
+    notes: "İshal nedeniyle tedavi altında.",
+    created_by: DEMO_USER_ID,
+    created_at: daysAgo(20),
+    updated_at: daysAgo(1),
   },
 ];
 
@@ -521,6 +536,63 @@ export const seedCalfFeedings: CalfFeeding[] = [
     examined_at: null,
     created_by: "demo-user-3",
     created_at: hoursAgo(4),
+  },
+];
+
+function buildCalfHousingSlots(): CalfHousingSlot[] {
+  const slots: CalfHousingSlot[] = [];
+  for (let i = 0; i < 20; i++) {
+    slots.push({
+      id: `slot-buzagilik-0-${i}`,
+      structure: "buzagilik",
+      group_index: 0,
+      slot_index: i,
+      animal_id: null,
+      created_at: daysAgo(30),
+    });
+  }
+  for (let i = 0; i < 16; i++) {
+    slots.push({
+      id: `slot-buzagilik-1-${i}`,
+      structure: "buzagilik",
+      group_index: 1,
+      slot_index: i,
+      animal_id: null,
+      created_at: daysAgo(30),
+    });
+  }
+  for (let g = 0; g < 6; g++) {
+    for (let s = 0; s < 10; s++) {
+      slots.push({
+        id: `slot-iglo-${g}-${s}`,
+        structure: "iglo",
+        group_index: g,
+        slot_index: s,
+        animal_id: null,
+        created_at: daysAgo(30),
+      });
+    }
+  }
+  return slots;
+}
+
+export const seedCalfHousingSlots: CalfHousingSlot[] = buildCalfHousingSlots().map((slot) => {
+  if (slot.structure === "buzagilik" && slot.group_index === 0 && slot.slot_index === 0) {
+    return { ...slot, animal_id: "animal-1" };
+  }
+  if (slot.structure === "iglo" && slot.group_index === 0 && slot.slot_index === 0) {
+    return { ...slot, animal_id: "animal-4" };
+  }
+  return slot;
+});
+
+export const seedCalfTreatmentStatuses: CalfTreatmentStatus[] = [
+  {
+    animal_id: "animal-4",
+    under_treatment: true,
+    note: "İshal nedeniyle antibiyotik tedavisi, 2 gün kaldı.",
+    updated_at: daysAgo(1),
+    updated_by: "demo-user-2",
   },
 ];
 

@@ -4,7 +4,10 @@ import {
   Animal,
   Bull,
   CalfFeeding,
+  CalfHousingSlot,
+  CalfHousingStructure,
   CalfNote,
+  CalfTreatmentStatus,
   Embryo,
   Insemination,
   MastitisDose,
@@ -708,6 +711,61 @@ export async function deleteCalfNote(id: string): Promise<void> {
   if (isDemoMode) return mock.demoDeleteCalfNote(id);
   const { error } = await supabase!.from("calf_notes").delete().eq("id", id);
   if (error) throw error;
+}
+
+// --- Buzagi barinma yerlesimi (Buzagilik / Iglo) ---
+
+export async function listCalfHousingSlots(structure: CalfHousingStructure): Promise<CalfHousingSlot[]> {
+  if (isDemoMode) return mock.demoListCalfHousingSlots(structure);
+  const { data, error } = await supabase!
+    .from("calf_housing_slots")
+    .select("*")
+    .eq("structure", structure)
+    .order("group_index")
+    .order("slot_index");
+  if (error) throw error;
+  return data as CalfHousingSlot[];
+}
+
+export async function assignCalfToSlot(slotId: string, animalId: string | null): Promise<CalfHousingSlot | undefined> {
+  if (isDemoMode) return mock.demoAssignCalfToSlot(slotId, animalId);
+  const { data, error } = await supabase!
+    .from("calf_housing_slots")
+    .update({ animal_id: animalId })
+    .eq("id", slotId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfHousingSlot;
+}
+
+export async function listCalfTreatmentStatuses(): Promise<CalfTreatmentStatus[]> {
+  if (isDemoMode) return mock.demoListCalfTreatmentStatuses();
+  const { data, error } = await supabase!.from("calf_treatment_status").select("*");
+  if (error) throw error;
+  return data as CalfTreatmentStatus[];
+}
+
+export async function setCalfTreatmentStatus(
+  animalId: string,
+  underTreatment: boolean,
+  note: string | null,
+  updatedBy: string | null
+): Promise<CalfTreatmentStatus> {
+  if (isDemoMode) return mock.demoSetCalfTreatmentStatus(animalId, underTreatment, note, updatedBy);
+  const { data, error } = await supabase!
+    .from("calf_treatment_status")
+    .upsert({
+      animal_id: animalId,
+      under_treatment: underTreatment,
+      note,
+      updated_at: new Date().toISOString(),
+      updated_by: updatedBy,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfTreatmentStatus;
 }
 
 // --- Medicines (asi/ilac stok takibi) ---
