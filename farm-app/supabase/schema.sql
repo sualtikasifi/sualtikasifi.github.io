@@ -329,6 +329,8 @@ create table if not exists calf_treatments (
   animal_id uuid not null references animals (id) on delete cascade,
   treatment_date date not null,
   diagnosis text,
+  -- protokolun kacinci gunu oldugu (orn. 4 gunluk bir tedavinin 2. gunu = 2)
+  protocol_day integer,
   description text not null,
   created_by uuid references profiles (id),
   created_at timestamptz not null default now()
