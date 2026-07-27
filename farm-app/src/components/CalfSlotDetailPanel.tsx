@@ -32,7 +32,12 @@ interface Props {
   onAssign: (animalId: string) => Promise<void>;
   onUnassign: () => Promise<void>;
   onSetTreatment: (underTreatment: boolean, note: string | null) => Promise<void>;
-  onAddTreatment: (input: { treatment_date: string; diagnosis: string | null; description: string }) => Promise<void>;
+  onAddTreatment: (input: {
+    treatment_date: string;
+    diagnosis: string | null;
+    protocol_day: number | null;
+    description: string;
+  }) => Promise<void>;
   onLogFeeding: (drank: boolean) => Promise<void>;
   onClose: () => void;
 }
@@ -61,6 +66,7 @@ export function CalfSlotDetailPanel({
   const [loggingId, setLoggingId] = useState(false);
   const [newTreatmentDate, setNewTreatmentDate] = useState(todayIso());
   const [newTreatmentDiagnosis, setNewTreatmentDiagnosis] = useState("");
+  const [newTreatmentDay, setNewTreatmentDay] = useState("");
   const [newTreatmentDescription, setNewTreatmentDescription] = useState("");
   const [savingNewTreatment, setSavingNewTreatment] = useState(false);
   const [showTreatmentForm, setShowTreatmentForm] = useState(false);
@@ -100,9 +106,11 @@ export function CalfSlotDetailPanel({
     await onAddTreatment({
       treatment_date: newTreatmentDate,
       diagnosis: newTreatmentDiagnosis.trim() || null,
+      protocol_day: newTreatmentDay.trim() ? Number(newTreatmentDay) : null,
       description: newTreatmentDescription.trim(),
     });
     setNewTreatmentDiagnosis("");
+    setNewTreatmentDay("");
     setNewTreatmentDescription("");
     setShowTreatmentForm(false);
     setSavingNewTreatment(false);
@@ -263,15 +271,28 @@ export function CalfSlotDetailPanel({
                     className="input"
                   />
                 </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-neutral-600">Teşhis (opsiyonel)</span>
-                  <input
-                    value={newTreatmentDiagnosis}
-                    onChange={(e) => setNewTreatmentDiagnosis(e.target.value)}
-                    placeholder="örn. PNÖMONİ"
-                    className="input"
-                  />
-                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-neutral-600">Teşhis (opsiyonel)</span>
+                    <input
+                      value={newTreatmentDiagnosis}
+                      onChange={(e) => setNewTreatmentDiagnosis(e.target.value)}
+                      placeholder="örn. PNÖMONİ"
+                      className="input"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-neutral-600">Protokol günü (opsiyonel)</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={newTreatmentDay}
+                      onChange={(e) => setNewTreatmentDay(e.target.value)}
+                      placeholder="örn. 1"
+                      className="input"
+                    />
+                  </label>
+                </div>
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-neutral-600">Tedavi</span>
                   <textarea
@@ -300,6 +321,7 @@ export function CalfSlotDetailPanel({
                   <div key={t.id} className="rounded-md border border-neutral-100 px-2 py-1.5 text-xs">
                     <p className="font-medium text-neutral-800">
                       {formatDate(t.treatment_date)}
+                      {t.protocol_day != null && <span className="ml-2 text-neutral-500">Gün {t.protocol_day}</span>}
                       {t.diagnosis && <span className="ml-2 text-neutral-500">{t.diagnosis}</span>}
                     </p>
                     <p className="text-neutral-600">{t.description}</p>

@@ -92,7 +92,7 @@ export default function IgloPage() {
 
   async function handleAddTreatment(
     animalId: string,
-    input: { treatment_date: string; diagnosis: string | null; description: string }
+    input: { treatment_date: string; diagnosis: string | null; protocol_day: number | null; description: string }
   ) {
     await createCalfTreatment({ animal_id: animalId, created_by: profile?.id ?? null, ...input });
     await refresh();

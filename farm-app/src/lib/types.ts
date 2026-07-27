@@ -245,6 +245,7 @@ export interface CalfTreatment {
   animal_id: string;
   treatment_date: string;
   diagnosis: string | null;
+  protocol_day: number | null;
   description: string;
   created_by: string | null;
   created_at: string;
