@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Animal, CalfFeeding, CalfTreatmentStatus } from "@/lib/types";
+import { Animal, CalfFeeding, CalfTreatment, CalfTreatmentStatus } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { EarTagPicker } from "@/components/EarTagPicker";
+import { todayIso } from "@/lib/format";
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -16,15 +17,22 @@ function formatDateTime(iso: string): string {
   });
 }
 
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
 interface Props {
   label: string;
   animal: Animal | undefined;
   feedings: CalfFeeding[];
   treatmentStatus: CalfTreatmentStatus | undefined;
+  treatments: CalfTreatment[];
   availableCalves: Animal[];
   onAssign: (animalId: string) => Promise<void>;
   onUnassign: () => Promise<void>;
   onSetTreatment: (underTreatment: boolean, note: string | null) => Promise<void>;
+  onAddTreatment: (input: { treatment_date: string; diagnosis: string | null; description: string }) => Promise<void>;
   onLogFeeding: (drank: boolean) => Promise<void>;
   onClose: () => void;
 }
@@ -34,10 +42,12 @@ export function CalfSlotDetailPanel({
   animal,
   feedings,
   treatmentStatus,
+  treatments,
   availableCalves,
   onAssign,
   onUnassign,
   onSetTreatment,
+  onAddTreatment,
   onLogFeeding,
   onClose,
 }: Props) {
@@ -49,6 +59,11 @@ export function CalfSlotDetailPanel({
   const [treatmentNote, setTreatmentNote] = useState(treatmentStatus?.note ?? "");
   const [savingTreatment, setSavingTreatment] = useState(false);
   const [loggingId, setLoggingId] = useState(false);
+  const [newTreatmentDate, setNewTreatmentDate] = useState(todayIso());
+  const [newTreatmentDiagnosis, setNewTreatmentDiagnosis] = useState("");
+  const [newTreatmentDescription, setNewTreatmentDescription] = useState("");
+  const [savingNewTreatment, setSavingNewTreatment] = useState(false);
+  const [showTreatmentForm, setShowTreatmentForm] = useState(false);
 
   const sortedFeedings = [...feedings].sort((a, b) => b.fed_at.localeCompare(a.fed_at));
 
@@ -77,6 +92,23 @@ export function CalfSlotDetailPanel({
     await onLogFeeding(drank);
     setLoggingId(false);
   }
+
+  async function handleAddTreatment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newTreatmentDescription.trim()) return;
+    setSavingNewTreatment(true);
+    await onAddTreatment({
+      treatment_date: newTreatmentDate,
+      diagnosis: newTreatmentDiagnosis.trim() || null,
+      description: newTreatmentDescription.trim(),
+    });
+    setNewTreatmentDiagnosis("");
+    setNewTreatmentDescription("");
+    setShowTreatmentForm(false);
+    setSavingNewTreatment(false);
+  }
+
+  const sortedTreatments = [...treatments].sort((a, b) => b.treatment_date.localeCompare(a.treatment_date));
 
   return (
     <div className="card space-y-3">
@@ -205,6 +237,77 @@ export function CalfSlotDetailPanel({
               </div>
             )
           )}
+
+          <div className="space-y-2 border-t border-neutral-100 pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-neutral-600">Tedavi Geçmişi</p>
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => setShowTreatmentForm((v) => !v)}
+                  className="text-xs font-medium text-green-700 hover:underline"
+                >
+                  {showTreatmentForm ? "Vazgeç" : "Kayıt Ekle"}
+                </button>
+              )}
+            </div>
+
+            {showTreatmentForm && (
+              <form onSubmit={handleAddTreatment} className="space-y-2 rounded-md border border-neutral-200 p-2">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-neutral-600">Tarih</span>
+                  <input
+                    type="date"
+                    value={newTreatmentDate}
+                    onChange={(e) => setNewTreatmentDate(e.target.value)}
+                    className="input"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-neutral-600">Teşhis (opsiyonel)</span>
+                  <input
+                    value={newTreatmentDiagnosis}
+                    onChange={(e) => setNewTreatmentDiagnosis(e.target.value)}
+                    placeholder="örn. PNÖMONİ"
+                    className="input"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-neutral-600">Tedavi</span>
+                  <textarea
+                    value={newTreatmentDescription}
+                    onChange={(e) => setNewTreatmentDescription(e.target.value)}
+                    placeholder="örn. CLAVON-C VİT-B VİT"
+                    className="input"
+                    rows={2}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={savingNewTreatment || !newTreatmentDescription.trim()}
+                  className="btn-primary"
+                >
+                  {savingNewTreatment ? "Kaydediliyor..." : "Kaydet"}
+                </button>
+              </form>
+            )}
+
+            {sortedTreatments.length === 0 ? (
+              <p className="text-sm text-neutral-400">Kayıtlı tedavi yok.</p>
+            ) : (
+              <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                {sortedTreatments.map((t) => (
+                  <div key={t.id} className="rounded-md border border-neutral-100 px-2 py-1.5 text-xs">
+                    <p className="font-medium text-neutral-800">
+                      {formatDate(t.treatment_date)}
+                      {t.diagnosis && <span className="ml-2 text-neutral-500">{t.diagnosis}</span>}
+                    </p>
+                    <p className="text-neutral-600">{t.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

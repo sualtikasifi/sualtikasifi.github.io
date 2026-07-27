@@ -321,6 +321,22 @@ create table if not exists calf_treatment_status (
   updated_by uuid references profiles (id)
 );
 
+-- 15b. Buzagi tedavi gecmisi (hangi tarihte hangi teshis/tedavi yapildi,
+-- gunluk log). calf_treatment_status'tan farkli olarak bu bir gecmis
+-- kaydi, anlik kirmizi/yesil durumu bu tabloyla degil o tabloyla belirlenir.
+create table if not exists calf_treatments (
+  id uuid primary key default gen_random_uuid(),
+  animal_id uuid not null references animals (id) on delete cascade,
+  treatment_date date not null,
+  diagnosis text,
+  description text not null,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists calf_treatments_animal_idx on calf_treatments (animal_id);
+create index if not exists calf_treatments_date_idx on calf_treatments (treatment_date);
+
 -- 16. Push bildirim abonelikleri (her cihaz/tarayici icin bir kayit)
 create table if not exists push_subscriptions (
   id uuid primary key default gen_random_uuid(),
@@ -446,6 +462,7 @@ alter table shift_notes enable row level security;
 alter table calf_notes enable row level security;
 alter table calf_housing_slots enable row level security;
 alter table calf_treatment_status enable row level security;
+alter table calf_treatments enable row level security;
 alter table task_animals enable row level security;
 alter table push_subscriptions enable row level security;
 
@@ -539,6 +556,11 @@ create policy "calf_treatment_status_select" on calf_treatment_status for select
 create policy "calf_treatment_status_insert" on calf_treatment_status for insert to authenticated with check (has_perm('calves'));
 create policy "calf_treatment_status_update" on calf_treatment_status for update to authenticated using (has_perm('calves'));
 create policy "calf_treatment_status_delete" on calf_treatment_status for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_treatments_select" on calf_treatments for select to authenticated using (true);
+create policy "calf_treatments_insert" on calf_treatments for insert to authenticated with check (has_perm('calves'));
+create policy "calf_treatments_update" on calf_treatments for update to authenticated using (has_perm('calves'));
+create policy "calf_treatments_delete" on calf_treatments for delete to authenticated using (has_perm('calves'));
 
 create policy "medicines_select" on medicines for select to authenticated using (true);
 create policy "medicines_insert" on medicines for insert to authenticated with check (has_perm('medicines'));

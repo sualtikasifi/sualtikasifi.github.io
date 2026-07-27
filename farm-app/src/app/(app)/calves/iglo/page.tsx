@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import {
   assignCalfToSlot,
   createCalfFeeding,
+  createCalfTreatment,
   listAnimals,
   listCalfFeedings,
   listCalfHousingSlots,
+  listCalfTreatments,
   listCalfTreatmentStatuses,
   setCalfTreatmentStatus,
 } from "@/lib/data";
-import { Animal, CalfFeeding, CalfHousingSlot, CalfTreatmentStatus } from "@/lib/types";
+import { Animal, CalfFeeding, CalfHousingSlot, CalfTreatment, CalfTreatmentStatus } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { CalfNotesPanel } from "@/components/CalfNotesPanel";
 import { CalfSlotBox } from "@/components/CalfSlotBox";
@@ -23,6 +25,7 @@ export default function IgloPage() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [feedings, setFeedings] = useState<CalfFeeding[]>([]);
   const [treatmentStatuses, setTreatmentStatuses] = useState<CalfTreatmentStatus[]>([]);
+  const [treatments, setTreatments] = useState<CalfTreatment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
@@ -33,32 +36,36 @@ export default function IgloPage() {
       listAnimals(),
       listCalfFeedings(),
       listCalfTreatmentStatuses(),
+      listCalfTreatments(),
     ]);
   }
 
   useEffect(() => {
-    loadData().then(([s, other, a, f, t]) => {
+    loadData().then(([s, other, a, f, t, tr]) => {
       setSlots(s);
       setOtherStructureSlots(other);
       setAnimals(a);
       setFeedings(f);
       setTreatmentStatuses(t);
+      setTreatments(tr);
       setLoading(false);
     });
   }, []);
 
   async function refresh() {
-    const [s, other, a, f, t] = await loadData();
+    const [s, other, a, f, t, tr] = await loadData();
     setSlots(s);
     setOtherStructureSlots(other);
     setAnimals(a);
     setFeedings(f);
     setTreatmentStatuses(t);
+    setTreatments(tr);
   }
 
   const animalById = (id: string | null) => (id ? animals.find((a) => a.id === id) : undefined);
   const treatmentFor = (animalId: string) => treatmentStatuses.find((t) => t.animal_id === animalId);
   const feedingsFor = (animalId: string) => feedings.filter((f) => f.animal_id === animalId);
+  const treatmentsFor = (animalId: string) => treatments.filter((t) => t.animal_id === animalId);
 
   const assignedElsewhere = new Set(
     [...slots, ...otherStructureSlots].map((s) => s.animal_id).filter((id): id is string => !!id)
@@ -80,6 +87,14 @@ export default function IgloPage() {
 
   async function handleSetTreatment(animalId: string, underTreatment: boolean, note: string | null) {
     await setCalfTreatmentStatus(animalId, underTreatment, note, profile?.id ?? null);
+    await refresh();
+  }
+
+  async function handleAddTreatment(
+    animalId: string,
+    input: { treatment_date: string; diagnosis: string | null; description: string }
+  ) {
+    await createCalfTreatment({ animal_id: animalId, created_by: profile?.id ?? null, ...input });
     await refresh();
   }
 
@@ -136,6 +151,7 @@ export default function IgloPage() {
           animal={animalById(selectedSlot.animal_id)}
           feedings={selectedSlot.animal_id ? feedingsFor(selectedSlot.animal_id) : []}
           treatmentStatus={selectedSlot.animal_id ? treatmentFor(selectedSlot.animal_id) : undefined}
+          treatments={selectedSlot.animal_id ? treatmentsFor(selectedSlot.animal_id) : []}
           availableCalves={availableCalves}
           onAssign={(animalId) => handleAssign(selectedSlot.id, animalId)}
           onUnassign={() => handleUnassign(selectedSlot.id)}
@@ -143,6 +159,9 @@ export default function IgloPage() {
             selectedSlot.animal_id
               ? handleSetTreatment(selectedSlot.animal_id, underTreatment, note)
               : Promise.resolve()
+          }
+          onAddTreatment={(input) =>
+            selectedSlot.animal_id ? handleAddTreatment(selectedSlot.animal_id, input) : Promise.resolve()
           }
           onLogFeeding={(drank) =>
             selectedSlot.animal_id ? handleLogFeeding(selectedSlot.animal_id, drank) : Promise.resolve()

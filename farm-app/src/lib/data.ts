@@ -7,6 +7,7 @@ import {
   CalfHousingSlot,
   CalfHousingStructure,
   CalfNote,
+  CalfTreatment,
   CalfTreatmentStatus,
   Embryo,
   Insemination,
@@ -766,6 +767,24 @@ export async function setCalfTreatmentStatus(
     .single();
   if (error) throw error;
   return data as CalfTreatmentStatus;
+}
+
+export async function listCalfTreatments(animalId?: string): Promise<CalfTreatment[]> {
+  if (isDemoMode) return mock.demoListCalfTreatments(animalId);
+  let query = supabase!.from("calf_treatments").select("*").order("treatment_date", { ascending: false });
+  if (animalId) query = query.eq("animal_id", animalId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as CalfTreatment[];
+}
+
+export async function createCalfTreatment(
+  input: Omit<CalfTreatment, "id" | "created_at">
+): Promise<CalfTreatment> {
+  if (isDemoMode) return mock.demoCreateCalfTreatment(input);
+  const { data, error } = await supabase!.from("calf_treatments").insert(input).select().single();
+  if (error) throw error;
+  return data as CalfTreatment;
 }
 
 // --- Medicines (asi/ilac stok takibi) ---
