@@ -2,7 +2,10 @@ import {
   Animal,
   Bull,
   CalfFeeding,
+  CalfHousingSlot,
+  CalfHousingStructure,
   CalfNote,
+  CalfTreatmentStatus,
   Embryo,
   Insemination,
   MastitisDose,
@@ -22,6 +25,8 @@ import {
   seedAnimals,
   seedBulls,
   seedCalfFeedings,
+  seedCalfHousingSlots,
+  seedCalfTreatmentStatuses,
   seedEmbryos,
   seedInseminations,
   seedMastitisDoses,
@@ -55,6 +60,8 @@ interface DemoDb {
   medicines: Medicine[];
   shiftNotes: ShiftNote[];
   calfNotes: CalfNote[];
+  calfHousingSlots: CalfHousingSlot[];
+  calfTreatmentStatuses: CalfTreatmentStatus[];
   pushSubscriptions: PushSubscriptionRecord[];
 }
 
@@ -76,6 +83,8 @@ function initialDb(): DemoDb {
     medicines: seedMedicines,
     shiftNotes: [],
     calfNotes: [],
+    calfHousingSlots: seedCalfHousingSlots,
+    calfTreatmentStatuses: seedCalfTreatmentStatuses,
     pushSubscriptions: [],
   };
 }
@@ -108,6 +117,8 @@ function loadDb(): DemoDb {
     medicines: parsed.medicines ?? seedMedicines,
     shiftNotes: parsed.shiftNotes ?? [],
     calfNotes: parsed.calfNotes ?? [],
+    calfHousingSlots: parsed.calfHousingSlots ?? seedCalfHousingSlots,
+    calfTreatmentStatuses: parsed.calfTreatmentStatuses ?? seedCalfTreatmentStatuses,
     pushSubscriptions: parsed.pushSubscriptions ?? [],
   };
 }
@@ -752,6 +763,48 @@ export function demoDeleteCalfNote(id: string): void {
   const db = loadDb();
   db.calfNotes = db.calfNotes.filter((n) => n.id !== id);
   saveDb(db);
+}
+
+// --- Buzagi barinma yerlesimi (demo) ---
+
+export function demoListCalfHousingSlots(structure: CalfHousingStructure): CalfHousingSlot[] {
+  return loadDb()
+    .calfHousingSlots.filter((s) => s.structure === structure)
+    .sort((a, b) => a.group_index - b.group_index || a.slot_index - b.slot_index);
+}
+
+export function demoAssignCalfToSlot(slotId: string, animalId: string | null): CalfHousingSlot | undefined {
+  const db = loadDb();
+  const idx = db.calfHousingSlots.findIndex((s) => s.id === slotId);
+  if (idx === -1) return undefined;
+  db.calfHousingSlots[idx] = { ...db.calfHousingSlots[idx], animal_id: animalId };
+  saveDb(db);
+  return db.calfHousingSlots[idx];
+}
+
+export function demoListCalfTreatmentStatuses(): CalfTreatmentStatus[] {
+  return loadDb().calfTreatmentStatuses;
+}
+
+export function demoSetCalfTreatmentStatus(
+  animalId: string,
+  underTreatment: boolean,
+  note: string | null,
+  updatedBy: string | null
+): CalfTreatmentStatus {
+  const db = loadDb();
+  const status: CalfTreatmentStatus = {
+    animal_id: animalId,
+    under_treatment: underTreatment,
+    note,
+    updated_at: new Date().toISOString(),
+    updated_by: updatedBy,
+  };
+  const idx = db.calfTreatmentStatuses.findIndex((s) => s.animal_id === animalId);
+  if (idx === -1) db.calfTreatmentStatuses.push(status);
+  else db.calfTreatmentStatuses[idx] = status;
+  saveDb(db);
+  return status;
 }
 
 // --- Medicines (asi/ilac stok takibi) ---

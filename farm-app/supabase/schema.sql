@@ -297,7 +297,31 @@ create table if not exists calf_notes (
 
 create index if not exists calf_notes_animal_idx on calf_notes (animal_id);
 
--- 14. Push bildirim abonelikleri (her cihaz/tarayici icin bir kayit)
+-- 14. Buzagi barinma yerlesimi: Buzagilik (2 sira kulube) ve Iglo (6 kare,
+-- her biri 2x5 kutucuk) icin sabit, onceden olusturulmus konum kayitlari.
+-- animal_id bos ise o kutucuk/kulube henuz bos demektir.
+create table if not exists calf_housing_slots (
+  id uuid primary key default gen_random_uuid(),
+  structure text not null check (structure in ('buzagilik', 'iglo')),
+  group_index integer not null,
+  slot_index integer not null,
+  animal_id uuid references animals (id) on delete set null,
+  created_at timestamptz not null default now(),
+  unique (structure, group_index, slot_index)
+);
+
+-- 15. Buzagi tedavi durumu (kulube/iglo kutucugunun kirmizi/yesil renginin
+-- kaynagi). calf_notes'tan ayri tutuluyor cunku bu bir anlik durum bayragi,
+-- gecmis kayit degil.
+create table if not exists calf_treatment_status (
+  animal_id uuid primary key references animals (id) on delete cascade,
+  under_treatment boolean not null default false,
+  note text,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references profiles (id)
+);
+
+-- 16. Push bildirim abonelikleri (her cihaz/tarayici icin bir kayit)
 create table if not exists push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references profiles (id) on delete cascade,
@@ -420,6 +444,8 @@ alter table calf_feedings enable row level security;
 alter table medicines enable row level security;
 alter table shift_notes enable row level security;
 alter table calf_notes enable row level security;
+alter table calf_housing_slots enable row level security;
+alter table calf_treatment_status enable row level security;
 alter table task_animals enable row level security;
 alter table push_subscriptions enable row level security;
 
@@ -504,6 +530,16 @@ create policy "shift_notes_insert" on shift_notes for insert to authenticated wi
 create policy "shift_notes_update" on shift_notes for update to authenticated using (has_perm('calves'));
 create policy "shift_notes_delete" on shift_notes for delete to authenticated using (has_perm('calves'));
 
+create policy "calf_housing_slots_select" on calf_housing_slots for select to authenticated using (true);
+create policy "calf_housing_slots_insert" on calf_housing_slots for insert to authenticated with check (has_perm('calves'));
+create policy "calf_housing_slots_update" on calf_housing_slots for update to authenticated using (has_perm('calves'));
+create policy "calf_housing_slots_delete" on calf_housing_slots for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_treatment_status_select" on calf_treatment_status for select to authenticated using (true);
+create policy "calf_treatment_status_insert" on calf_treatment_status for insert to authenticated with check (has_perm('calves'));
+create policy "calf_treatment_status_update" on calf_treatment_status for update to authenticated using (has_perm('calves'));
+create policy "calf_treatment_status_delete" on calf_treatment_status for delete to authenticated using (has_perm('calves'));
+
 create policy "medicines_select" on medicines for select to authenticated using (true);
 create policy "medicines_insert" on medicines for insert to authenticated with check (has_perm('medicines'));
 create policy "medicines_update" on medicines for update to authenticated using (has_perm('medicines'));
@@ -529,3 +565,14 @@ create policy "task_images_insert_authenticated" on storage.objects
 
 create policy "task_images_select_public" on storage.objects
   for select to public using (bucket_id = 'task-images');
+
+-- Buzagilik: 20'lik ve 16'lik iki sira kulube (group_index 0 = 20'lik sira,
+-- group_index 1 = 16'lik sira). Iglo: 6 kare (group_index 0-5), her biri
+-- 2x5 = 10 kutucuk (slot_index 0-9). Idempotent: tekrar calistirmak guvenli.
+insert into calf_housing_slots (structure, group_index, slot_index)
+select 'buzagilik', 0, gs from generate_series(0, 19) gs
+union all
+select 'buzagilik', 1, gs from generate_series(0, 15) gs
+union all
+select 'iglo', g, s from generate_series(0, 5) g, generate_series(0, 9) s
+on conflict (structure, group_index, slot_index) do nothing;

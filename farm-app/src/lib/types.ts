@@ -229,6 +229,25 @@ export interface Medicine {
   updated_at: string;
 }
 
+export type CalfHousingStructure = "buzagilik" | "iglo";
+
+export interface CalfHousingSlot {
+  id: string;
+  structure: CalfHousingStructure;
+  group_index: number;
+  slot_index: number;
+  animal_id: string | null;
+  created_at: string;
+}
+
+export interface CalfTreatmentStatus {
+  animal_id: string;
+  under_treatment: boolean;
+  note: string | null;
+  updated_at: string;
+  updated_by: string | null;
+}
+
 export interface PushSubscriptionRecord {
   id: string;
   profile_id: string;
