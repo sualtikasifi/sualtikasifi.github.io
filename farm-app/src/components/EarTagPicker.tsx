@@ -26,7 +26,17 @@ export function EarTagPicker({ animals, selectedId, onSelect, onClear }: Props) 
   }
 
   const q = search.trim().toLowerCase();
-  const filtered = q ? animals.filter((a) => a.ear_tag.toLowerCase().includes(q)) : animals;
+  // Tam eslesme ve "ile baslayan" sonuclar, uzun listelerde alaka duzeyi
+  // dusuk sonuclarin (sadece son eklenme sirasina gore) araniani gizlemesin
+  // diye once gelir.
+  const filtered = q
+    ? animals
+        .filter((a) => a.ear_tag.toLowerCase().includes(q))
+        .sort((a, b) => {
+          const rank = (tag: string) => (tag === q ? 0 : tag.startsWith(q) ? 1 : 2);
+          return rank(a.ear_tag.toLowerCase()) - rank(b.ear_tag.toLowerCase());
+        })
+    : animals;
 
   return (
     <div>
