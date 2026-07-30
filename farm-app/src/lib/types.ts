@@ -247,6 +247,80 @@ export interface CalfTreatment {
   diagnosis: string | null;
   protocol_day: number | null;
   description: string;
+  note: string | null;
+  course_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type CalfMealHour = 3 | 9 | 15 | 21;
+
+export interface CalfMeal {
+  id: string;
+  animal_id: string;
+  meal_date: string;
+  meal_hour: CalfMealHour;
+  drank: boolean;
+  pectolit: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CalfProtocol {
+  id: string;
+  name: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CalfProtocolDay {
+  id: string;
+  protocol_id: string;
+  day_number: number;
+  medicines: string;
+}
+
+export type CourseStatus = "aktif" | "tamamlandi" | "iptal";
+
+export interface CalfTreatmentCourse {
+  id: string;
+  animal_id: string;
+  protocol_id: string;
+  start_date: string;
+  status: CourseStatus;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CalfBirthRecord {
+  animal_id: string;
+  born_at: string | null;
+  blood_brix: number | null;
+  blood_brix_at: string | null;
+  colostrum1_liters: number | null;
+  colostrum1_brix: number | null;
+  colostrum2_liters: number | null;
+  colostrum2_brix: number | null;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export interface CalfPectolit {
+  animal_id: string;
+  remaining_meals: number;
+  started_at: string;
+  started_by: string | null;
+}
+
+export interface VaccinationPlan {
+  id: string;
+  vaccine_name: string;
+  target: string | null;
+  planned_date: string;
+  done: boolean;
+  done_by: string | null;
+  done_at: string | null;
+  notes: string | null;
   created_by: string | null;
   created_at: string;
 }

@@ -1,12 +1,20 @@
 import {
   Animal,
   Bull,
+  CalfBirthRecord,
   CalfFeeding,
   CalfHousingSlot,
   CalfHousingStructure,
+  CalfMeal,
+  CalfMealHour,
   CalfNote,
+  CalfPectolit,
+  CalfProtocol,
+  CalfProtocolDay,
   CalfTreatment,
+  CalfTreatmentCourse,
   CalfTreatmentStatus,
+  CourseStatus,
   Embryo,
   Insemination,
   MastitisDose,
@@ -20,6 +28,7 @@ import {
   ShiftNote,
   Task,
   TaskAnimal,
+  VaccinationPlan,
 } from "@/lib/types";
 import {
   DEMO_USER_ID,
@@ -27,6 +36,8 @@ import {
   seedBulls,
   seedCalfFeedings,
   seedCalfHousingSlots,
+  seedCalfProtocolDays,
+  seedCalfProtocols,
   seedCalfTreatmentStatuses,
   seedEmbryos,
   seedInseminations,
@@ -64,6 +75,13 @@ interface DemoDb {
   calfHousingSlots: CalfHousingSlot[];
   calfTreatmentStatuses: CalfTreatmentStatus[];
   calfTreatments: CalfTreatment[];
+  calfMeals: CalfMeal[];
+  calfProtocols: CalfProtocol[];
+  calfProtocolDays: CalfProtocolDay[];
+  calfTreatmentCourses: CalfTreatmentCourse[];
+  calfBirthRecords: CalfBirthRecord[];
+  calfPectolit: CalfPectolit[];
+  vaccinationPlans: VaccinationPlan[];
   pushSubscriptions: PushSubscriptionRecord[];
 }
 
@@ -88,6 +106,13 @@ function initialDb(): DemoDb {
     calfHousingSlots: seedCalfHousingSlots,
     calfTreatmentStatuses: seedCalfTreatmentStatuses,
     calfTreatments: [],
+    calfMeals: [],
+    calfProtocols: seedCalfProtocols,
+    calfProtocolDays: seedCalfProtocolDays,
+    calfTreatmentCourses: [],
+    calfBirthRecords: [],
+    calfPectolit: [],
+    vaccinationPlans: [],
     pushSubscriptions: [],
   };
 }
@@ -123,6 +148,13 @@ function loadDb(): DemoDb {
     calfHousingSlots: parsed.calfHousingSlots ?? seedCalfHousingSlots,
     calfTreatmentStatuses: parsed.calfTreatmentStatuses ?? seedCalfTreatmentStatuses,
     calfTreatments: parsed.calfTreatments ?? [],
+    calfMeals: parsed.calfMeals ?? [],
+    calfProtocols: parsed.calfProtocols ?? seedCalfProtocols,
+    calfProtocolDays: parsed.calfProtocolDays ?? seedCalfProtocolDays,
+    calfTreatmentCourses: parsed.calfTreatmentCourses ?? [],
+    calfBirthRecords: parsed.calfBirthRecords ?? [],
+    calfPectolit: parsed.calfPectolit ?? [],
+    vaccinationPlans: parsed.vaccinationPlans ?? [],
     pushSubscriptions: parsed.pushSubscriptions ?? [],
   };
 }
@@ -822,6 +854,180 @@ export function demoCreateCalfTreatment(input: Omit<CalfTreatment, "id" | "creat
   db.calfTreatments.push(treatment);
   saveDb(db);
   return treatment;
+}
+
+// --- Buzagi mama ogunleri ---
+
+export function demoListCalfMeals(sinceDate?: string): CalfMeal[] {
+  const all = loadDb().calfMeals.sort((a, b) => b.meal_date.localeCompare(a.meal_date));
+  return sinceDate ? all.filter((m) => m.meal_date >= sinceDate) : all;
+}
+
+export function demoUpsertCalfMeal(input: {
+  animal_id: string;
+  meal_date: string;
+  meal_hour: CalfMealHour;
+  drank: boolean;
+  pectolit: boolean;
+  created_by: string | null;
+}): CalfMeal {
+  const db = loadDb();
+  const idx = db.calfMeals.findIndex(
+    (m) => m.animal_id === input.animal_id && m.meal_date === input.meal_date && m.meal_hour === input.meal_hour
+  );
+  if (idx >= 0) {
+    db.calfMeals[idx] = { ...db.calfMeals[idx], ...input };
+    saveDb(db);
+    return db.calfMeals[idx];
+  }
+  const meal: CalfMeal = { ...input, id: newId("calfmeal"), created_at: new Date().toISOString() };
+  db.calfMeals.push(meal);
+  saveDb(db);
+  return meal;
+}
+
+// --- Buzagi tedavi protokolleri ve kurleri ---
+
+export function demoListCalfProtocols(): CalfProtocol[] {
+  return loadDb().calfProtocols.sort((a, b) => a.name.localeCompare(b.name, "tr"));
+}
+
+export function demoListCalfProtocolDays(): CalfProtocolDay[] {
+  return loadDb().calfProtocolDays.sort((a, b) => a.day_number - b.day_number);
+}
+
+export function demoListCalfTreatmentCourses(): CalfTreatmentCourse[] {
+  return loadDb().calfTreatmentCourses.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export function demoCreateCalfTreatmentCourse(input: {
+  animal_id: string;
+  protocol_id: string;
+  start_date: string;
+  created_by: string | null;
+}): CalfTreatmentCourse {
+  const db = loadDb();
+  const course: CalfTreatmentCourse = {
+    ...input,
+    id: newId("course"),
+    status: "aktif",
+    created_at: new Date().toISOString(),
+  };
+  db.calfTreatmentCourses.push(course);
+  saveDb(db);
+  return course;
+}
+
+export function demoSetCalfTreatmentCourseStatus(id: string, status: CourseStatus): CalfTreatmentCourse | undefined {
+  const db = loadDb();
+  const idx = db.calfTreatmentCourses.findIndex((c) => c.id === id);
+  if (idx === -1) return undefined;
+  db.calfTreatmentCourses[idx] = { ...db.calfTreatmentCourses[idx], status };
+  saveDb(db);
+  return db.calfTreatmentCourses[idx];
+}
+
+// --- Dogum kayitlari ---
+
+export function demoListCalfBirthRecords(): CalfBirthRecord[] {
+  return loadDb().calfBirthRecords;
+}
+
+export function demoUpsertCalfBirthRecord(
+  animalId: string,
+  patch: Partial<Omit<CalfBirthRecord, "animal_id" | "updated_at" | "updated_by">>,
+  updatedBy: string | null
+): CalfBirthRecord {
+  const db = loadDb();
+  const idx = db.calfBirthRecords.findIndex((r) => r.animal_id === animalId);
+  const base: CalfBirthRecord =
+    idx >= 0
+      ? db.calfBirthRecords[idx]
+      : {
+          animal_id: animalId,
+          born_at: null,
+          blood_brix: null,
+          blood_brix_at: null,
+          colostrum1_liters: null,
+          colostrum1_brix: null,
+          colostrum2_liters: null,
+          colostrum2_brix: null,
+          updated_at: new Date().toISOString(),
+          updated_by: updatedBy,
+        };
+  const next: CalfBirthRecord = { ...base, ...patch, updated_at: new Date().toISOString(), updated_by: updatedBy };
+  if (idx >= 0) db.calfBirthRecords[idx] = next;
+  else db.calfBirthRecords.push(next);
+  saveDb(db);
+  return next;
+}
+
+// --- Pectolit takibi ---
+
+export function demoListCalfPectolit(): CalfPectolit[] {
+  return loadDb().calfPectolit;
+}
+
+export function demoSetCalfPectolit(animalId: string, remainingMeals: number, startedBy: string | null): CalfPectolit {
+  const db = loadDb();
+  const idx = db.calfPectolit.findIndex((p) => p.animal_id === animalId);
+  const record: CalfPectolit = {
+    animal_id: animalId,
+    remaining_meals: remainingMeals,
+    started_at: new Date().toISOString(),
+    started_by: startedBy,
+  };
+  if (idx >= 0) db.calfPectolit[idx] = record;
+  else db.calfPectolit.push(record);
+  saveDb(db);
+  return record;
+}
+
+// --- Asi planlari ---
+
+export function demoListVaccinationPlans(): VaccinationPlan[] {
+  return loadDb().vaccinationPlans.sort((a, b) => b.planned_date.localeCompare(a.planned_date));
+}
+
+export function demoCreateVaccinationPlan(input: {
+  vaccine_name: string;
+  target: string | null;
+  planned_date: string;
+  notes: string | null;
+  created_by: string | null;
+}): VaccinationPlan {
+  const db = loadDb();
+  const plan: VaccinationPlan = {
+    ...input,
+    id: newId("vaccine"),
+    done: false,
+    done_by: null,
+    done_at: null,
+    created_at: new Date().toISOString(),
+  };
+  db.vaccinationPlans.push(plan);
+  saveDb(db);
+  return plan;
+}
+
+export function demoSetVaccinationPlanDone(id: string, done: boolean, doneBy: string | null): VaccinationPlan | undefined {
+  const db = loadDb();
+  const idx = db.vaccinationPlans.findIndex((v) => v.id === id);
+  if (idx === -1) return undefined;
+  db.vaccinationPlans[idx] = {
+    ...db.vaccinationPlans[idx],
+    done,
+    done_by: done ? doneBy : null,
+    done_at: done ? new Date().toISOString() : null,
+  };
+  saveDb(db);
+  return db.vaccinationPlans[idx];
+}
+
+export function demoDeleteVaccinationPlan(id: string): void {
+  const db = loadDb();
+  db.vaccinationPlans = db.vaccinationPlans.filter((v) => v.id !== id);
+  saveDb(db);
 }
 
 // --- Medicines (asi/ilac stok takibi) ---

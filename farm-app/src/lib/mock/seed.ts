@@ -1,4 +1,4 @@
-import { Animal, Bull, CalfFeeding, CalfHousingSlot, CalfTreatmentStatus, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuSession, Profile, SemenInventory, Task, TaskAnimal } from "@/lib/types";
+import { Animal, Bull, CalfFeeding, CalfHousingSlot, CalfProtocol, CalfProtocolDay, CalfTreatmentStatus, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuSession, Profile, SemenInventory, Task, TaskAnimal } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -627,4 +627,56 @@ export const seedMedicines: Medicine[] = [
     created_at: daysAgo(45),
     updated_at: daysAgo(1),
   },
+];
+
+export const seedCalfProtocols: CalfProtocol[] = [
+  { id: "protocol-pnomoni", name: "Pnömoni Tedavisi", created_by: null, created_at: daysAgo(30) },
+  { id: "protocol-ishal", name: "İshal Tedavisi", created_by: null, created_at: daysAgo(30) },
+  { id: "protocol-ishal-pnomoni", name: "İshal+Pnömoni Tedavisi", created_by: null, created_at: daysAgo(30) },
+  { id: "protocol-koksidiyoz", name: "Koksidiyoz Tedavisi", created_by: null, created_at: daysAgo(30) },
+  { id: "protocol-omfalitis", name: "Omfalitis Tedavisi", created_by: null, created_at: daysAgo(30) },
+  { id: "protocol-timpani", name: "Timpani Tedavisi", created_by: null, created_at: daysAgo(30) },
+  { id: "protocol-mycoplasma", name: "Mycoplasma Tedavisi", created_by: null, created_at: daysAgo(30) },
+];
+
+const protocolDay = (protocolId: string, day: number, medicines: string): CalfProtocolDay => ({
+  id: `${protocolId}-day-${day}`,
+  protocol_id: protocolId,
+  day_number: day,
+  medicines,
+});
+
+export const seedCalfProtocolDays: CalfProtocolDay[] = [
+  protocolDay("protocol-pnomoni", 1, "BAYTRİL-COBACTAN-C VİT-B VİT-COXDUO"),
+  protocolDay("protocol-pnomoni", 2, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-pnomoni", 3, "BAYTRİL-COBACTAN-C VİT-B VİT-COXDUO"),
+  protocolDay("protocol-pnomoni", 4, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-pnomoni", 5, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-ishal", 1, "BAYTRİL-COBACTAN-C VİT-B VİT-COXDUO"),
+  protocolDay("protocol-ishal", 2, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-ishal", 3, "BAYTRİL-COBACTAN-C VİT-B VİT-COXDUO"),
+  protocolDay("protocol-ishal", 4, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-ishal", 5, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-ishal-pnomoni", 1, "BAYTRİL-COBACTAN-C VİT-B VİT-FULİMED"),
+  protocolDay("protocol-ishal-pnomoni", 2, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-ishal-pnomoni", 3, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-ishal-pnomoni", 4, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-ishal-pnomoni", 5, "BAYTRİL-COBACTAN-C VİT-B VİT"),
+  protocolDay("protocol-koksidiyoz", 1, "REPTOPEN-PRİMOXAL-C VİT-B VİT-FULİMED"),
+  protocolDay("protocol-koksidiyoz", 2, "REPTOPEN-PRİMOXAL-C VİT-B VİT"),
+  protocolDay("protocol-koksidiyoz", 3, "REPTOPEN-PRİMOXAL-C VİT-B VİT"),
+  protocolDay("protocol-koksidiyoz", 4, "REPTOPEN-PRİMOXAL-C VİT-B VİT"),
+  protocolDay("protocol-koksidiyoz", 5, "REPTOPEN-PRİMOXAL-C VİT-B VİT"),
+  protocolDay("protocol-omfalitis", 1, "PRİMAMYCİN LA-ACTİMİSİN-C VİT-B VİT-FULİMED"),
+  protocolDay("protocol-omfalitis", 2, "REPTOPEN-PRİMOXAL-C VİT-B VİT"),
+  protocolDay("protocol-omfalitis", 3, "PRİMAMYCİN LA-ACTİMİSİN-C VİT-B VİT"),
+  protocolDay("protocol-timpani", 1, "B VİT-BROMOSCOL-BLOTSİM"),
+  protocolDay("protocol-timpani", 2, "B VİT-BROMOSCOL"),
+  protocolDay("protocol-timpani", 3, "B VİT-BROMOSCOL"),
+  protocolDay("protocol-timpani", 4, "KONTROL"),
+  protocolDay("protocol-mycoplasma", 1, "OKSİTETRASİKLİN-TİLMİKOSİN-FULİMED-KORTİKOSTREOİD-B VİT(10CC)-C VİT-ADEMİN-ACTİVATE-FOSFOVET-YELDİF-GLUTELLAC"),
+  protocolDay("protocol-mycoplasma", 2, "B VİT(10CC)-C VİT-FOSFOVET-GLUTELLAC"),
+  protocolDay("protocol-mycoplasma", 3, "OKSİTETRASİKLİN-YELDİF-B VİT(10CC)-C VİT-FOSFOVET-GLUTELLAC"),
+  protocolDay("protocol-mycoplasma", 4, "B VİT(10CC)-C VİT-FOSFOVET-GLUTELLAC"),
+  protocolDay("protocol-mycoplasma", 5, "B VİT(10CC)-C VİT-FOSFOVET-GLUTELLAC"),
 ];
