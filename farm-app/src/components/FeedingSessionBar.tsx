@@ -10,11 +10,11 @@ interface Props {
   onSelectMeal: (slot: MealSlotRef) => void;
   onFinish: () => void;
   canManage: boolean;
-  // Coklu secim: acikken kulubelere tiklamak "icmedi" olarak isaretler,
-  // Kaydet hepsini birden yazar.
-  bulkMode: boolean;
-  bulkCount: number;
-  onToggleBulk: () => void;
+  // Giris modunda kulubelere tiklanarak tek ya da coklu secim yapilir;
+  // Icti/Icmedi butonlari secilenlerin hepsini birden isler.
+  selectionCount: number;
+  marking: boolean;
+  onMarkSelected: (drank: boolean) => void;
 }
 
 function formatToday(): string {
@@ -31,9 +31,9 @@ export function FeedingSessionBar({
   onSelectMeal,
   onFinish,
   canManage,
-  bulkMode,
-  bulkCount,
-  onToggleBulk,
+  selectionCount,
+  marking,
+  onMarkSelected,
 }: Props) {
   const slots = todayMealSlots();
   const idSet = new Set(slotAnimalIds);
@@ -74,22 +74,27 @@ export function FeedingSessionBar({
       {activeMeal && (
         <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
           <p className="text-xs text-amber-900">
-            <span className="font-semibold">{formatMealHour(activeMeal.hour)} öğünü işaretleniyor.</span>{" "}
-            {bulkMode
-              ? "Mamasını İÇMEYEN buzağıların kulübelerine tıklayın; Kaydet hepsini birden işler."
-              : "Kulübeye tıklayıp içti/içmedi seçin. Bilgi girilmeyenler \u0022içti\u0022 sayılır."}
+            <span className="font-semibold">{formatMealHour(activeMeal.hour)} öğünü işaretleniyor.</span> Kulübelere
+            tıklayarak tek veya birden çok buzağı seçin, sonra İçti/İçmedi&apos;ye basın. Bilgi girilmeyenler
+            &quot;içti&quot; sayılır.
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-amber-800">Seçili: {selectionCount}</span>
             <button
               type="button"
-              onClick={onToggleBulk}
-              className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-                bulkMode
-                  ? "border-red-500 bg-red-100 text-red-800"
-                  : "border-amber-400 bg-white text-amber-800 hover:bg-amber-100"
-              }`}
+              disabled={selectionCount === 0 || marking}
+              onClick={() => onMarkSelected(true)}
+              className="rounded-md border border-green-600 bg-green-50 px-3 py-1 text-xs font-semibold text-green-800 transition-colors hover:bg-green-100 disabled:opacity-40"
             >
-              {bulkMode ? `İçmeyen seçimi: ${bulkCount} buzağı` : "Çoklu Seçim (içmeyenler)"}
+              {marking ? "..." : "İçti"}
+            </button>
+            <button
+              type="button"
+              disabled={selectionCount === 0 || marking}
+              onClick={() => onMarkSelected(false)}
+              className="rounded-md border border-red-500 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-40"
+            >
+              {marking ? "..." : "İçmedi"}
             </button>
             <div className="flex-1" />
             <button type="button" onClick={onFinish} className="btn-primary shrink-0">

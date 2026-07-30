@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   assignCalfToSlot,
   createCalfNote,
+  deleteCalfNote,
   createCalfProtocol,
   createCalfTreatment,
   createCalfTreatmentCourse,
@@ -138,8 +139,13 @@ export function useCalfCare(structure: CalfHousingStructure) {
   const notesFor = (animalId: string) => calfNotes.filter((n) => n.animal_id === animalId);
   const legacyStatusFor = (animalId: string) => treatmentStatuses.find((t) => t.animal_id === animalId);
   const hasActiveCourse = (animalId: string) => courses.some((c) => c.animal_id === animalId && c.status === "aktif");
+  // Bugunu (veya ileri bir gunu) kapsayan tedavi gecmisi kaydi olan hayvan
+  // da tedavide sayilir - Excel'den toplu yuklenen protokoller kur olarak
+  // acilmadigi icin sadece kurlara bakmak onlari kaciriyordu.
+  const hasOngoingTreatmentRecord = (animalId: string) =>
+    treatments.some((t) => t.animal_id === animalId && t.treatment_date >= todayIso());
   const underTreatment = (animalId: string) =>
-    hasActiveCourse(animalId) || !!legacyStatusFor(animalId)?.under_treatment;
+    hasActiveCourse(animalId) || hasOngoingTreatmentRecord(animalId) || !!legacyStatusFor(animalId)?.under_treatment;
   const pectolitPending = (animalId: string) => (pectolitFor(animalId)?.remaining_meals ?? 0) > 0;
   // Suresi devam eden (visible_until bugunden once olmayan) notlar.
   const activeNotesFor = (animalId: string) =>
@@ -149,8 +155,11 @@ export function useCalfCare(structure: CalfHousingStructure) {
     meals.filter((m) => m.animal_id === animalId && !m.drank && !m.exam_result);
   const activeProtocolNameFor = (animalId: string) => {
     const course = courses.find((c) => c.animal_id === animalId && c.status === "aktif");
-    if (!course) return null;
-    return protocols.find((p) => p.id === course.protocol_id)?.name ?? null;
+    if (course) return protocols.find((p) => p.id === course.protocol_id)?.name ?? null;
+    const record = treatments.find(
+      (t) => t.animal_id === animalId && t.treatment_date >= todayIso() && t.diagnosis
+    );
+    return record?.diagnosis ?? null;
   };
 
   const assignedAnywhere = new Set(
@@ -286,6 +295,11 @@ export function useCalfCare(structure: CalfHousingStructure) {
     await refresh();
   }
 
+  async function handleDeleteNote(noteId: string) {
+    await deleteCalfNote(noteId);
+    await refresh();
+  }
+
   async function handleClearLegacyStatus(animalId: string) {
     await setCalfTreatmentStatus(animalId, false, null, profile?.id ?? null);
     await refresh();
@@ -337,6 +351,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
     handleStartPectolit,
     handleCancelPectolit,
     handleAddNote,
+    handleDeleteNote,
     handleMealExam,
     handleSaveProtocol,
     handleClearLegacyStatus,

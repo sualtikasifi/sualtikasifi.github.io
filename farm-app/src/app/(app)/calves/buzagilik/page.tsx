@@ -3,13 +3,12 @@
 import { useState } from "react";
 import { CalfHousingSlot } from "@/lib/types";
 import { useCalfCare } from "@/lib/useCalfCare";
-import { MealSlotRef, findMeal } from "@/lib/meals";
+import { MealSlotRef } from "@/lib/meals";
 import { hasPermission } from "@/lib/permissions";
 import { CalfNotesPanel } from "@/components/CalfNotesPanel";
 import { CalfSlotBox } from "@/components/CalfSlotBox";
 import { CalfDetailModal, MoveTarget } from "@/components/CalfDetailModal";
 import { FeedingSessionBar } from "@/components/FeedingSessionBar";
-import { MealEntrySheet } from "@/components/MealEntrySheet";
 import { MealHistoryPanel } from "@/components/MealHistoryPanel";
 import { DailyTreatmentTable } from "@/components/DailyTreatmentTable";
 import { VaccinationPanel } from "@/components/VaccinationPanel";
@@ -28,16 +27,14 @@ export default function BuzagilikPage() {
 
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [entryMeal, setEntryMeal] = useState<MealSlotRef | null>(null);
-  const [entrySlotId, setEntrySlotId] = useState<string | null>(null);
-  const [bulkMode, setBulkMode] = useState(false);
-  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [mealSelection, setMealSelection] = useState<Set<string>>(new Set());
+  const [marking, setMarking] = useState(false);
   const [dragSlotId, setDragSlotId] = useState<string | null>(null);
 
   const columns = Array.from({ length: COLUMN_COUNT }, (_, g) =>
     care.slots.filter((s) => s.group_index === g).sort((a, b) => a.slot_index - b.slot_index)
   );
   const selectedSlot = care.slots.find((s) => s.id === selectedSlotId);
-  const entrySlot = care.slots.find((s) => s.id === entrySlotId);
 
   const emptyTargets: MoveTarget[] = [...care.slots, ...care.otherSlots]
     .filter((s) => !s.animal_id)
@@ -50,31 +47,30 @@ export default function BuzagilikPage() {
   function handleBoxClick(slot: CalfHousingSlot) {
     if (entryMeal) {
       if (!slot.animal_id) return;
-      if (bulkMode) {
-        setBulkSelected((prev) => {
-          const next = new Set(prev);
-          if (next.has(slot.animal_id!)) next.delete(slot.animal_id!);
-          else next.add(slot.animal_id!);
-          return next;
-        });
-        return;
-      }
-      setEntrySlotId(slot.id === entrySlotId ? null : slot.id);
+      setMealSelection((prev) => {
+        const next = new Set(prev);
+        if (next.has(slot.animal_id!)) next.delete(slot.animal_id!);
+        else next.add(slot.animal_id!);
+        return next;
+      });
       return;
     }
     setSelectedSlotId(slot.id === selectedSlotId ? null : slot.id);
   }
 
-  async function finishEntryMode() {
-    if (entryMeal && bulkMode && bulkSelected.size > 0) {
-      for (const animalId of bulkSelected) {
-        await care.handleMarkMeal(animalId, entryMeal, false);
-      }
+  async function markSelection(drank: boolean) {
+    if (!entryMeal || mealSelection.size === 0) return;
+    setMarking(true);
+    for (const animalId of mealSelection) {
+      await care.handleMarkMeal(animalId, entryMeal, drank);
     }
+    setMealSelection(new Set());
+    setMarking(false);
+  }
+
+  function finishEntryMode() {
     setEntryMeal(null);
-    setEntrySlotId(null);
-    setBulkMode(false);
-    setBulkSelected(new Set());
+    setMealSelection(new Set());
   }
 
   const BOX_HEIGHT = 44;
@@ -101,9 +97,7 @@ export default function BuzagilikPage() {
               alertNote={!!(slot.animal_id && care.activeNotesFor(slot.animal_id).length > 0)}
               alertExam={!!(slot.animal_id && care.unexaminedMissedFor(slot.animal_id).length > 0)}
               selected={
-                selectedSlotId === slot.id ||
-                entrySlotId === slot.id ||
-                !!(bulkMode && slot.animal_id && bulkSelected.has(slot.animal_id))
+                selectedSlotId === slot.id || !!(entryMeal && slot.animal_id && mealSelection.has(slot.animal_id))
               }
               onClick={() => handleBoxClick(slot)}
               draggable={canManage && !entryMeal}
@@ -146,13 +140,9 @@ export default function BuzagilikPage() {
           }}
           onFinish={finishEntryMode}
           canManage={canManage}
-          bulkMode={bulkMode}
-          bulkCount={bulkSelected.size}
-          onToggleBulk={() => {
-            setBulkMode((v) => !v);
-            setBulkSelected(new Set());
-            setEntrySlotId(null);
-          }}
+          selectionCount={mealSelection.size}
+          marking={marking}
+          onMarkSelected={markSelection}
         />
       )}
 
@@ -252,23 +242,13 @@ export default function BuzagilikPage() {
           onAddNote={(text, days) =>
             selectedSlot.animal_id ? care.handleAddNote(selectedSlot.animal_id, text, days) : Promise.resolve()
           }
+          onDeleteNote={(noteId) => care.handleDeleteNote(noteId)}
           onMealExam={(mealId, result) => care.handleMealExam(mealId, result)}
           onSaveProtocol={(protocolId, name, days) => care.handleSaveProtocol(protocolId, name, days)}
           onClearLegacyStatus={() =>
             selectedSlot.animal_id ? care.handleClearLegacyStatus(selectedSlot.animal_id) : Promise.resolve()
           }
           onClose={() => setSelectedSlotId(null)}
-        />
-      )}
-
-      {entryMeal && !bulkMode && entrySlot?.animal_id && (
-        <MealEntrySheet
-          animal={care.animalById(entrySlot.animal_id)!}
-          slot={entryMeal}
-          existing={findMeal(care.meals, entrySlot.animal_id, entryMeal)}
-          pectolitPending={care.pectolitPending(entrySlot.animal_id)}
-          onMark={(drank) => care.handleMarkMeal(entrySlot.animal_id!, entryMeal, drank)}
-          onClose={() => setEntrySlotId(null)}
         />
       )}
     </div>
