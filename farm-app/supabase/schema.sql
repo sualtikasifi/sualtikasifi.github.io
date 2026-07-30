@@ -394,7 +394,10 @@ $$;
 
 -- Yonetici olmayan bir kullanici kendi profilini guncellerse, yetki
 -- alanlarinin (is_admin ve can_manage_*) degismesini engeller; sadece
--- yonetici baskasinin yetkilerini degistirebilir.
+-- yonetici baskasinin yetkilerini degistirebilir. auth.uid() bos ise
+-- (SQL Editor/servis rolu uzerinden dogrudan yapilan bir degisiklik,
+-- uygulamanin kendi API'si degil) bu kontrol atlanir - zaten sadece
+-- proje sahibi SQL Editor'e erisebilir.
 create or replace function enforce_profile_permission_update()
 returns trigger
 language plpgsql
@@ -402,7 +405,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if not is_admin_user() then
+  if auth.uid() is not null and not is_admin_user() then
     new.is_admin := old.is_admin;
     new.role := old.role;
     new.can_manage_animals := old.can_manage_animals;
