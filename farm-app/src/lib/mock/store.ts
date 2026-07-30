@@ -781,12 +781,18 @@ export function demoListCalfNotes(animalId?: string): CalfNote[] {
   return animalId ? all.filter((n) => n.animal_id === animalId) : all;
 }
 
-export function demoCreateCalfNote(animalId: string, note: string, createdBy: string | null): CalfNote {
+export function demoCreateCalfNote(
+  animalId: string,
+  note: string,
+  createdBy: string | null,
+  visibleUntil: string | null = null
+): CalfNote {
   const db = loadDb();
   const calfNote: CalfNote = {
     id: newId("calfnote"),
     animal_id: animalId,
     note,
+    visible_until: visibleUntil,
     created_by: createdBy,
     created_at: new Date().toISOString(),
   };
@@ -880,10 +886,31 @@ export function demoUpsertCalfMeal(input: {
     saveDb(db);
     return db.calfMeals[idx];
   }
-  const meal: CalfMeal = { ...input, id: newId("calfmeal"), created_at: new Date().toISOString() };
+  const meal: CalfMeal = {
+    ...input,
+    id: newId("calfmeal"),
+    exam_result: null,
+    examined_by: null,
+    examined_at: null,
+    created_at: new Date().toISOString(),
+  };
   db.calfMeals.push(meal);
   saveDb(db);
   return meal;
+}
+
+export function demoSetCalfMealExam(id: string, examResult: string, examinedBy: string | null): CalfMeal | undefined {
+  const db = loadDb();
+  const idx = db.calfMeals.findIndex((m) => m.id === id);
+  if (idx === -1) return undefined;
+  db.calfMeals[idx] = {
+    ...db.calfMeals[idx],
+    exam_result: examResult,
+    examined_by: examinedBy,
+    examined_at: new Date().toISOString(),
+  };
+  saveDb(db);
+  return db.calfMeals[idx];
 }
 
 // --- Buzagi tedavi protokolleri ve kurleri ---
@@ -894,6 +921,32 @@ export function demoListCalfProtocols(): CalfProtocol[] {
 
 export function demoListCalfProtocolDays(): CalfProtocolDay[] {
   return loadDb().calfProtocolDays.sort((a, b) => a.day_number - b.day_number);
+}
+
+export function demoCreateCalfProtocol(name: string, createdBy: string | null): CalfProtocol {
+  const db = loadDb();
+  const protocol: CalfProtocol = { id: newId("protocol"), name, created_by: createdBy, created_at: new Date().toISOString() };
+  db.calfProtocols.push(protocol);
+  saveDb(db);
+  return protocol;
+}
+
+export function demoUpdateCalfProtocolName(id: string, name: string): CalfProtocol | undefined {
+  const db = loadDb();
+  const idx = db.calfProtocols.findIndex((p) => p.id === id);
+  if (idx === -1) return undefined;
+  db.calfProtocols[idx] = { ...db.calfProtocols[idx], name };
+  saveDb(db);
+  return db.calfProtocols[idx];
+}
+
+export function demoReplaceCalfProtocolDays(protocolId: string, days: { day_number: number; medicines: string }[]): void {
+  const db = loadDb();
+  db.calfProtocolDays = db.calfProtocolDays.filter((d) => d.protocol_id !== protocolId);
+  for (const d of days) {
+    db.calfProtocolDays.push({ id: newId("protoday"), protocol_id: protocolId, ...d });
+  }
+  saveDb(db);
 }
 
 export function demoListCalfTreatmentCourses(): CalfTreatmentCourse[] {

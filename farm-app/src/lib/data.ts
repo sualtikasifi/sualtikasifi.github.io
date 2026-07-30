@@ -705,12 +705,13 @@ export async function listCalfNotes(animalId?: string): Promise<CalfNote[]> {
 export async function createCalfNote(
   animalId: string,
   note: string,
-  createdBy: string | null
+  createdBy: string | null,
+  visibleUntil: string | null = null
 ): Promise<CalfNote> {
-  if (isDemoMode) return mock.demoCreateCalfNote(animalId, note, createdBy);
+  if (isDemoMode) return mock.demoCreateCalfNote(animalId, note, createdBy, visibleUntil);
   const { data, error } = await supabase!
     .from("calf_notes")
-    .insert({ animal_id: animalId, note, created_by: createdBy })
+    .insert({ animal_id: animalId, note, created_by: createdBy, visible_until: visibleUntil })
     .select()
     .single();
   if (error) throw error;
@@ -828,6 +829,22 @@ export async function upsertCalfMeal(input: {
   return data as CalfMeal;
 }
 
+export async function setCalfMealExam(
+  id: string,
+  examResult: string,
+  examinedBy: string | null
+): Promise<CalfMeal | undefined> {
+  if (isDemoMode) return mock.demoSetCalfMealExam(id, examResult, examinedBy);
+  const { data, error } = await supabase!
+    .from("calf_meals")
+    .update({ exam_result: examResult, examined_by: examinedBy, examined_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfMeal;
+}
+
 // --- Buzagi tedavi protokolleri ve kurleri ---
 
 export async function listCalfProtocols(): Promise<CalfProtocol[]> {
@@ -842,6 +859,40 @@ export async function listCalfProtocolDays(): Promise<CalfProtocolDay[]> {
   const { data, error } = await supabase!.from("calf_protocol_days").select("*").order("day_number");
   if (error) throw error;
   return data as CalfProtocolDay[];
+}
+
+export async function createCalfProtocol(name: string, createdBy: string | null): Promise<CalfProtocol> {
+  if (isDemoMode) return mock.demoCreateCalfProtocol(name, createdBy);
+  const { data, error } = await supabase!
+    .from("calf_protocols")
+    .insert({ name, created_by: createdBy })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfProtocol;
+}
+
+export async function updateCalfProtocolName(id: string, name: string): Promise<CalfProtocol | undefined> {
+  if (isDemoMode) return mock.demoUpdateCalfProtocolName(id, name);
+  const { data, error } = await supabase!.from("calf_protocols").update({ name }).eq("id", id).select().single();
+  if (error) throw error;
+  return data as CalfProtocol;
+}
+
+// Protokolun gun listesini komple degistirir (gun ekleme/silme/duzenleme).
+export async function replaceCalfProtocolDays(
+  protocolId: string,
+  days: { day_number: number; medicines: string }[]
+): Promise<void> {
+  if (isDemoMode) return mock.demoReplaceCalfProtocolDays(protocolId, days);
+  const { error: delError } = await supabase!.from("calf_protocol_days").delete().eq("protocol_id", protocolId);
+  if (delError) throw delError;
+  if (days.length > 0) {
+    const { error } = await supabase!
+      .from("calf_protocol_days")
+      .insert(days.map((d) => ({ protocol_id: protocolId, ...d })));
+    if (error) throw error;
+  }
 }
 
 export async function listCalfTreatmentCourses(): Promise<CalfTreatmentCourse[]> {

@@ -10,6 +10,11 @@ interface Props {
   onSelectMeal: (slot: MealSlotRef) => void;
   onFinish: () => void;
   canManage: boolean;
+  // Coklu secim: acikken kulubelere tiklamak "icmedi" olarak isaretler,
+  // Kaydet hepsini birden yazar.
+  bulkMode: boolean;
+  bulkCount: number;
+  onToggleBulk: () => void;
 }
 
 function formatToday(): string {
@@ -19,7 +24,17 @@ function formatToday(): string {
 // Sayfanin ustundeki gunluk beslenme alani: 4 es parca (09-15-21-03).
 // Bir ogune tiklaninca giris moduna gecilir; kulubelere tiklanarak
 // icti/icmedi isaretlenir, Kaydet ile normal goruntuye donulur.
-export function FeedingSessionBar({ meals, slotAnimalIds, activeMeal, onSelectMeal, onFinish, canManage }: Props) {
+export function FeedingSessionBar({
+  meals,
+  slotAnimalIds,
+  activeMeal,
+  onSelectMeal,
+  onFinish,
+  canManage,
+  bulkMode,
+  bulkCount,
+  onToggleBulk,
+}: Props) {
   const slots = todayMealSlots();
   const idSet = new Set(slotAnimalIds);
 
@@ -57,14 +72,30 @@ export function FeedingSessionBar({ meals, slotAnimalIds, activeMeal, onSelectMe
         })}
       </div>
       {activeMeal && (
-        <div className="flex items-center justify-between rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
+        <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
           <p className="text-xs text-amber-900">
-            <span className="font-semibold">{formatMealHour(activeMeal.hour)} öğünü işaretleniyor.</span> Kulübeye
-            tıklayıp içti/içmedi seçin. Bilgi girilmeyenler &quot;içti&quot; sayılır.
+            <span className="font-semibold">{formatMealHour(activeMeal.hour)} öğünü işaretleniyor.</span>{" "}
+            {bulkMode
+              ? "Mamasını İÇMEYEN buzağıların kulübelerine tıklayın; Kaydet hepsini birden işler."
+              : "Kulübeye tıklayıp içti/içmedi seçin. Bilgi girilmeyenler \u0022içti\u0022 sayılır."}
           </p>
-          <button type="button" onClick={onFinish} className="btn-primary shrink-0">
-            Kaydet
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleBulk}
+              className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                bulkMode
+                  ? "border-red-500 bg-red-100 text-red-800"
+                  : "border-amber-400 bg-white text-amber-800 hover:bg-amber-100"
+              }`}
+            >
+              {bulkMode ? `İçmeyen seçimi: ${bulkCount} buzağı` : "Çoklu Seçim (içmeyenler)"}
+            </button>
+            <div className="flex-1" />
+            <button type="button" onClick={onFinish} className="btn-primary shrink-0">
+              Kaydet
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -291,6 +291,8 @@ create table if not exists calf_notes (
   id uuid primary key default gen_random_uuid(),
   animal_id uuid not null references animals (id) on delete cascade,
   note text not null,
+  -- Bu tarihe kadar (dahil) kutucukta unlem rozetiyle gosterilir.
+  visible_until date,
   created_by uuid references profiles (id),
   created_at timestamptz not null default now()
 );
@@ -350,6 +352,11 @@ create table if not exists calf_meals (
   meal_hour integer not null check (meal_hour in (3, 9, 15, 21)),
   drank boolean not null default true,
   pectolit boolean not null default false,
+  -- Icmeyen buzagi muayene edilmeli; sonucu girilene kadar kutucukta
+  -- kirmizi unlem yanip soner.
+  exam_result text,
+  examined_by uuid references profiles (id),
+  examined_at timestamptz,
   created_by uuid references profiles (id),
   created_at timestamptz not null default now(),
   unique (animal_id, meal_date, meal_hour)
@@ -732,13 +739,11 @@ create policy "task_images_insert_authenticated" on storage.objects
 create policy "task_images_select_public" on storage.objects
   for select to public using (bucket_id = 'task-images');
 
--- Buzagilik: 20'lik ve 16'lik iki sira kulube (group_index 0 = 20'lik sira,
--- group_index 1 = 16'lik sira). Iglo: 6 kare (group_index 0-5), her biri
--- 2x5 = 10 kutucuk (slot_index 0-9). Idempotent: tekrar calistirmak guvenli.
+-- Buzagilik: 6 sutun x 20 kulube = 120 kulube (group_index 0-5,
+-- slot_index 0-19). Iglo: 6 kare (group_index 0-5), her biri 2x5 = 10
+-- kutucuk (slot_index 0-9). Idempotent: tekrar calistirmak guvenli.
 insert into calf_housing_slots (structure, group_index, slot_index)
-select 'buzagilik', 0, gs from generate_series(0, 19) gs
-union all
-select 'buzagilik', 1, gs from generate_series(0, 15) gs
+select 'buzagilik', g, s from generate_series(0, 5) g, generate_series(0, 19) s
 union all
 select 'iglo', g, s from generate_series(0, 5) g, generate_series(0, 9) s
 on conflict (structure, group_index, slot_index) do nothing;

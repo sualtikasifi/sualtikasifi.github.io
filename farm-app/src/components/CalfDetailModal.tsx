@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Animal,
@@ -75,7 +76,13 @@ interface Props {
   onSaveBirth: (patch: Partial<Omit<CalfBirthRecord, "animal_id" | "updated_at" | "updated_by">>) => Promise<void>;
   onStartPectolit: () => Promise<void>;
   onCancelPectolit: () => Promise<void>;
-  onAddNote: (text: string) => Promise<void>;
+  onAddNote: (text: string, visibleDays: number | null) => Promise<void>;
+  onMealExam: (mealId: string, result: string) => Promise<void>;
+  onSaveProtocol: (
+    protocolId: string | null,
+    name: string,
+    days: { day_number: number; medicines: string }[]
+  ) => Promise<void>;
   onClearLegacyStatus: () => Promise<void>;
   onClose: () => void;
 }
@@ -104,6 +111,8 @@ export function CalfDetailModal({
   onStartPectolit,
   onCancelPectolit,
   onAddNote,
+  onMealExam,
+  onSaveProtocol,
   onClearLegacyStatus,
   onClose,
 }: Props) {
@@ -131,7 +140,30 @@ export function CalfDetailModal({
   const [newTreatmentNote, setNewTreatmentNote] = useState("");
 
   const [noteInput, setNoteInput] = useState("");
+  const [noteDays, setNoteDays] = useState("3");
   const [moveTargetId, setMoveTargetId] = useState("");
+  const [examText, setExamText] = useState("");
+  // Protokol duzenleyici: null=kapali, ""=yeni protokol, id=duzenlenen
+  const [editingProtocolId, setEditingProtocolId] = useState<string | null>(null);
+  const [protocolNameDraft, setProtocolNameDraft] = useState("");
+  const [protocolDaysDraft, setProtocolDaysDraft] = useState<string[]>([]);
+
+  function openProtocolEditor(protocolId: string | null) {
+    if (protocolId) {
+      const protocol = protocols.find((p) => p.id === protocolId);
+      const days = protocolDays
+        .filter((d) => d.protocol_id === protocolId)
+        .sort((a, b) => a.day_number - b.day_number)
+        .map((d) => d.medicines);
+      setProtocolNameDraft(protocol?.name ?? "");
+      setProtocolDaysDraft(days.length ? days : [""]);
+      setEditingProtocolId(protocolId);
+    } else {
+      setProtocolNameDraft("");
+      setProtocolDaysDraft([""]);
+      setEditingProtocolId("");
+    }
+  }
 
   const activeCourse = courses.find((c) => c.status === "aktif");
   const protocolById = (id: string) => protocols.find((p) => p.id === id);
@@ -165,6 +197,11 @@ export function CalfDetailModal({
 
   const sortedTreatments = [...treatments].sort((a, b) => b.treatment_date.localeCompare(a.treatment_date));
   const recentSlots = lastNMealSlots(8);
+  const todayStr = todayIso();
+  const activeNotes = notes.filter((n) => n.visible_until != null && n.visible_until >= todayStr);
+  const unexaminedMissed = meals
+    .filter((m) => !m.drank && !m.exam_result)
+    .sort((a, b) => b.meal_date.localeCompare(a.meal_date) || b.meal_hour - a.meal_hour);
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -220,10 +257,16 @@ export function CalfDetailModal({
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex items-center gap-2">
                 <span className="text-lg font-bold text-neutral-900">{animal.ear_tag}</span>
-                {animal.name && <span className="ml-2 text-neutral-500">{animal.name}</span>}
-                {animal.breed && <span className="ml-2 text-xs text-neutral-400">{animal.breed}</span>}
+                {animal.name && <span className="text-neutral-500">{animal.name}</span>}
+                {animal.breed && <span className="text-xs text-neutral-400">{animal.breed}</span>}
+                <Link
+                  href={`/calves/report?ids=${animal.id}`}
+                  className="rounded-md border border-green-600 px-2 py-0.5 text-[11px] font-medium text-green-700 hover:bg-green-50"
+                >
+                  Buzağı Özet
+                </Link>
               </div>
               {canManage && (
                 <button
@@ -236,6 +279,60 @@ export function CalfDetailModal({
                 </button>
               )}
             </div>
+
+            {/* Aktif notlar (unlem rozetinin sebebi) en ustte gorunur */}
+            {activeNotes.length > 0 && (
+              <div className="space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-2">
+                {activeNotes.map((n) => (
+                  <p key={n.id} className="text-xs text-amber-900">
+                    <span className="mr-1 font-bold">!</span>
+                    {n.note}
+                    {n.visible_until && (
+                      <span className="ml-1 text-amber-600">({formatDate(n.visible_until)} tarihine kadar)</span>
+                    )}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {/* Muayene bekleyen icilmemis ogunler */}
+            {unexaminedMissed.length > 0 && (
+              <div className="space-y-2 rounded-lg border border-red-300 bg-red-50 p-2">
+                <p className="text-xs font-semibold text-red-800">
+                  Muayene bekliyor — içmediği öğünler:
+                </p>
+                <p className="text-xs text-red-700">
+                  {unexaminedMissed
+                    .map((m) => `${formatDate(m.meal_date)} ${String(m.meal_hour).padStart(2, "0")}:00`)
+                    .join(", ")}
+                </p>
+                {canManage && (
+                  <div className="flex gap-2">
+                    <input
+                      value={examText}
+                      onChange={(e) => setExamText(e.target.value)}
+                      placeholder="Muayene sonucu..."
+                      className="input flex-1"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy || !examText.trim()}
+                      onClick={() =>
+                        run(async () => {
+                          for (const m of unexaminedMissed) {
+                            await onMealExam(m.id, examText.trim());
+                          }
+                          setExamText("");
+                        })
+                      }
+                      className="btn-primary shrink-0"
+                    >
+                      Kaydet
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Dogum + kan brix */}
             <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
@@ -420,19 +517,122 @@ export function CalfDetailModal({
               ) : (
                 canManage && (
                   <div className="space-y-2">
-                    <p className="text-xs text-neutral-500">Tedavi başlatmak için protokol seçin:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {protocols.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setSelectedProtocolId(p.id === selectedProtocolId ? null : p.id)}
-                          className={`chip ${selectedProtocolId === p.id ? "chip-selected" : "chip-unselected"}`}
-                        >
-                          {p.name}
-                        </button>
-                      ))}
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-neutral-500">Tedavi başlatmak için protokol seçin:</p>
+                      <button
+                        type="button"
+                        onClick={() => openProtocolEditor(null)}
+                        className="text-xs font-medium text-green-700 hover:underline"
+                      >
+                        Yeni Protokol
+                      </button>
                     </div>
+                    <div className="space-y-1">
+                      {protocols.map((p) => {
+                        const dayCount = protocolDays.filter((d) => d.protocol_id === p.id).length;
+                        const isSelected = selectedProtocolId === p.id;
+                        return (
+                          <div
+                            key={p.id}
+                            className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${
+                              isSelected ? "border-green-600 bg-green-50" : "border-neutral-200"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setSelectedProtocolId(p.id === selectedProtocolId ? null : p.id)}
+                              className="flex-1 text-left"
+                            >
+                              <span className={`text-xs font-semibold ${isSelected ? "text-green-800" : "text-neutral-800"}`}>
+                                {p.name}
+                              </span>
+                              <span className="ml-2 text-[11px] text-neutral-500">{dayCount} gün</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openProtocolEditor(p.id)}
+                              className="shrink-0 text-[11px] font-medium text-neutral-500 underline hover:no-underline"
+                            >
+                              Düzenle
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {editingProtocolId !== null && (
+                      <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50/50 p-2">
+                        <p className="text-xs font-semibold text-neutral-700">
+                          {editingProtocolId === "" ? "Yeni Protokol" : "Protokolü Düzenle"}
+                        </p>
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-medium text-neutral-600">Protokol adı</span>
+                          <input
+                            value={protocolNameDraft}
+                            onChange={(e) => setProtocolNameDraft(e.target.value)}
+                            placeholder="örn. Pnömoni Tedavisi"
+                            className="input"
+                          />
+                        </label>
+                        {protocolDaysDraft.map((meds, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className="mt-2 w-10 shrink-0 text-xs font-medium text-neutral-600">Gün {i + 1}</span>
+                            <textarea
+                              value={meds}
+                              onChange={(e) =>
+                                setProtocolDaysDraft((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))
+                              }
+                              placeholder="İlaçlar (örn. BAYTRİL-C VİT)"
+                              className="input flex-1"
+                              rows={1}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setProtocolDaysDraft((prev) => prev.filter((_, j) => j !== i))}
+                              disabled={protocolDaysDraft.length <= 1}
+                              className="mt-2 shrink-0 text-[11px] text-red-500 hover:underline disabled:opacity-40"
+                            >
+                              Sil
+                            </button>
+                          </div>
+                        ))}
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setProtocolDaysDraft((prev) => [...prev, ""])}
+                            className="btn-secondary"
+                          >
+                            Gün Ekle
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy || !protocolNameDraft.trim() || protocolDaysDraft.every((d) => !d.trim())}
+                            onClick={() =>
+                              run(async () => {
+                                await onSaveProtocol(
+                                  editingProtocolId === "" ? null : editingProtocolId,
+                                  protocolNameDraft.trim(),
+                                  protocolDaysDraft
+                                    .map((meds, i) => ({ day_number: i + 1, medicines: meds.trim() }))
+                                    .filter((d) => d.medicines)
+                                );
+                                setEditingProtocolId(null);
+                              })
+                            }
+                            className="btn-primary"
+                          >
+                            {busy ? "Kaydediliyor..." : "Protokolü Kaydet"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingProtocolId(null)}
+                            className="text-xs text-neutral-500 underline hover:no-underline"
+                          >
+                            Vazgeç
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {selectedProtocolId && (
                       <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-2">
                         <div className="space-y-1">
@@ -570,26 +770,42 @@ export function CalfDetailModal({
             <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
               <p className="text-xs font-semibold text-neutral-700">Notlar</p>
               {canManage && (
-                <div className="flex gap-2">
+                <div className="space-y-2">
                   <input
                     value={noteInput}
                     onChange={(e) => setNoteInput(e.target.value)}
                     placeholder="Bu buzağı için not..."
-                    className="input flex-1"
+                    className="input"
                   />
-                  <button
-                    type="button"
-                    disabled={busy || !noteInput.trim()}
-                    onClick={() =>
-                      run(async () => {
-                        await onAddNote(noteInput.trim());
-                        setNoteInput("");
-                      })
-                    }
-                    className="btn-secondary shrink-0"
-                  >
-                    Ekle
-                  </button>
+                  <div className="flex items-end gap-2">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-neutral-600">Kaç gün görünsün?</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={noteDays}
+                        onChange={(e) => setNoteDays(e.target.value)}
+                        className="input w-24"
+                      />
+                    </label>
+                    <p className="flex-1 pb-2 text-[11px] text-neutral-400">
+                      Süre boyunca kulübede sarı ünlem yanar. 0 = rozetsiz not.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={busy || !noteInput.trim()}
+                      onClick={() =>
+                        run(async () => {
+                          const days = Number(noteDays);
+                          await onAddNote(noteInput.trim(), Number.isFinite(days) && days > 0 ? days : null);
+                          setNoteInput("");
+                        })
+                      }
+                      className="btn-secondary shrink-0"
+                    >
+                      Ekle
+                    </button>
+                  </div>
                 </div>
               )}
               {notes.length === 0 ? (
