@@ -3,12 +3,20 @@ import * as mock from "./mock/store";
 import {
   Animal,
   Bull,
+  CalfBirthRecord,
   CalfFeeding,
   CalfHousingSlot,
   CalfHousingStructure,
+  CalfMeal,
+  CalfMealHour,
   CalfNote,
+  CalfPectolit,
+  CalfProtocol,
+  CalfProtocolDay,
   CalfTreatment,
+  CalfTreatmentCourse,
   CalfTreatmentStatus,
+  CourseStatus,
   Embryo,
   Insemination,
   MastitisDose,
@@ -22,6 +30,7 @@ import {
   ShiftNote,
   Task,
   TaskAnimal,
+  VaccinationPlan,
 } from "./types";
 
 export { isDemoMode };
@@ -785,6 +794,193 @@ export async function createCalfTreatment(
   const { data, error } = await supabase!.from("calf_treatments").insert(input).select().single();
   if (error) throw error;
   return data as CalfTreatment;
+}
+
+// --- Buzagi mama ogunleri (09/15/21/03) ---
+
+export async function listCalfMeals(sinceDate?: string): Promise<CalfMeal[]> {
+  if (isDemoMode) return mock.demoListCalfMeals(sinceDate);
+  return fetchAllPages<CalfMeal>((from, to) => {
+    let query = supabase!
+      .from("calf_meals")
+      .select("*", { count: "exact" })
+      .order("meal_date", { ascending: false });
+    if (sinceDate) query = query.gte("meal_date", sinceDate);
+    return query.range(from, to);
+  });
+}
+
+export async function upsertCalfMeal(input: {
+  animal_id: string;
+  meal_date: string;
+  meal_hour: CalfMealHour;
+  drank: boolean;
+  pectolit: boolean;
+  created_by: string | null;
+}): Promise<CalfMeal> {
+  if (isDemoMode) return mock.demoUpsertCalfMeal(input);
+  const { data, error } = await supabase!
+    .from("calf_meals")
+    .upsert(input, { onConflict: "animal_id,meal_date,meal_hour" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfMeal;
+}
+
+// --- Buzagi tedavi protokolleri ve kurleri ---
+
+export async function listCalfProtocols(): Promise<CalfProtocol[]> {
+  if (isDemoMode) return mock.demoListCalfProtocols();
+  const { data, error } = await supabase!.from("calf_protocols").select("*").order("name");
+  if (error) throw error;
+  return data as CalfProtocol[];
+}
+
+export async function listCalfProtocolDays(): Promise<CalfProtocolDay[]> {
+  if (isDemoMode) return mock.demoListCalfProtocolDays();
+  const { data, error } = await supabase!.from("calf_protocol_days").select("*").order("day_number");
+  if (error) throw error;
+  return data as CalfProtocolDay[];
+}
+
+export async function listCalfTreatmentCourses(): Promise<CalfTreatmentCourse[]> {
+  if (isDemoMode) return mock.demoListCalfTreatmentCourses();
+  return fetchAllPages<CalfTreatmentCourse>((from, to) =>
+    supabase!
+      .from("calf_treatment_courses")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to)
+  );
+}
+
+export async function createCalfTreatmentCourse(input: {
+  animal_id: string;
+  protocol_id: string;
+  start_date: string;
+  created_by: string | null;
+}): Promise<CalfTreatmentCourse> {
+  if (isDemoMode) return mock.demoCreateCalfTreatmentCourse(input);
+  const { data, error } = await supabase!.from("calf_treatment_courses").insert(input).select().single();
+  if (error) throw error;
+  return data as CalfTreatmentCourse;
+}
+
+export async function setCalfTreatmentCourseStatus(
+  id: string,
+  status: CourseStatus
+): Promise<CalfTreatmentCourse | undefined> {
+  if (isDemoMode) return mock.demoSetCalfTreatmentCourseStatus(id, status);
+  const { data, error } = await supabase!
+    .from("calf_treatment_courses")
+    .update({ status })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfTreatmentCourse;
+}
+
+// --- Dogum kayitlari (dogum saati, kan brix, kolostrum) ---
+
+export async function listCalfBirthRecords(): Promise<CalfBirthRecord[]> {
+  if (isDemoMode) return mock.demoListCalfBirthRecords();
+  const { data, error } = await supabase!.from("calf_birth_records").select("*");
+  if (error) throw error;
+  return data as CalfBirthRecord[];
+}
+
+export async function upsertCalfBirthRecord(
+  animalId: string,
+  patch: Partial<Omit<CalfBirthRecord, "animal_id" | "updated_at" | "updated_by">>,
+  updatedBy: string | null
+): Promise<CalfBirthRecord> {
+  if (isDemoMode) return mock.demoUpsertCalfBirthRecord(animalId, patch, updatedBy);
+  const { data, error } = await supabase!
+    .from("calf_birth_records")
+    .upsert({ animal_id: animalId, ...patch, updated_at: new Date().toISOString(), updated_by: updatedBy })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfBirthRecord;
+}
+
+// --- Pectolit takibi ---
+
+export async function listCalfPectolit(): Promise<CalfPectolit[]> {
+  if (isDemoMode) return mock.demoListCalfPectolit();
+  const { data, error } = await supabase!.from("calf_pectolit").select("*");
+  if (error) throw error;
+  return data as CalfPectolit[];
+}
+
+export async function setCalfPectolit(
+  animalId: string,
+  remainingMeals: number,
+  startedBy: string | null
+): Promise<CalfPectolit> {
+  if (isDemoMode) return mock.demoSetCalfPectolit(animalId, remainingMeals, startedBy);
+  const { data, error } = await supabase!
+    .from("calf_pectolit")
+    .upsert({
+      animal_id: animalId,
+      remaining_meals: remainingMeals,
+      started_at: new Date().toISOString(),
+      started_by: startedBy,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfPectolit;
+}
+
+// --- Asi planlari (persembe) ---
+
+export async function listVaccinationPlans(): Promise<VaccinationPlan[]> {
+  if (isDemoMode) return mock.demoListVaccinationPlans();
+  return fetchAllPages<VaccinationPlan>((from, to) =>
+    supabase!
+      .from("vaccination_plans")
+      .select("*", { count: "exact" })
+      .order("planned_date", { ascending: false })
+      .range(from, to)
+  );
+}
+
+export async function createVaccinationPlan(input: {
+  vaccine_name: string;
+  target: string | null;
+  planned_date: string;
+  notes: string | null;
+  created_by: string | null;
+}): Promise<VaccinationPlan> {
+  if (isDemoMode) return mock.demoCreateVaccinationPlan(input);
+  const { data, error } = await supabase!.from("vaccination_plans").insert(input).select().single();
+  if (error) throw error;
+  return data as VaccinationPlan;
+}
+
+export async function setVaccinationPlanDone(
+  id: string,
+  done: boolean,
+  doneBy: string | null
+): Promise<VaccinationPlan | undefined> {
+  if (isDemoMode) return mock.demoSetVaccinationPlanDone(id, done, doneBy);
+  const { data, error } = await supabase!
+    .from("vaccination_plans")
+    .update({ done, done_by: done ? doneBy : null, done_at: done ? new Date().toISOString() : null })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as VaccinationPlan;
+}
+
+export async function deleteVaccinationPlan(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteVaccinationPlan(id);
+  const { error } = await supabase!.from("vaccination_plans").delete().eq("id", id);
+  if (error) throw error;
 }
 
 // --- Medicines (asi/ilac stok takibi) ---

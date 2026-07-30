@@ -339,6 +339,103 @@ create table if not exists calf_treatments (
 create index if not exists calf_treatments_animal_idx on calf_treatments (animal_id);
 create index if not exists calf_treatments_date_idx on calf_treatments (treatment_date);
 
+-- 15c. Buzagi mama ogunleri: gunde 4 sabit ogun (09:00, 15:00, 21:00, 03:00).
+-- Kayit girilmeyen ogun "icti" kabul edilir; sadece istisnalar (icmedi) ve
+-- pectolit verilen ogunler kayit gerektirir. pectolit=true ise o ogunde
+-- pectolit icirilmistir (kutucuk altindaki nokta sari gosterilir).
+create table if not exists calf_meals (
+  id uuid primary key default gen_random_uuid(),
+  animal_id uuid not null references animals (id) on delete cascade,
+  meal_date date not null,
+  meal_hour integer not null check (meal_hour in (3, 9, 15, 21)),
+  drank boolean not null default true,
+  pectolit boolean not null default false,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now(),
+  unique (animal_id, meal_date, meal_hour)
+);
+
+create index if not exists calf_meals_animal_idx on calf_meals (animal_id);
+create index if not exists calf_meals_date_idx on calf_meals (meal_date);
+
+-- 15d. Buzagi tedavi protokolleri: isimli protokol (orn. "Pnomoni Tedavisi")
+-- ve her gunune ait ilac listesi.
+create table if not exists calf_protocols (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists calf_protocol_days (
+  id uuid primary key default gen_random_uuid(),
+  protocol_id uuid not null references calf_protocols (id) on delete cascade,
+  day_number integer not null check (day_number > 0),
+  medicines text not null,
+  unique (protocol_id, day_number)
+);
+
+-- 15e. Aktif tedavi kurleri: bir buzagiya bir protokol baslatildiginda
+-- acilir; gunluk gorev tablosu buradan uretilir. Kur tamamlaninca veya
+-- iptal edilince status guncellenir.
+create table if not exists calf_treatment_courses (
+  id uuid primary key default gen_random_uuid(),
+  animal_id uuid not null references animals (id) on delete cascade,
+  protocol_id uuid not null references calf_protocols (id) on delete cascade,
+  start_date date not null default current_date,
+  status text not null default 'aktif' check (status in ('aktif', 'tamamlandi', 'iptal')),
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists calf_treatment_courses_animal_idx on calf_treatment_courses (animal_id);
+create index if not exists calf_treatment_courses_status_idx on calf_treatment_courses (status);
+
+-- Tedavi gecmisi kayitlarina serbest not ve kur baglantisi
+alter table calf_treatments add column if not exists note text;
+alter table calf_treatments add column if not exists course_id uuid references calf_treatment_courses (id) on delete set null;
+
+-- 15f. Dogum kayitlari: dogum tarihi+saati, kan brix (dogumdan 36 saat
+-- sonra bakilir) ve ilk 2 kolostrumun litre/brix bilgisi.
+create table if not exists calf_birth_records (
+  animal_id uuid primary key references animals (id) on delete cascade,
+  born_at timestamptz,
+  blood_brix numeric,
+  blood_brix_at timestamptz,
+  colostrum1_liters numeric,
+  colostrum1_brix numeric,
+  colostrum2_liters numeric,
+  colostrum2_brix numeric,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references profiles (id)
+);
+
+-- 15g. Pectolit takibi: "Pectolit Basla" denince remaining_meals=2 olur,
+-- pectolit verilen her ogunde 1 azalir; >0 iken kutucukta sari uyari yanar.
+create table if not exists calf_pectolit (
+  animal_id uuid primary key references animals (id) on delete cascade,
+  remaining_meals integer not null default 0 check (remaining_meals >= 0),
+  started_at timestamptz not null default now(),
+  started_by uuid references profiles (id)
+);
+
+-- 15h. Asi planlari (persembe asi gunleri): yapilacak asilar eklenir,
+-- yapilinca tik atilir (kim/ne zaman kaydiyla).
+create table if not exists vaccination_plans (
+  id uuid primary key default gen_random_uuid(),
+  vaccine_name text not null,
+  target text,
+  planned_date date not null,
+  done boolean not null default false,
+  done_by uuid references profiles (id),
+  done_at timestamptz,
+  notes text,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists vaccination_plans_date_idx on vaccination_plans (planned_date);
+
 -- 16. Push bildirim abonelikleri (her cihaz/tarayici icin bir kayit)
 create table if not exists push_subscriptions (
   id uuid primary key default gen_random_uuid(),
@@ -468,6 +565,13 @@ alter table calf_notes enable row level security;
 alter table calf_housing_slots enable row level security;
 alter table calf_treatment_status enable row level security;
 alter table calf_treatments enable row level security;
+alter table calf_meals enable row level security;
+alter table calf_protocols enable row level security;
+alter table calf_protocol_days enable row level security;
+alter table calf_treatment_courses enable row level security;
+alter table calf_birth_records enable row level security;
+alter table calf_pectolit enable row level security;
+alter table vaccination_plans enable row level security;
 alter table task_animals enable row level security;
 alter table push_subscriptions enable row level security;
 
@@ -566,6 +670,41 @@ create policy "calf_treatments_select" on calf_treatments for select to authenti
 create policy "calf_treatments_insert" on calf_treatments for insert to authenticated with check (has_perm('calves'));
 create policy "calf_treatments_update" on calf_treatments for update to authenticated using (has_perm('calves'));
 create policy "calf_treatments_delete" on calf_treatments for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_meals_select" on calf_meals for select to authenticated using (true);
+create policy "calf_meals_insert" on calf_meals for insert to authenticated with check (has_perm('calves'));
+create policy "calf_meals_update" on calf_meals for update to authenticated using (has_perm('calves'));
+create policy "calf_meals_delete" on calf_meals for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_protocols_select" on calf_protocols for select to authenticated using (true);
+create policy "calf_protocols_insert" on calf_protocols for insert to authenticated with check (has_perm('calves'));
+create policy "calf_protocols_update" on calf_protocols for update to authenticated using (has_perm('calves'));
+create policy "calf_protocols_delete" on calf_protocols for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_protocol_days_select" on calf_protocol_days for select to authenticated using (true);
+create policy "calf_protocol_days_insert" on calf_protocol_days for insert to authenticated with check (has_perm('calves'));
+create policy "calf_protocol_days_update" on calf_protocol_days for update to authenticated using (has_perm('calves'));
+create policy "calf_protocol_days_delete" on calf_protocol_days for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_treatment_courses_select" on calf_treatment_courses for select to authenticated using (true);
+create policy "calf_treatment_courses_insert" on calf_treatment_courses for insert to authenticated with check (has_perm('calves'));
+create policy "calf_treatment_courses_update" on calf_treatment_courses for update to authenticated using (has_perm('calves'));
+create policy "calf_treatment_courses_delete" on calf_treatment_courses for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_birth_records_select" on calf_birth_records for select to authenticated using (true);
+create policy "calf_birth_records_insert" on calf_birth_records for insert to authenticated with check (has_perm('calves'));
+create policy "calf_birth_records_update" on calf_birth_records for update to authenticated using (has_perm('calves'));
+create policy "calf_birth_records_delete" on calf_birth_records for delete to authenticated using (has_perm('calves'));
+
+create policy "calf_pectolit_select" on calf_pectolit for select to authenticated using (true);
+create policy "calf_pectolit_insert" on calf_pectolit for insert to authenticated with check (has_perm('calves'));
+create policy "calf_pectolit_update" on calf_pectolit for update to authenticated using (has_perm('calves'));
+create policy "calf_pectolit_delete" on calf_pectolit for delete to authenticated using (has_perm('calves'));
+
+create policy "vaccination_plans_select" on vaccination_plans for select to authenticated using (true);
+create policy "vaccination_plans_insert" on vaccination_plans for insert to authenticated with check (has_perm('calves'));
+create policy "vaccination_plans_update" on vaccination_plans for update to authenticated using (has_perm('calves'));
+create policy "vaccination_plans_delete" on vaccination_plans for delete to authenticated using (has_perm('calves'));
 
 create policy "medicines_select" on medicines for select to authenticated using (true);
 create policy "medicines_insert" on medicines for insert to authenticated with check (has_perm('medicines'));

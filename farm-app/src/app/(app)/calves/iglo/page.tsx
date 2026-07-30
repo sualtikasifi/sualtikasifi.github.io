@@ -1,113 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  assignCalfToSlot,
-  createCalfFeeding,
-  createCalfTreatment,
-  listAnimals,
-  listCalfFeedings,
-  listCalfHousingSlots,
-  listCalfTreatments,
-  listCalfTreatmentStatuses,
-  setCalfTreatmentStatus,
-} from "@/lib/data";
-import { Animal, CalfFeeding, CalfHousingSlot, CalfTreatment, CalfTreatmentStatus } from "@/lib/types";
-import { useAuth } from "@/lib/auth";
+import { useState } from "react";
+import { CalfHousingSlot } from "@/lib/types";
+import { useCalfCare } from "@/lib/useCalfCare";
+import { MealSlotRef, findMeal } from "@/lib/meals";
+import { hasPermission } from "@/lib/permissions";
 import { CalfNotesPanel } from "@/components/CalfNotesPanel";
 import { CalfSlotBox } from "@/components/CalfSlotBox";
-import { CalfSlotDetailPanel } from "@/components/CalfSlotDetailPanel";
+import { CalfDetailModal, MoveTarget } from "@/components/CalfDetailModal";
+import { FeedingSessionBar } from "@/components/FeedingSessionBar";
+import { MealEntrySheet } from "@/components/MealEntrySheet";
+import { DailyTreatmentTable } from "@/components/DailyTreatmentTable";
+
+function slotLabel(slot: CalfHousingSlot): string {
+  if (slot.structure === "iglo") return `İglo ${slot.group_index + 1} · ${slot.slot_index + 1}`;
+  return slot.group_index === 0 ? `20'lik Sıra · ${slot.slot_index + 1}` : `16'lık Sıra · ${slot.slot_index + 1}`;
+}
 
 export default function IgloPage() {
-  const { profile } = useAuth();
-  const [slots, setSlots] = useState<CalfHousingSlot[]>([]);
-  const [otherStructureSlots, setOtherStructureSlots] = useState<CalfHousingSlot[]>([]);
-  const [animals, setAnimals] = useState<Animal[]>([]);
-  const [feedings, setFeedings] = useState<CalfFeeding[]>([]);
-  const [treatmentStatuses, setTreatmentStatuses] = useState<CalfTreatmentStatus[]>([]);
-  const [treatments, setTreatments] = useState<CalfTreatment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const care = useCalfCare("iglo");
+  const canManage = hasPermission(care.profile, "can_manage_calves");
+
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [entryMeal, setEntryMeal] = useState<MealSlotRef | null>(null);
+  const [entrySlotId, setEntrySlotId] = useState<string | null>(null);
+  const [dragSlotId, setDragSlotId] = useState<string | null>(null);
 
-  function loadData() {
-    return Promise.all([
-      listCalfHousingSlots("iglo"),
-      listCalfHousingSlots("buzagilik"),
-      listAnimals(),
-      listCalfFeedings(),
-      listCalfTreatmentStatuses(),
-      listCalfTreatments(),
-    ]);
-  }
+  const igloGroups = Array.from({ length: 6 }, (_, g) => care.slots.filter((s) => s.group_index === g));
+  const selectedSlot = care.slots.find((s) => s.id === selectedSlotId);
+  const entrySlot = care.slots.find((s) => s.id === entrySlotId);
 
-  useEffect(() => {
-    loadData().then(([s, other, a, f, t, tr]) => {
-      setSlots(s);
-      setOtherStructureSlots(other);
-      setAnimals(a);
-      setFeedings(f);
-      setTreatmentStatuses(t);
-      setTreatments(tr);
-      setLoading(false);
-    });
-  }, []);
+  const emptyTargets: MoveTarget[] = [...care.slots, ...care.otherSlots]
+    .filter((s) => !s.animal_id)
+    .map((s) => ({ slotId: s.id, label: slotLabel(s) }));
 
-  async function refresh() {
-    const [s, other, a, f, t, tr] = await loadData();
-    setSlots(s);
-    setOtherStructureSlots(other);
-    setAnimals(a);
-    setFeedings(f);
-    setTreatmentStatuses(t);
-    setTreatments(tr);
-  }
-
-  const animalById = (id: string | null) => (id ? animals.find((a) => a.id === id) : undefined);
-  const treatmentFor = (animalId: string) => treatmentStatuses.find((t) => t.animal_id === animalId);
-  const feedingsFor = (animalId: string) => feedings.filter((f) => f.animal_id === animalId);
-  const treatmentsFor = (animalId: string) => treatments.filter((t) => t.animal_id === animalId);
-
-  const assignedElsewhere = new Set(
-    [...slots, ...otherStructureSlots].map((s) => s.animal_id).filter((id): id is string => !!id)
-  );
-  const availableCalves = animals.filter((a) => a.weaned_at === null && !assignedElsewhere.has(a.id));
-
-  const igloGroups = Array.from({ length: 6 }, (_, g) => slots.filter((s) => s.group_index === g));
-  const selectedSlot = slots.find((s) => s.id === selectedSlotId);
-
-  async function handleAssign(slotId: string, animalId: string) {
-    await assignCalfToSlot(slotId, animalId);
-    await refresh();
-  }
-
-  async function handleUnassign(slotId: string) {
-    await assignCalfToSlot(slotId, null);
-    await refresh();
-  }
-
-  async function handleSetTreatment(animalId: string, underTreatment: boolean, note: string | null) {
-    await setCalfTreatmentStatus(animalId, underTreatment, note, profile?.id ?? null);
-    await refresh();
-  }
-
-  async function handleAddTreatment(
-    animalId: string,
-    input: { treatment_date: string; diagnosis: string | null; protocol_day: number | null; description: string }
-  ) {
-    await createCalfTreatment({ animal_id: animalId, created_by: profile?.id ?? null, ...input });
-    await refresh();
-  }
-
-  async function handleLogFeeding(animalId: string, drank: boolean) {
-    if (!profile) return;
-    await createCalfFeeding({
-      animal_id: animalId,
-      fed_at: new Date().toISOString(),
-      drank,
-      notes: null,
-      created_by: profile.id,
-    });
-    await refresh();
+  function handleBoxClick(slot: CalfHousingSlot) {
+    if (entryMeal) {
+      if (slot.animal_id) setEntrySlotId(slot.id === entrySlotId ? null : slot.id);
+      return;
+    }
+    setSelectedSlotId(slot.id === selectedSlotId ? null : slot.id);
   }
 
   return (
@@ -116,11 +48,61 @@ export default function IgloPage() {
 
       <CalfNotesPanel />
 
-      {loading ? (
+      {care.brixAlerts.length > 0 && (
+        <div className="rounded-lg border border-red-300 bg-red-50 p-3">
+          <p className="mb-1 text-sm font-semibold text-red-800">Kan Brix ölçümü bekleyenler (36 saat doldu)</p>
+          <p className="text-xs text-red-700">
+            {care.brixAlerts.map((a) => a.animal.ear_tag).join(", ")} — kutucuğa tıklayıp Kan Brix değerini girin.
+          </p>
+        </div>
+      )}
+
+      {!care.loading && (
+        <FeedingSessionBar
+          meals={care.meals}
+          slotAnimalIds={care.slots.map((s) => s.animal_id).filter((id): id is string => !!id)}
+          activeMeal={entryMeal}
+          onSelectMeal={(slot) => {
+            setEntryMeal(slot);
+            setSelectedSlotId(null);
+          }}
+          onFinish={() => {
+            setEntryMeal(null);
+            setEntrySlotId(null);
+          }}
+          canManage={canManage}
+        />
+      )}
+
+      {!care.loading && (
+        <DailyTreatmentTable
+          courses={care.courses.filter((c) => care.slots.some((s) => s.animal_id === c.animal_id))}
+          protocols={care.protocols}
+          protocolDays={care.protocolDays}
+          animals={care.animals}
+          treatments={care.treatments}
+          canManage={canManage}
+          onLogDone={({ course, day, diagnosis, medicines, note }) =>
+            care.handleAddTreatment(course.animal_id, {
+              treatment_date: new Date().toISOString().slice(0, 10),
+              diagnosis,
+              protocol_day: day,
+              description: medicines,
+              note,
+              course_id: course.id,
+            })
+          }
+        />
+      )}
+
+      {care.loading ? (
         <p className="text-sm text-neutral-500">Yükleniyor...</p>
       ) : (
         <div className="card">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-800">İglo Odası</h2>
+          <h2 className="mb-3 text-sm font-semibold text-neutral-800">
+            İglo Odası
+            {entryMeal && <span className="ml-2 font-normal text-amber-700">(öğün işaretleme modu)</span>}
+          </h2>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {igloGroups.map((group, g) => (
               <div key={g} className="shrink-0 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
@@ -130,11 +112,18 @@ export default function IgloPage() {
                     <CalfSlotBox
                       key={slot.id}
                       label={`İglo ${g + 1} · ${i + 1}`}
-                      animal={animalById(slot.animal_id)}
-                      underTreatment={!!(slot.animal_id && treatmentFor(slot.animal_id)?.under_treatment)}
-                      feedings={slot.animal_id ? feedingsFor(slot.animal_id) : []}
-                      selected={selectedSlotId === slot.id}
-                      onClick={() => setSelectedSlotId(slot.id === selectedSlotId ? null : slot.id)}
+                      animal={care.animalById(slot.animal_id)}
+                      underTreatment={!!(slot.animal_id && care.underTreatment(slot.animal_id))}
+                      meals={slot.animal_id ? care.mealsFor(slot.animal_id) : []}
+                      pectolitPending={!!(slot.animal_id && care.pectolitPending(slot.animal_id))}
+                      selected={selectedSlotId === slot.id || entrySlotId === slot.id}
+                      onClick={() => handleBoxClick(slot)}
+                      draggable={canManage && !entryMeal}
+                      onDragStartSlot={() => setDragSlotId(slot.id)}
+                      onDropOnSlot={() => {
+                        if (dragSlotId && dragSlotId !== slot.id) care.handleMove(dragSlotId, slot.id);
+                        setDragSlotId(null);
+                      }}
                       className="h-12 w-12"
                     />
                   ))}
@@ -145,28 +134,66 @@ export default function IgloPage() {
         </div>
       )}
 
-      {selectedSlot && (
-        <CalfSlotDetailPanel
-          label={`İglo ${selectedSlot.group_index + 1} · ${selectedSlot.slot_index + 1}`}
-          animal={animalById(selectedSlot.animal_id)}
-          feedings={selectedSlot.animal_id ? feedingsFor(selectedSlot.animal_id) : []}
-          treatmentStatus={selectedSlot.animal_id ? treatmentFor(selectedSlot.animal_id) : undefined}
-          treatments={selectedSlot.animal_id ? treatmentsFor(selectedSlot.animal_id) : []}
-          availableCalves={availableCalves}
-          onAssign={(animalId) => handleAssign(selectedSlot.id, animalId)}
-          onUnassign={() => handleUnassign(selectedSlot.id)}
-          onSetTreatment={(underTreatment, note) =>
+      {selectedSlot && !entryMeal && (
+        <CalfDetailModal
+          label={slotLabel(selectedSlot)}
+          animal={care.animalById(selectedSlot.animal_id)}
+          availableCalves={care.availableCalves}
+          meals={selectedSlot.animal_id ? care.mealsFor(selectedSlot.animal_id) : []}
+          birthRecord={selectedSlot.animal_id ? care.birthRecordFor(selectedSlot.animal_id) : undefined}
+          pectolit={selectedSlot.animal_id ? care.pectolitFor(selectedSlot.animal_id) : undefined}
+          notes={selectedSlot.animal_id ? care.notesFor(selectedSlot.animal_id) : []}
+          courses={selectedSlot.animal_id ? care.coursesFor(selectedSlot.animal_id) : []}
+          protocols={care.protocols}
+          protocolDays={care.protocolDays}
+          treatments={selectedSlot.animal_id ? care.treatmentsFor(selectedSlot.animal_id) : []}
+          legacyStatus={selectedSlot.animal_id ? care.legacyStatusFor(selectedSlot.animal_id) : undefined}
+          moveTargets={emptyTargets}
+          onAssign={(animalId) => care.handleAssign(selectedSlot.id, animalId)}
+          onUnassign={async () => {
+            await care.handleAssign(selectedSlot.id, null);
+            setSelectedSlotId(null);
+          }}
+          onMove={async (targetSlotId) => {
+            await care.handleMove(selectedSlot.id, targetSlotId);
+            setSelectedSlotId(null);
+          }}
+          onStartCourse={(protocolId, startDate) =>
             selectedSlot.animal_id
-              ? handleSetTreatment(selectedSlot.animal_id, underTreatment, note)
+              ? care.handleStartCourse(selectedSlot.animal_id, protocolId, startDate)
               : Promise.resolve()
           }
+          onSetCourseStatus={(courseId, status) => care.handleSetCourseStatus(courseId, status)}
           onAddTreatment={(input) =>
-            selectedSlot.animal_id ? handleAddTreatment(selectedSlot.animal_id, input) : Promise.resolve()
+            selectedSlot.animal_id ? care.handleAddTreatment(selectedSlot.animal_id, input) : Promise.resolve()
           }
-          onLogFeeding={(drank) =>
-            selectedSlot.animal_id ? handleLogFeeding(selectedSlot.animal_id, drank) : Promise.resolve()
+          onSaveBirth={(patch) =>
+            selectedSlot.animal_id ? care.handleSaveBirth(selectedSlot.animal_id, patch) : Promise.resolve()
+          }
+          onStartPectolit={() =>
+            selectedSlot.animal_id ? care.handleStartPectolit(selectedSlot.animal_id) : Promise.resolve()
+          }
+          onCancelPectolit={() =>
+            selectedSlot.animal_id ? care.handleCancelPectolit(selectedSlot.animal_id) : Promise.resolve()
+          }
+          onAddNote={(text) =>
+            selectedSlot.animal_id ? care.handleAddNote(selectedSlot.animal_id, text) : Promise.resolve()
+          }
+          onClearLegacyStatus={() =>
+            selectedSlot.animal_id ? care.handleClearLegacyStatus(selectedSlot.animal_id) : Promise.resolve()
           }
           onClose={() => setSelectedSlotId(null)}
+        />
+      )}
+
+      {entryMeal && entrySlot?.animal_id && (
+        <MealEntrySheet
+          animal={care.animalById(entrySlot.animal_id)!}
+          slot={entryMeal}
+          existing={findMeal(care.meals, entrySlot.animal_id, entryMeal)}
+          pectolitPending={care.pectolitPending(entrySlot.animal_id)}
+          onMark={(drank) => care.handleMarkMeal(entrySlot.animal_id!, entryMeal, drank)}
+          onClose={() => setEntrySlotId(null)}
         />
       )}
     </div>
