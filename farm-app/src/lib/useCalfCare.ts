@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   assignCalfToSlot,
   createCalfNote,
+  createCalfProtocol,
   createCalfTreatment,
   createCalfTreatmentCourse,
   listAnimals,
@@ -17,9 +18,12 @@ import {
   listCalfTreatmentCourses,
   listCalfTreatments,
   listCalfTreatmentStatuses,
+  replaceCalfProtocolDays,
+  setCalfMealExam,
   setCalfPectolit,
   setCalfTreatmentCourseStatus,
   setCalfTreatmentStatus,
+  updateCalfProtocolName,
   upsertCalfBirthRecord,
   upsertCalfMeal,
 } from "./data";
@@ -73,7 +77,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
       listCalfHousingSlots(structure),
       listCalfHousingSlots(otherStructure),
       listAnimals(),
-      listCalfMeals(daysAgoIso(4)),
+      listCalfMeals(daysAgoIso(14)),
       listCalfTreatments(),
       listCalfTreatmentStatuses(),
       listCalfTreatmentCourses(),
@@ -137,6 +141,17 @@ export function useCalfCare(structure: CalfHousingStructure) {
   const underTreatment = (animalId: string) =>
     hasActiveCourse(animalId) || !!legacyStatusFor(animalId)?.under_treatment;
   const pectolitPending = (animalId: string) => (pectolitFor(animalId)?.remaining_meals ?? 0) > 0;
+  // Suresi devam eden (visible_until bugunden once olmayan) notlar.
+  const activeNotesFor = (animalId: string) =>
+    calfNotes.filter((n) => n.animal_id === animalId && n.visible_until != null && n.visible_until >= todayIso());
+  // Icmedigi halde muayene sonucu girilmemis ogunler (kirmizi unlem).
+  const unexaminedMissedFor = (animalId: string) =>
+    meals.filter((m) => m.animal_id === animalId && !m.drank && !m.exam_result);
+  const activeProtocolNameFor = (animalId: string) => {
+    const course = courses.find((c) => c.animal_id === animalId && c.status === "aktif");
+    if (!course) return null;
+    return protocols.find((p) => p.id === course.protocol_id)?.name ?? null;
+  };
 
   const assignedAnywhere = new Set(
     [...slots, ...otherSlots].map((s) => s.animal_id).filter((id): id is string => !!id)
@@ -238,8 +253,36 @@ export function useCalfCare(structure: CalfHousingStructure) {
     await refresh();
   }
 
-  async function handleAddNote(animalId: string, text: string) {
-    await createCalfNote(animalId, text, profile?.id ?? null);
+  async function handleAddNote(animalId: string, text: string, visibleDays: number | null) {
+    let visibleUntil: string | null = null;
+    if (visibleDays != null && visibleDays > 0) {
+      const d = new Date();
+      d.setDate(d.getDate() + visibleDays);
+      const pad = (x: number) => String(x).padStart(2, "0");
+      visibleUntil = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+    await createCalfNote(animalId, text, profile?.id ?? null, visibleUntil);
+    await refresh();
+  }
+
+  async function handleMealExam(mealId: string, result: string) {
+    await setCalfMealExam(mealId, result, profile?.id ?? null);
+    await refresh();
+  }
+
+  // Protokol duzenleme: id verilirse gunceller, verilmezse yeni olusturur.
+  async function handleSaveProtocol(
+    protocolId: string | null,
+    name: string,
+    days: { day_number: number; medicines: string }[]
+  ) {
+    if (protocolId) {
+      await updateCalfProtocolName(protocolId, name);
+      await replaceCalfProtocolDays(protocolId, days);
+    } else {
+      const created = await createCalfProtocol(name, profile?.id ?? null);
+      await replaceCalfProtocolDays(created.id, days);
+    }
     await refresh();
   }
 
@@ -294,7 +337,12 @@ export function useCalfCare(structure: CalfHousingStructure) {
     handleStartPectolit,
     handleCancelPectolit,
     handleAddNote,
+    handleMealExam,
+    handleSaveProtocol,
     handleClearLegacyStatus,
+    activeNotesFor,
+    unexaminedMissedFor,
+    activeProtocolNameFor,
     refresh,
   };
 }

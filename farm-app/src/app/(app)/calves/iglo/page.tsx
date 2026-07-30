@@ -10,11 +10,12 @@ import { CalfSlotBox } from "@/components/CalfSlotBox";
 import { CalfDetailModal, MoveTarget } from "@/components/CalfDetailModal";
 import { FeedingSessionBar } from "@/components/FeedingSessionBar";
 import { MealEntrySheet } from "@/components/MealEntrySheet";
+import { MealHistoryPanel } from "@/components/MealHistoryPanel";
 import { DailyTreatmentTable } from "@/components/DailyTreatmentTable";
 
 function slotLabel(slot: CalfHousingSlot): string {
   if (slot.structure === "iglo") return `İglo ${slot.group_index + 1} · ${slot.slot_index + 1}`;
-  return slot.group_index === 0 ? `20'lik Sıra · ${slot.slot_index + 1}` : `16'lık Sıra · ${slot.slot_index + 1}`;
+  return `Sıra ${slot.group_index + 1} · ${slot.slot_index + 1}`;
 }
 
 export default function IgloPage() {
@@ -24,6 +25,8 @@ export default function IgloPage() {
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [entryMeal, setEntryMeal] = useState<MealSlotRef | null>(null);
   const [entrySlotId, setEntrySlotId] = useState<string | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [dragSlotId, setDragSlotId] = useState<string | null>(null);
 
   const igloGroups = Array.from({ length: 6 }, (_, g) => care.slots.filter((s) => s.group_index === g));
@@ -34,12 +37,38 @@ export default function IgloPage() {
     .filter((s) => !s.animal_id)
     .map((s) => ({ slotId: s.id, label: slotLabel(s) }));
 
+  const occupied = care.slots.filter((s) => s.animal_id);
+  const treatedCount = occupied.filter((s) => care.underTreatment(s.animal_id!)).length;
+  const examPendingCount = occupied.filter((s) => care.unexaminedMissedFor(s.animal_id!).length > 0).length;
+
   function handleBoxClick(slot: CalfHousingSlot) {
     if (entryMeal) {
-      if (slot.animal_id) setEntrySlotId(slot.id === entrySlotId ? null : slot.id);
+      if (!slot.animal_id) return;
+      if (bulkMode) {
+        setBulkSelected((prev) => {
+          const next = new Set(prev);
+          if (next.has(slot.animal_id!)) next.delete(slot.animal_id!);
+          else next.add(slot.animal_id!);
+          return next;
+        });
+        return;
+      }
+      setEntrySlotId(slot.id === entrySlotId ? null : slot.id);
       return;
     }
     setSelectedSlotId(slot.id === selectedSlotId ? null : slot.id);
+  }
+
+  async function finishEntryMode() {
+    if (entryMeal && bulkMode && bulkSelected.size > 0) {
+      for (const animalId of bulkSelected) {
+        await care.handleMarkMeal(animalId, entryMeal, false);
+      }
+    }
+    setEntryMeal(null);
+    setEntrySlotId(null);
+    setBulkMode(false);
+    setBulkSelected(new Set());
   }
 
   return (
@@ -66,13 +95,19 @@ export default function IgloPage() {
             setEntryMeal(slot);
             setSelectedSlotId(null);
           }}
-          onFinish={() => {
-            setEntryMeal(null);
+          onFinish={finishEntryMode}
+          canManage={canManage}
+          bulkMode={bulkMode}
+          bulkCount={bulkSelected.size}
+          onToggleBulk={() => {
+            setBulkMode((v) => !v);
+            setBulkSelected(new Set());
             setEntrySlotId(null);
           }}
-          canManage={canManage}
         />
       )}
+
+      {!care.loading && <MealHistoryPanel animals={care.animals} />}
 
       {!care.loading && (
         <DailyTreatmentTable
@@ -99,10 +134,17 @@ export default function IgloPage() {
         <p className="text-sm text-neutral-500">Yükleniyor...</p>
       ) : (
         <div className="card">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-800">
-            İglo Odası
-            {entryMeal && <span className="ml-2 font-normal text-amber-700">(öğün işaretleme modu)</span>}
-          </h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-neutral-800">
+              İglo Odası
+              {entryMeal && <span className="ml-2 font-normal text-amber-700">(öğün işaretleme modu)</span>}
+            </h2>
+            <p className="text-xs text-neutral-500">
+              Dolu: <span className="font-semibold text-neutral-800">{occupied.length}/60</span>
+              {" · "}Tedavide: <span className="font-semibold text-red-700">{treatedCount}</span>
+              {" · "}Muayene bekleyen: <span className="font-semibold text-red-700">{examPendingCount}</span>
+            </p>
+          </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {igloGroups.map((group, g) => (
               <div key={g} className="shrink-0 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
@@ -114,9 +156,16 @@ export default function IgloPage() {
                       label={`İglo ${g + 1} · ${i + 1}`}
                       animal={care.animalById(slot.animal_id)}
                       underTreatment={!!(slot.animal_id && care.underTreatment(slot.animal_id))}
+                      treatmentLabel={slot.animal_id ? care.activeProtocolNameFor(slot.animal_id) : null}
                       meals={slot.animal_id ? care.mealsFor(slot.animal_id) : []}
                       pectolitPending={!!(slot.animal_id && care.pectolitPending(slot.animal_id))}
-                      selected={selectedSlotId === slot.id || entrySlotId === slot.id}
+                      alertNote={!!(slot.animal_id && care.activeNotesFor(slot.animal_id).length > 0)}
+                      alertExam={!!(slot.animal_id && care.unexaminedMissedFor(slot.animal_id).length > 0)}
+                      selected={
+                        selectedSlotId === slot.id ||
+                        entrySlotId === slot.id ||
+                        !!(bulkMode && slot.animal_id && bulkSelected.has(slot.animal_id))
+                      }
                       onClick={() => handleBoxClick(slot)}
                       draggable={canManage && !entryMeal}
                       onDragStartSlot={() => setDragSlotId(slot.id)}
@@ -131,6 +180,11 @@ export default function IgloPage() {
               </div>
             ))}
           </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-neutral-400">
+            Kırmızı çerçeve: tedavide (üstte protokol adı) · Noktalar: son 5 öğün, soldan en yeni (yeşil içti, kırmızı
+            içmedi, sarı Pectolit) · Yanıp sönen sarı nokta: Pectolit içecek · Kırmızı ünlem: muayene bekliyor · Sarı
+            ünlem: aktif not var · Taşımak için kutucuğu sürükleyip bırakın.
+          </p>
         </div>
       )}
 
@@ -176,9 +230,11 @@ export default function IgloPage() {
           onCancelPectolit={() =>
             selectedSlot.animal_id ? care.handleCancelPectolit(selectedSlot.animal_id) : Promise.resolve()
           }
-          onAddNote={(text) =>
-            selectedSlot.animal_id ? care.handleAddNote(selectedSlot.animal_id, text) : Promise.resolve()
+          onAddNote={(text, days) =>
+            selectedSlot.animal_id ? care.handleAddNote(selectedSlot.animal_id, text, days) : Promise.resolve()
           }
+          onMealExam={(mealId, result) => care.handleMealExam(mealId, result)}
+          onSaveProtocol={(protocolId, name, days) => care.handleSaveProtocol(protocolId, name, days)}
           onClearLegacyStatus={() =>
             selectedSlot.animal_id ? care.handleClearLegacyStatus(selectedSlot.animal_id) : Promise.resolve()
           }
@@ -186,7 +242,7 @@ export default function IgloPage() {
         />
       )}
 
-      {entryMeal && entrySlot?.animal_id && (
+      {entryMeal && !bulkMode && entrySlot?.animal_id && (
         <MealEntrySheet
           animal={care.animalById(entrySlot.animal_id)!}
           slot={entryMeal}

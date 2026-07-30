@@ -7,8 +7,11 @@ interface Props {
   label: string;
   animal: Animal | undefined;
   underTreatment: boolean;
+  treatmentLabel?: string | null;
   meals: CalfMeal[];
   pectolitPending: boolean;
+  alertNote?: boolean;
+  alertExam?: boolean;
   selected: boolean;
   onClick: () => void;
   draggable?: boolean;
@@ -20,13 +23,18 @@ interface Props {
 // Kutunun altindaki 5 nokta: soldan saga en yeni ogunden eskiye. Kayit
 // girilmeyen ogun "icti" (yesil) kabul edilir; icmedi kirmizi, pectolit
 // verilen ogun sari gorunur. Pectolit bekleyen buzagida en solda yanip
-// sonen sari uyari noktasi bulunur.
+// sonen sari uyari; sag ust kosede muayene bekleyen icin kirmizi, aktif
+// notu olan icin sari unlem rozeti yanip soner. Tedavideki buzaginin
+// cercevesi kirmizi olur ve numaranin ustunde protokol adi yazar.
 export function CalfSlotBox({
   label,
   animal,
   underTreatment,
+  treatmentLabel,
   meals,
   pectolitPending,
+  alertNote,
+  alertExam,
   selected,
   onClick,
   draggable,
@@ -37,7 +45,7 @@ export function CalfSlotBox({
   const colorClasses = !animal
     ? "border-dashed border-neutral-300 bg-white text-neutral-400"
     : underTreatment
-      ? "border-red-400 bg-red-100 text-red-900"
+      ? "border-2 border-red-500 bg-red-100 text-red-900"
       : "border-green-400 bg-green-100 text-green-900";
 
   const dots = animal
@@ -71,10 +79,27 @@ export function CalfSlotBox({
         e.preventDefault();
         onDropOnSlot();
       }}
-      className={`flex shrink-0 flex-col items-center justify-center gap-1 rounded-md border p-1 text-center shadow-sm transition-colors ${colorClasses} ${
+      className={`relative flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border p-1 text-center shadow-sm transition-colors ${colorClasses} ${
         selected ? "ring-2 ring-offset-1 ring-green-700" : ""
       } ${className ?? "h-14 w-14"}`}
     >
+      {animal && (alertExam || alertNote) && (
+        <span className="absolute -right-1 -top-1 flex gap-0.5">
+          {alertExam && (
+            <span className="flex h-3.5 w-3.5 animate-pulse items-center justify-center rounded-full bg-red-600 text-[9px] font-bold leading-none text-white shadow">
+              !
+            </span>
+          )}
+          {alertNote && (
+            <span className="flex h-3.5 w-3.5 animate-pulse items-center justify-center rounded-full bg-amber-400 text-[9px] font-bold leading-none text-white shadow">
+              !
+            </span>
+          )}
+        </span>
+      )}
+      {animal && underTreatment && treatmentLabel && (
+        <span className="w-full truncate text-[7px] font-medium leading-none text-red-700">{treatmentLabel}</span>
+      )}
       <span className="w-full truncate text-[10px] font-bold leading-tight">
         {animal ? animal.ear_tag : "Boş"}
       </span>

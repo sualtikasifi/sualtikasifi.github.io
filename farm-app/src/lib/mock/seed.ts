@@ -541,25 +541,17 @@ export const seedCalfFeedings: CalfFeeding[] = [
 
 function buildCalfHousingSlots(): CalfHousingSlot[] {
   const slots: CalfHousingSlot[] = [];
-  for (let i = 0; i < 20; i++) {
-    slots.push({
-      id: `slot-buzagilik-0-${i}`,
-      structure: "buzagilik",
-      group_index: 0,
-      slot_index: i,
-      animal_id: null,
-      created_at: daysAgo(30),
-    });
-  }
-  for (let i = 0; i < 16; i++) {
-    slots.push({
-      id: `slot-buzagilik-1-${i}`,
-      structure: "buzagilik",
-      group_index: 1,
-      slot_index: i,
-      animal_id: null,
-      created_at: daysAgo(30),
-    });
+  for (let g = 0; g < 6; g++) {
+    for (let i = 0; i < 20; i++) {
+      slots.push({
+        id: `slot-buzagilik-${g}-${i}`,
+        structure: "buzagilik",
+        group_index: g,
+        slot_index: i,
+        animal_id: null,
+        created_at: daysAgo(30),
+      });
+    }
   }
   for (let g = 0; g < 6; g++) {
     for (let s = 0; s < 10; s++) {

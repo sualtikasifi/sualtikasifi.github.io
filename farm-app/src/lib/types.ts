@@ -214,6 +214,7 @@ export interface CalfNote {
   id: string;
   animal_id: string;
   note: string;
+  visible_until: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -262,6 +263,9 @@ export interface CalfMeal {
   meal_hour: CalfMealHour;
   drank: boolean;
   pectolit: boolean;
+  exam_result: string | null;
+  examined_by: string | null;
+  examined_at: string | null;
   created_by: string | null;
   created_at: string;
 }
