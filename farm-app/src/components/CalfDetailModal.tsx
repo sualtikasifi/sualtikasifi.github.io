@@ -77,6 +77,7 @@ interface Props {
   onStartPectolit: () => Promise<void>;
   onCancelPectolit: () => Promise<void>;
   onAddNote: (text: string, visibleDays: number | null) => Promise<void>;
+  onDeleteNote: (noteId: string) => Promise<void>;
   onMealExam: (mealId: string, result: string) => Promise<void>;
   onSaveProtocol: (
     protocolId: string | null,
@@ -111,6 +112,7 @@ export function CalfDetailModal({
   onStartPectolit,
   onCancelPectolit,
   onAddNote,
+  onDeleteNote,
   onMealExam,
   onSaveProtocol,
   onClearLegacyStatus,
@@ -284,13 +286,25 @@ export function CalfDetailModal({
             {activeNotes.length > 0 && (
               <div className="space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-2">
                 {activeNotes.map((n) => (
-                  <p key={n.id} className="text-xs text-amber-900">
-                    <span className="mr-1 font-bold">!</span>
-                    {n.note}
-                    {n.visible_until && (
-                      <span className="ml-1 text-amber-600">({formatDate(n.visible_until)} tarihine kadar)</span>
+                  <div key={n.id} className="flex items-start justify-between gap-2">
+                    <p className="text-xs text-amber-900">
+                      <span className="mr-1 font-bold">!</span>
+                      {n.note}
+                      {n.visible_until && (
+                        <span className="ml-1 text-amber-600">({formatDate(n.visible_until)} tarihine kadar)</span>
+                      )}
+                    </p>
+                    {canManage && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => run(() => onDeleteNote(n.id))}
+                        className="shrink-0 text-[11px] font-medium text-red-600 hover:underline disabled:opacity-50"
+                      >
+                        Sil
+                      </button>
                     )}
-                  </p>
+                  </div>
                 ))}
               </div>
             )}
@@ -813,9 +827,21 @@ export function CalfDetailModal({
               ) : (
                 <div className="max-h-32 space-y-1 overflow-y-auto">
                   {notes.map((n) => (
-                    <p key={n.id} className="rounded-md bg-neutral-50 px-2 py-1 text-xs text-neutral-700">
-                      {n.note} <span className="text-neutral-400">· {formatDateTime(n.created_at)}</span>
-                    </p>
+                    <div key={n.id} className="flex items-start justify-between gap-2 rounded-md bg-neutral-50 px-2 py-1">
+                      <p className="text-xs text-neutral-700">
+                        {n.note} <span className="text-neutral-400">· {formatDateTime(n.created_at)}</span>
+                      </p>
+                      {canManage && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => run(() => onDeleteNote(n.id))}
+                          className="shrink-0 text-[11px] font-medium text-red-600 hover:underline disabled:opacity-50"
+                        >
+                          Sil
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
