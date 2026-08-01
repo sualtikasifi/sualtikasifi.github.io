@@ -5,6 +5,7 @@ import { listProfiles, updateProfile } from "@/lib/data";
 import { Profile } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { PERMISSION_KEYS, PERMISSION_LABELS } from "@/lib/permissions";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function TeamPage() {
   const { profile: me } = useAuth();
@@ -36,13 +37,11 @@ export default function TeamPage() {
 
   return (
     <div className="max-w-3xl space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-neutral-900">Ekip ve Yetkiler</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          Her kullanıcı için hangi işlemleri yapabileceğini buradan belirleyebilirsiniz. Yönetici yetkisi olan
-          kullanıcılar her şeyi yapabilir.
-        </p>
-      </div>
+      <PageHeader icon="🛡️" title="Ekip ve Yetkiler" color="slate" />
+      <p className="text-sm text-neutral-500">
+        Her kullanıcı için hangi işlemleri yapabileceğini buradan belirleyebilirsiniz. Yönetici yetkisi olan
+        kullanıcılar her şeyi yapabilir.
+      </p>
 
       {loading ? (
         <p className="text-sm text-neutral-500">Yükleniyor...</p>

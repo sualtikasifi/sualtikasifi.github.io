@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function HerdInfoPage() {
   const { profile } = useAuth();
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">Sürü Bilgileri</h1>
+      <PageHeader icon="📋" title="Sürü Bilgileri" subtitle="Toplu veri aktarımı ve hayvan yönetimi" color="green" />
 
       {hasPermission(profile, "can_manage_animals") && (
         <div className="card">

@@ -7,6 +7,7 @@ import { Animal, MastitisTreatment, Profile } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { MastitisTreatmentCard } from "@/components/MastitisTreatmentCard";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function MastitisPage() {
   const { profile } = useAuth();
@@ -28,14 +29,19 @@ export default function MastitisPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Mastitler</h1>
-        {hasPermission(profile, "can_manage_mastitis") && (
-          <Link href="/treatments/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-            Yeni mastitis kaydı
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        icon="💉"
+        title="Mastitler"
+        subtitle="Meme bazlı tedavi ve arınma takibi"
+        color="rose"
+        actions={
+          hasPermission(profile, "can_manage_mastitis") && (
+            <Link href="/treatments/new" className="btn-primary">
+              + Yeni mastitis kaydı
+            </Link>
+          )
+        }
+      />
 
       {loading ? (
         <p className="text-sm text-neutral-500">Yükleniyor...</p>

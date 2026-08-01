@@ -5,6 +5,7 @@ import { createPushSubscription, deletePushSubscriptionByEndpoint, listTasks, up
 import { Task } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { getPushStatus, PushSupportStatus, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
+import { PageHeader } from "@/components/PageHeader";
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -105,7 +106,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">Profilim</h1>
+      <PageHeader icon="👤" title="Profilim" color="green" />
       <form onSubmit={handleSubmit} className="card space-y-3">
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-neutral-700">Unvan + Ad Soyad</span>

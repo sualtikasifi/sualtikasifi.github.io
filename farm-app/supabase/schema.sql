@@ -417,14 +417,26 @@ create table if not exists calf_birth_records (
   updated_by uuid references profiles (id)
 );
 
--- 15g. Pectolit takibi: "Pectolit Basla" denince remaining_meals=2 olur,
--- pectolit verilen her ogunde 1 azalir; >0 iken kutucukta sari uyari yanar.
-create table if not exists calf_pectolit (
-  animal_id uuid primary key references animals (id) on delete cascade,
-  remaining_meals integer not null default 0 check (remaining_meals >= 0),
-  started_at timestamptz not null default now(),
-  started_by uuid references profiles (id)
+-- 15g. Pectolit kuru: "Pectolit Basla" ile 3 gunluk (gun basina 09:00 ve
+-- 21:00 ogunleri = toplam 6 doz) bir donem acilir. Donem sonunda (bugunun
+-- gun sirasi total_days'i gectiginde) "ishal iyilesti mi?" sorusu kutucukta
+-- rozet olarak belirir. Iyilestiyse status=tamamlandi. Iyilesmediyse
+-- total_days 1 artar (1 gun/2 doz uzar); bu uzatma total_days'i 5'e
+-- tasiyorsa (yani 5. gunun sonunda hala iyilesmediyse) antibiotic_warning
+-- true olur - pectolit'e devam etmeyi engellemez, sadece ayrica uyarir.
+create table if not exists calf_pectolit_courses (
+  id uuid primary key default gen_random_uuid(),
+  animal_id uuid not null references animals (id) on delete cascade,
+  start_date date not null default current_date,
+  total_days integer not null default 3 check (total_days > 0),
+  status text not null default 'aktif' check (status in ('aktif', 'tamamlandi', 'iptal')),
+  antibiotic_warning boolean not null default false,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
 );
+
+create index if not exists calf_pectolit_courses_animal_idx on calf_pectolit_courses (animal_id);
+create index if not exists calf_pectolit_courses_status_idx on calf_pectolit_courses (status);
 
 -- 15h. Asi planlari (persembe asi gunleri): yapilacak asilar eklenir,
 -- yapilinca tik atilir (kim/ne zaman kaydiyla).
@@ -577,7 +589,7 @@ alter table calf_protocols enable row level security;
 alter table calf_protocol_days enable row level security;
 alter table calf_treatment_courses enable row level security;
 alter table calf_birth_records enable row level security;
-alter table calf_pectolit enable row level security;
+alter table calf_pectolit_courses enable row level security;
 alter table vaccination_plans enable row level security;
 alter table task_animals enable row level security;
 alter table push_subscriptions enable row level security;
@@ -703,10 +715,10 @@ create policy "calf_birth_records_insert" on calf_birth_records for insert to au
 create policy "calf_birth_records_update" on calf_birth_records for update to authenticated using (has_perm('calves'));
 create policy "calf_birth_records_delete" on calf_birth_records for delete to authenticated using (has_perm('calves'));
 
-create policy "calf_pectolit_select" on calf_pectolit for select to authenticated using (true);
-create policy "calf_pectolit_insert" on calf_pectolit for insert to authenticated with check (has_perm('calves'));
-create policy "calf_pectolit_update" on calf_pectolit for update to authenticated using (has_perm('calves'));
-create policy "calf_pectolit_delete" on calf_pectolit for delete to authenticated using (has_perm('calves'));
+create policy "calf_pectolit_courses_select" on calf_pectolit_courses for select to authenticated using (true);
+create policy "calf_pectolit_courses_insert" on calf_pectolit_courses for insert to authenticated with check (has_perm('calves'));
+create policy "calf_pectolit_courses_update" on calf_pectolit_courses for update to authenticated using (has_perm('calves'));
+create policy "calf_pectolit_courses_delete" on calf_pectolit_courses for delete to authenticated using (has_perm('calves'));
 
 create policy "vaccination_plans_select" on vaccination_plans for select to authenticated using (true);
 create policy "vaccination_plans_insert" on vaccination_plans for insert to authenticated with check (has_perm('calves'));

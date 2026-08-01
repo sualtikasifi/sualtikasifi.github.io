@@ -8,7 +8,7 @@ import {
   CalfMeal,
   CalfMealHour,
   CalfNote,
-  CalfPectolit,
+  CalfPectolitCourse,
   CalfProtocol,
   CalfProtocolDay,
   CalfTreatment,
@@ -30,6 +30,7 @@ import {
   TaskAnimal,
   VaccinationPlan,
 } from "@/lib/types";
+import { todayIso } from "../format";
 import {
   DEMO_USER_ID,
   seedAnimals,
@@ -80,7 +81,7 @@ interface DemoDb {
   calfProtocolDays: CalfProtocolDay[];
   calfTreatmentCourses: CalfTreatmentCourse[];
   calfBirthRecords: CalfBirthRecord[];
-  calfPectolit: CalfPectolit[];
+  calfPectolitCourses: CalfPectolitCourse[];
   vaccinationPlans: VaccinationPlan[];
   pushSubscriptions: PushSubscriptionRecord[];
 }
@@ -111,7 +112,7 @@ function initialDb(): DemoDb {
     calfProtocolDays: seedCalfProtocolDays,
     calfTreatmentCourses: [],
     calfBirthRecords: [],
-    calfPectolit: [],
+    calfPectolitCourses: [],
     vaccinationPlans: [],
     pushSubscriptions: [],
   };
@@ -153,7 +154,7 @@ function loadDb(): DemoDb {
     calfProtocolDays: parsed.calfProtocolDays ?? seedCalfProtocolDays,
     calfTreatmentCourses: parsed.calfTreatmentCourses ?? [],
     calfBirthRecords: parsed.calfBirthRecords ?? [],
-    calfPectolit: parsed.calfPectolit ?? [],
+    calfPectolitCourses: parsed.calfPectolitCourses ?? [],
     vaccinationPlans: parsed.vaccinationPlans ?? [],
     pushSubscriptions: parsed.pushSubscriptions ?? [],
   };
@@ -1015,25 +1016,39 @@ export function demoUpsertCalfBirthRecord(
   return next;
 }
 
-// --- Pectolit takibi ---
+// --- Pectolit kurleri ---
 
-export function demoListCalfPectolit(): CalfPectolit[] {
-  return loadDb().calfPectolit;
+export function demoListCalfPectolitCourses(): CalfPectolitCourse[] {
+  return loadDb().calfPectolitCourses.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
-export function demoSetCalfPectolit(animalId: string, remainingMeals: number, startedBy: string | null): CalfPectolit {
+export function demoCreateCalfPectolitCourse(animalId: string, createdBy: string | null): CalfPectolitCourse {
   const db = loadDb();
-  const idx = db.calfPectolit.findIndex((p) => p.animal_id === animalId);
-  const record: CalfPectolit = {
+  const course: CalfPectolitCourse = {
+    id: newId("pectolit"),
     animal_id: animalId,
-    remaining_meals: remainingMeals,
-    started_at: new Date().toISOString(),
-    started_by: startedBy,
+    start_date: todayIso(),
+    total_days: 3,
+    status: "aktif",
+    antibiotic_warning: false,
+    created_by: createdBy,
+    created_at: new Date().toISOString(),
   };
-  if (idx >= 0) db.calfPectolit[idx] = record;
-  else db.calfPectolit.push(record);
+  db.calfPectolitCourses.push(course);
   saveDb(db);
-  return record;
+  return course;
+}
+
+export function demoUpdateCalfPectolitCourse(
+  id: string,
+  patch: Partial<Pick<CalfPectolitCourse, "total_days" | "status" | "antibiotic_warning">>
+): CalfPectolitCourse | undefined {
+  const db = loadDb();
+  const idx = db.calfPectolitCourses.findIndex((c) => c.id === id);
+  if (idx === -1) return undefined;
+  db.calfPectolitCourses[idx] = { ...db.calfPectolitCourses[idx], ...patch };
+  saveDb(db);
+  return db.calfPectolitCourses[idx];
 }
 
 // --- Asi planlari ---

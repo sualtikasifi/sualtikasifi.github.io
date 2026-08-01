@@ -6,16 +6,14 @@ import { useSearchParams } from "next/navigation";
 import {
   getAnimal,
   listAnimals,
-  listBulls,
   listCalfFeedings,
   listEmbryosForRecipient,
-  listInseminations,
   listMastitisTreatments,
   listOpuSessions,
   listProfiles,
   updateAnimal,
 } from "@/lib/data";
-import { Animal, AnimalStatus, Bull, CalfFeeding, Embryo, Insemination, MastitisTreatment, OpuSession, Profile } from "@/lib/types";
+import { Animal, AnimalStatus, CalfFeeding, Embryo, MastitisTreatment, OpuSession, Profile } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { MastitisTreatmentCard } from "@/components/MastitisTreatmentCard";
 import { formatDate } from "@/lib/format";
@@ -37,8 +35,6 @@ function AnimalDetailContent() {
   const [animal, setAnimal] = useState<Animal | null>(null);
   const [mastitisTreatments, setMastitisTreatments] = useState<MastitisTreatment[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [inseminations, setInseminations] = useState<Insemination[]>([]);
-  const [bulls, setBulls] = useState<Bull[]>([]);
   const [donorSessions, setDonorSessions] = useState<OpuSession[]>([]);
   const [receivedEmbryos, setReceivedEmbryos] = useState<Embryo[]>([]);
   const [opuSessions, setOpuSessions] = useState<OpuSession[]>([]);
@@ -52,18 +48,14 @@ function AnimalDetailContent() {
       getAnimal(id),
       listMastitisTreatments(id),
       listProfiles(),
-      listInseminations(id),
-      listBulls(),
       listOpuSessions(),
       listEmbryosForRecipient(id),
       listAnimals(),
       listCalfFeedings(id),
-    ]).then(([a, mt, p, ins, b, sessions, received, animals, feed]) => {
+    ]).then(([a, mt, p, sessions, received, animals, feed]) => {
       setAnimal(a ?? null);
       setMastitisTreatments(mt);
       setProfiles(p);
-      setInseminations(ins);
-      setBulls(b);
       setOpuSessions(sessions);
       setDonorSessions(sessions.filter((s) => s.donor_animal_id === id));
       setReceivedEmbryos(received);
@@ -99,14 +91,6 @@ function AnimalDetailContent() {
           <div className="mt-1"><Badge value={animal.status} /></div>
         </div>
         <div className="flex gap-2">
-          {hasPermission(profile, "can_manage_inseminations") && (
-            <Link
-              href={`/inseminations/new?animalId=${animal.id}`}
-              className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50"
-            >
-              Tohumlama ekle
-            </Link>
-          )}
           {hasPermission(profile, "can_manage_mastitis") && (
             <Link
               href={`/treatments/new?animalId=${animal.id}`}
@@ -225,34 +209,6 @@ function AnimalDetailContent() {
           )}
         </div>
       )}
-
-      <div className="card">
-        <h2 className="mb-2 text-sm font-semibold text-neutral-800">Tohumlama geçmişi</h2>
-        {inseminations.length === 0 ? (
-          <p className="text-sm text-neutral-400">Kayıt yok.</p>
-        ) : (
-          <div className="divide-y divide-neutral-100">
-            {inseminations.map((i) => (
-              <div key={i.id} className="py-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-neutral-700">
-                      {bulls.find((b) => b.id === i.bull_id)?.name ?? "-"}
-                    </span>
-                    {i.semen_type && <Badge value={i.semen_type} />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-neutral-400">{formatDate(i.insemination_date)}</span>
-                    <Badge value={i.pregnancy_result} />
-                  </div>
-                </div>
-                {i.technician_name && <p className="text-neutral-500">Teknisyen: {i.technician_name}</p>}
-                {i.notes && <p className="text-neutral-500">{i.notes}</p>}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {donorSessions.length > 0 && (
         <div className="card">

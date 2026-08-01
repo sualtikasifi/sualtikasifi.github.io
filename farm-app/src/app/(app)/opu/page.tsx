@@ -9,6 +9,7 @@ import { OPU_STAGE_INFO, opuStageFor } from "@/lib/opuStage";
 import { exportOpuReportToExcel } from "@/lib/excelExport";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { PageHeader } from "@/components/PageHeader";
 
 function formatDateTime(d: Date): string {
   return d.toLocaleString("tr-TR", {
@@ -276,22 +277,27 @@ export default function OpuSessionsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">OPU Seansları</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/opu/stats" className="btn-secondary">
-            OPU İstatistikleri
-          </Link>
-          <button type="button" onClick={() => setShowExportModal(true)} className="btn-secondary">
-            Excel&apos;e Aktar
-          </button>
-          {hasPermission(profile, "can_manage_opu") && (
-            <Link href="/opu/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-              Yeni OPU
+      <PageHeader
+        icon="🧬"
+        title="OPU Seansları"
+        subtitle="Folikül, oosit ve embriyo takibi"
+        color="purple"
+        actions={
+          <>
+            <Link href="/opu/stats" className="btn-secondary">
+              İstatistikler
             </Link>
-          )}
-        </div>
-      </div>
+            <button type="button" onClick={() => setShowExportModal(true)} className="btn-secondary">
+              Excel&apos;e Aktar
+            </button>
+            {hasPermission(profile, "can_manage_opu") && (
+              <Link href="/opu/new" className="btn-primary">
+                + Yeni OPU
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {showExportModal && (
         <div

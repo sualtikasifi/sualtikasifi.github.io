@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format";
 import { exportRowsToExcel } from "@/lib/excelExport";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { PageHeader } from "@/components/PageHeader";
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -49,29 +50,34 @@ export default function MedicinesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Aşı/İlaç Stok Takibi</h1>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={exporting || medicines.length === 0}
-            className="btn-secondary"
-          >
-            {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
-          </button>
-          {hasPermission(profile, "can_manage_medicines") && (
-            <>
-              <Link href="/medicines/add-stock" className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50">
-                Stok Ekle
-              </Link>
-              <Link href="/medicines/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-                Yeni İlaç Ekle
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        icon="💊"
+        title="Aşı/İlaç Stok Takibi"
+        subtitle="Sayım, kullanımda düşüm ve alım takibi"
+        color="teal"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || medicines.length === 0}
+              className="btn-secondary"
+            >
+              {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
+            </button>
+            {hasPermission(profile, "can_manage_medicines") && (
+              <>
+                <Link href="/medicines/add-stock" className="btn-secondary">
+                  Stok Ekle
+                </Link>
+                <Link href="/medicines/new" className="btn-primary">
+                  + Yeni İlaç Ekle
+                </Link>
+              </>
+            )}
+          </>
+        }
+      />
 
       <input
         placeholder="İlaç/aşı ara..."

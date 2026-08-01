@@ -7,7 +7,7 @@ import {
   CalfBirthRecord,
   CalfMeal,
   CalfNote,
-  CalfPectolit,
+  CalfPectolitCourse,
   CalfProtocol,
   CalfProtocolDay,
   CalfTreatment,
@@ -34,6 +34,14 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+// Bugun, verilen baslangic gununden itibaren kacinci gun (1-indeksli).
+function courseCurrentDay(startDate: string): number {
+  const diff = Math.floor(
+    (new Date(`${todayIso()}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000
+  );
+  return diff + 1;
+}
+
 // datetime-local inputu yerel saatle "YYYY-MM-DDTHH:mm" bekler.
 function toLocalInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -53,7 +61,10 @@ interface Props {
   availableCalves: Animal[];
   meals: CalfMeal[];
   birthRecord: CalfBirthRecord | undefined;
-  pectolit: CalfPectolit | undefined;
+  pectolit: CalfPectolitCourse | undefined;
+  pectolitHistory: CalfPectolitCourse[];
+  pectolitNeedsResponse: boolean;
+  pectolitAntibioticWarning: boolean;
   notes: CalfNote[];
   courses: CalfTreatmentCourse[];
   protocols: CalfProtocol[];
@@ -76,6 +87,7 @@ interface Props {
   onSaveBirth: (patch: Partial<Omit<CalfBirthRecord, "animal_id" | "updated_at" | "updated_by">>) => Promise<void>;
   onStartPectolit: () => Promise<void>;
   onCancelPectolit: () => Promise<void>;
+  onPectolitResponse: (improved: boolean) => Promise<void>;
   onAddNote: (text: string, visibleDays: number | null) => Promise<void>;
   onDeleteNote: (noteId: string) => Promise<void>;
   onMealExam: (mealId: string, result: string) => Promise<void>;
@@ -95,6 +107,9 @@ export function CalfDetailModal({
   meals,
   birthRecord,
   pectolit,
+  pectolitHistory,
+  pectolitNeedsResponse,
+  pectolitAntibioticWarning,
   notes,
   courses,
   protocols,
@@ -111,6 +126,7 @@ export function CalfDetailModal({
   onSaveBirth,
   onStartPectolit,
   onCancelPectolit,
+  onPectolitResponse,
   onAddNote,
   onDeleteNote,
   onMealExam,
@@ -459,29 +475,84 @@ export function CalfDetailModal({
             <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-neutral-700">Pectolit</p>
-                {pectolit && pectolit.remaining_meals > 0 && (
+                {pectolit && (
                   <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">
-                    {pectolit.remaining_meals} öğün kaldı
+                    Gün {Math.min(courseCurrentDay(pectolit.start_date), pectolit.total_days)}/{pectolit.total_days}
                   </span>
                 )}
               </div>
-              {pectolit && pectolit.remaining_meals > 0 ? (
-                <div className="flex items-center gap-2">
-                  <p className="flex-1 text-xs text-neutral-500">
-                    Önümüzdeki {pectolit.remaining_meals} öğünde Pectolit içecek; işaretlenen öğünler sarı görünür.
+
+              {pectolitAntibioticWarning && (
+                <div className="rounded-md border border-purple-300 bg-purple-50 px-2 py-1.5">
+                  <p className="text-xs font-semibold text-purple-800">
+                    5 günü aşkın süredir ishal iyileşmedi — antibiyotik tedavisi başlatılması öneriliyor.
                   </p>
-                  {canManage && (
-                    <button type="button" disabled={busy} onClick={() => run(onCancelPectolit)} className="btn-secondary shrink-0">
-                      İptal Et
-                    </button>
+                  <p className="text-[11px] text-purple-700">
+                    Pectolit isterseniz devam edebilir; aşağıdan &quot;Tedavi&quot; bölümünden antibiyotik protokolü
+                    başlatabilirsiniz.
+                  </p>
+                </div>
+              )}
+
+              {pectolit ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-neutral-500">
+                    09:00 ve 21:00 öğünlerinde Pectolit içecek; işaretlenen öğünler sarı görünür.
+                  </p>
+
+                  {pectolitNeedsResponse ? (
+                    <div className="space-y-2 rounded-md border border-blue-300 bg-blue-50 p-2">
+                      <p className="text-xs font-semibold text-blue-900">
+                        {pectolit.total_days} günlük Pectolit süresi doldu — ishal iyileşti mi?
+                      </p>
+                      {canManage && (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => run(() => onPectolitResponse(true))}
+                            className="rounded-md border border-green-600 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-800 hover:bg-green-100 disabled:opacity-50"
+                          >
+                            İyileşti (Bitir)
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => run(() => onPectolitResponse(false))}
+                            className="rounded-md border border-red-500 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          >
+                            İyileşmedi (+1 gün)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    canManage && (
+                      <button type="button" disabled={busy} onClick={() => run(onCancelPectolit)} className="btn-secondary">
+                        Pectolit&apos;i İptal Et
+                      </button>
+                    )
                   )}
                 </div>
               ) : (
                 canManage && (
                   <button type="button" disabled={busy} onClick={() => run(onStartPectolit)} className="btn-primary">
-                    Pectolit Başla (2 öğün)
+                    Pectolit Başla (3 gün · 09:00 ve 21:00)
                   </button>
                 )
+              )}
+
+              {pectolitHistory.length > 0 && (
+                <div className="border-t border-neutral-100 pt-1.5">
+                  <p className="text-[11px] text-neutral-400">
+                    Geçmiş kürler:{" "}
+                    {pectolitHistory
+                      .filter((c) => c.status !== "aktif")
+                      .slice(0, 3)
+                      .map((c) => `${formatDate(c.start_date)} (${c.total_days} gün, ${c.status})`)
+                      .join(" · ") || "yok"}
+                  </p>
+                </div>
               )}
             </div>
 

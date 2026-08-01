@@ -11,6 +11,7 @@ import { CalfDetailModal, MoveTarget } from "@/components/CalfDetailModal";
 import { FeedingSessionBar } from "@/components/FeedingSessionBar";
 import { MealHistoryPanel } from "@/components/MealHistoryPanel";
 import { DailyTreatmentTable } from "@/components/DailyTreatmentTable";
+import { PageHeader } from "@/components/PageHeader";
 
 function slotLabel(slot: CalfHousingSlot): string {
   if (slot.structure === "iglo") return `İglo ${slot.group_index + 1} · ${slot.slot_index + 1}`;
@@ -69,7 +70,7 @@ export default function IgloPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-neutral-900">İglo</h1>
+      <PageHeader icon="⛺" title="İglo" subtitle="6 iglo · 60 kutucuk" color="sky" />
 
       <CalfNotesPanel />
 
@@ -153,6 +154,8 @@ export default function IgloPage() {
                       pectolitPending={!!(slot.animal_id && care.pectolitPending(slot.animal_id))}
                       alertNote={!!(slot.animal_id && care.activeNotesFor(slot.animal_id).length > 0)}
                       alertExam={!!(slot.animal_id && care.unexaminedMissedFor(slot.animal_id).length > 0)}
+              alertPectolitResponse={!!(slot.animal_id && care.pectolitNeedsResponse(slot.animal_id))}
+              alertAntibiotic={!!(slot.animal_id && care.pectolitAntibioticWarning(slot.animal_id))}
                       selected={
                         selectedSlotId === slot.id || !!(entryMeal && slot.animal_id && mealSelection.has(slot.animal_id))
                       }
@@ -185,7 +188,10 @@ export default function IgloPage() {
           availableCalves={care.availableCalves}
           meals={selectedSlot.animal_id ? care.mealsFor(selectedSlot.animal_id) : []}
           birthRecord={selectedSlot.animal_id ? care.birthRecordFor(selectedSlot.animal_id) : undefined}
-          pectolit={selectedSlot.animal_id ? care.pectolitFor(selectedSlot.animal_id) : undefined}
+          pectolit={selectedSlot.animal_id ? care.activePectolitCourseFor(selectedSlot.animal_id) : undefined}
+          pectolitHistory={selectedSlot.animal_id ? care.pectolitCoursesFor(selectedSlot.animal_id) : []}
+          pectolitNeedsResponse={!!(selectedSlot.animal_id && care.pectolitNeedsResponse(selectedSlot.animal_id))}
+          pectolitAntibioticWarning={!!(selectedSlot.animal_id && care.pectolitAntibioticWarning(selectedSlot.animal_id))}
           notes={selectedSlot.animal_id ? care.notesFor(selectedSlot.animal_id) : []}
           courses={selectedSlot.animal_id ? care.coursesFor(selectedSlot.animal_id) : []}
           protocols={care.protocols}
@@ -219,6 +225,9 @@ export default function IgloPage() {
           }
           onCancelPectolit={() =>
             selectedSlot.animal_id ? care.handleCancelPectolit(selectedSlot.animal_id) : Promise.resolve()
+          }
+          onPectolitResponse={(improved) =>
+            selectedSlot.animal_id ? care.handlePectolitResponse(selectedSlot.animal_id, improved) : Promise.resolve()
           }
           onAddNote={(text, days) =>
             selectedSlot.animal_id ? care.handleAddNote(selectedSlot.animal_id, text, days) : Promise.resolve()

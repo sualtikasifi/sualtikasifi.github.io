@@ -8,12 +8,13 @@ import {
   createCalfProtocol,
   createCalfTreatment,
   createCalfTreatmentCourse,
+  createCalfPectolitCourse,
   listAnimals,
   listCalfBirthRecords,
   listCalfHousingSlots,
   listCalfMeals,
   listCalfNotes,
-  listCalfPectolit,
+  listCalfPectolitCourses,
   listCalfProtocolDays,
   listCalfProtocols,
   listCalfTreatmentCourses,
@@ -21,9 +22,9 @@ import {
   listCalfTreatmentStatuses,
   replaceCalfProtocolDays,
   setCalfMealExam,
-  setCalfPectolit,
   setCalfTreatmentCourseStatus,
   setCalfTreatmentStatus,
+  updateCalfPectolitCourse,
   updateCalfProtocolName,
   upsertCalfBirthRecord,
   upsertCalfMeal,
@@ -35,7 +36,7 @@ import {
   CalfHousingStructure,
   CalfMeal,
   CalfNote,
-  CalfPectolit,
+  CalfPectolitCourse,
   CalfProtocol,
   CalfProtocolDay,
   CalfTreatment,
@@ -54,6 +55,21 @@ function daysAgoIso(n: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+function addDaysIso(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  const pad = (x: number) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Bugun, kurun basladigi gunden itibaren kacinci gun (1-indeksli).
+function courseCurrentDay(startDate: string): number {
+  const diff = Math.floor(
+    (new Date(`${todayIso()}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000
+  );
+  return diff + 1;
+}
+
 // Buzagilik ve Iglo sayfalarinin ortak veri yukleme + islem katmani.
 export function useCalfCare(structure: CalfHousingStructure) {
   const { profile } = useAuth();
@@ -67,7 +83,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
   const [protocols, setProtocols] = useState<CalfProtocol[]>([]);
   const [protocolDays, setProtocolDays] = useState<CalfProtocolDay[]>([]);
   const [birthRecords, setBirthRecords] = useState<CalfBirthRecord[]>([]);
-  const [pectolitList, setPectolitList] = useState<CalfPectolit[]>([]);
+  const [pectolitCourses, setPectolitCourses] = useState<CalfPectolitCourse[]>([]);
   const [calfNotes, setCalfNotes] = useState<CalfNote[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,7 +101,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
       listCalfProtocols(),
       listCalfProtocolDays(),
       listCalfBirthRecords(),
-      listCalfPectolit(),
+      listCalfPectolitCourses(),
       listCalfNotes(),
     ]);
     setSlots(s);
@@ -98,7 +114,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
     setProtocols(p);
     setProtocolDays(pd);
     setBirthRecords(br);
-    setPectolitList(pl);
+    setPectolitCourses(pl);
     setCalfNotes(cn);
 
     // Suresi dolan aktif kurleri otomatik "tamamlandi" yap.
@@ -135,7 +151,10 @@ export function useCalfCare(structure: CalfHousingStructure) {
   const treatmentsFor = (animalId: string) => treatments.filter((t) => t.animal_id === animalId);
   const coursesFor = (animalId: string) => courses.filter((c) => c.animal_id === animalId);
   const birthRecordFor = (animalId: string) => birthRecords.find((b) => b.animal_id === animalId);
-  const pectolitFor = (animalId: string) => pectolitList.find((p) => p.animal_id === animalId);
+  const activePectolitCourseFor = (animalId: string) =>
+    pectolitCourses.find((c) => c.animal_id === animalId && c.status === "aktif");
+  const pectolitCoursesFor = (animalId: string) =>
+    pectolitCourses.filter((c) => c.animal_id === animalId).sort((a, b) => b.created_at.localeCompare(a.created_at));
   const notesFor = (animalId: string) => calfNotes.filter((n) => n.animal_id === animalId);
   const legacyStatusFor = (animalId: string) => treatmentStatuses.find((t) => t.animal_id === animalId);
   const hasActiveCourse = (animalId: string) => courses.some((c) => c.animal_id === animalId && c.status === "aktif");
@@ -146,7 +165,30 @@ export function useCalfCare(structure: CalfHousingStructure) {
     treatments.some((t) => t.animal_id === animalId && t.treatment_date >= todayIso());
   const underTreatment = (animalId: string) =>
     hasActiveCourse(animalId) || hasOngoingTreatmentRecord(animalId) || !!legacyStatusFor(animalId)?.under_treatment;
-  const pectolitPending = (animalId: string) => (pectolitFor(animalId)?.remaining_meals ?? 0) > 0;
+  // Kurun kapsadigi son gun (start_date + total_days - 1).
+  const pectolitEndDate = (course: CalfPectolitCourse) => addDaysIso(course.start_date, course.total_days - 1);
+  // Bugun, kurun 09:00/21:00 doz penceresi icinde mi (kur suruyor).
+  const pectolitPending = (animalId: string) => {
+    const course = activePectolitCourseFor(animalId);
+    if (!course) return false;
+    const today = todayIso();
+    return today >= course.start_date && today <= pectolitEndDate(course);
+  };
+  // Kurun suresi doldu ama "iyilesti mi?" sorusu henuz cevaplanmadi.
+  const pectolitNeedsResponse = (animalId: string) => {
+    const course = activePectolitCourseFor(animalId);
+    if (!course) return false;
+    return courseCurrentDay(course.start_date) > course.total_days;
+  };
+  const pectolitAntibioticWarning = (animalId: string) => !!activePectolitCourseFor(animalId)?.antibiotic_warning;
+  // Bu (tarih, saat) dozu pectolit kapsamina giriyor mu - sadece 09:00/21:00,
+  // sadece kurun basladigi gunden bitis gunune kadar.
+  const isPectolitDoseSlot = (animalId: string, dateStr: string, hour: number) => {
+    if (hour !== 9 && hour !== 21) return false;
+    const course = activePectolitCourseFor(animalId);
+    if (!course) return false;
+    return dateStr >= course.start_date && dateStr <= pectolitEndDate(course);
+  };
   // Suresi devam eden (visible_until bugunden once olmayan) notlar.
   const activeNotesFor = (animalId: string) =>
     calfNotes.filter((n) => n.animal_id === animalId && n.visible_until != null && n.visible_until >= todayIso());
@@ -185,23 +227,14 @@ export function useCalfCare(structure: CalfHousingStructure) {
   }
 
   async function handleMarkMeal(animalId: string, slot: MealSlotRef, drank: boolean) {
-    const pect = pectolitFor(animalId);
-    const givePectolit = (pect?.remaining_meals ?? 0) > 0;
-    const already = meals.find(
-      (m) => m.animal_id === animalId && m.meal_date === slot.date && m.meal_hour === slot.hour
-    );
     await upsertCalfMeal({
       animal_id: animalId,
       meal_date: slot.date,
       meal_hour: slot.hour,
       drank,
-      pectolit: already?.pectolit || givePectolit,
+      pectolit: isPectolitDoseSlot(animalId, slot.date, slot.hour),
       created_by: profile?.id ?? null,
     });
-    // Pectolit sayacini yalnizca bu ogun daha once pectolitli kaydedilmediyse dus.
-    if (givePectolit && !already?.pectolit) {
-      await setCalfPectolit(animalId, (pect?.remaining_meals ?? 1) - 1, pect?.started_by ?? profile?.id ?? null);
-    }
     await refresh();
   }
 
@@ -253,12 +286,33 @@ export function useCalfCare(structure: CalfHousingStructure) {
   }
 
   async function handleStartPectolit(animalId: string) {
-    await setCalfPectolit(animalId, 2, profile?.id ?? null);
+    await createCalfPectolitCourse(animalId, profile?.id ?? null);
     await refresh();
   }
 
   async function handleCancelPectolit(animalId: string) {
-    await setCalfPectolit(animalId, 0, profile?.id ?? null);
+    const course = activePectolitCourseFor(animalId);
+    if (!course) return;
+    await updateCalfPectolitCourse(course.id, { status: "iptal" });
+    await refresh();
+  }
+
+  // Pectolit suresi dolunca sorulan "ishal iyilesti mi?" cevabi. Iyilestiyse
+  // kur biter; iyilesmediyse 1 gun (2 doz) uzar - uzatma total_days'i 5'e
+  // tasiyorsa (yani 5. gunun sonunda hala iyilesmediyse) antibiyotik uyarisi
+  // acilir, ama kur pectolit vermeye devam eder.
+  async function handlePectolitResponse(animalId: string, improved: boolean) {
+    const course = activePectolitCourseFor(animalId);
+    if (!course) return;
+    if (improved) {
+      await updateCalfPectolitCourse(course.id, { status: "tamamlandi" });
+    } else {
+      const triggersWarning = course.antibiotic_warning || course.total_days >= 5;
+      await updateCalfPectolitCourse(course.id, {
+        total_days: course.total_days + 1,
+        antibiotic_warning: triggersWarning,
+      });
+    }
     await refresh();
   }
 
@@ -336,11 +390,14 @@ export function useCalfCare(structure: CalfHousingStructure) {
     treatmentsFor,
     coursesFor,
     birthRecordFor,
-    pectolitFor,
+    activePectolitCourseFor,
+    pectolitCoursesFor,
     notesFor,
     legacyStatusFor,
     underTreatment,
     pectolitPending,
+    pectolitNeedsResponse,
+    pectolitAntibioticWarning,
     handleAssign,
     handleMove,
     handleMarkMeal,
@@ -350,6 +407,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
     handleSaveBirth,
     handleStartPectolit,
     handleCancelPectolit,
+    handlePectolitResponse,
     handleAddNote,
     handleDeleteNote,
     handleMealExam,
