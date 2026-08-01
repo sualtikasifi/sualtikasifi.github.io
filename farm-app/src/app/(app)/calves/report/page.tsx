@@ -24,6 +24,7 @@ import {
 } from "@/lib/types";
 import { EarTagPicker } from "@/components/EarTagPicker";
 import { formatMealHour } from "@/lib/meals";
+import { PageHeader } from "@/components/PageHeader";
 
 function formatDate(iso: string): string {
   return new Date(iso.includes("T") ? iso : `${iso}T00:00:00`).toLocaleDateString("tr-TR", {
@@ -120,11 +121,18 @@ function ReportContent() {
         }
       `}</style>
 
-      <div className="no-print flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Buzağı Raporu</h1>
-        <button type="button" onClick={() => window.print()} disabled={selected.length === 0} className="btn-primary">
-          PDF Oluştur / Yazdır
-        </button>
+      <div className="no-print">
+        <PageHeader
+          icon="📄"
+          title="Buzağı Raporu"
+          subtitle="Seçilen buzağıların tüm bilgilerini görüntüle ve PDF olarak indir"
+          color="green"
+          actions={
+            <button type="button" onClick={() => window.print()} disabled={selected.length === 0} className="btn-primary">
+              🖨️ PDF Oluştur / Yazdır
+            </button>
+          }
+        />
       </div>
 
       <div className="no-print card space-y-2">

@@ -309,11 +309,15 @@ export interface CalfBirthRecord {
   updated_by: string | null;
 }
 
-export interface CalfPectolit {
+export interface CalfPectolitCourse {
+  id: string;
   animal_id: string;
-  remaining_meals: number;
-  started_at: string;
-  started_by: string | null;
+  start_date: string;
+  total_days: number;
+  status: CourseStatus;
+  antibiotic_warning: boolean;
+  created_by: string | null;
+  created_at: string;
 }
 
 export interface VaccinationPlan {

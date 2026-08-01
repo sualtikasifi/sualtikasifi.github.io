@@ -8,6 +8,7 @@ import { Badge } from "@/components/Badge";
 import { formatDate } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { PageHeader } from "@/components/PageHeader";
 
 type ViewMode = "toplam" | "tank";
 type SemenFilter = SemenType | "embriyo";
@@ -101,19 +102,24 @@ export default function BullsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Boğalar ve Sperma Stoğu</h1>
-        {hasPermission(profile, "can_manage_bulls_semen") && (
-          <div className="flex gap-2">
-            <Link href="/bulls/stock" className="rounded-md border border-green-700 px-3 py-1.5 text-sm font-medium text-green-700 shadow-sm transition-colors hover:bg-green-50">
-              Stok Düzenle
-            </Link>
-            <Link href="/bulls/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-              Yeni boğa
-            </Link>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        icon="🐂"
+        title="Boğalar ve Sperma Stoğu"
+        subtitle="Boğa kayıtları ve straw/tank stok takibi"
+        color="sky"
+        actions={
+          hasPermission(profile, "can_manage_bulls_semen") && (
+            <>
+              <Link href="/bulls/stock" className="btn-secondary">
+                Stok Düzenle
+              </Link>
+              <Link href="/bulls/new" className="btn-primary">
+                + Yeni boğa
+              </Link>
+            </>
+          )
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex rounded-md border border-neutral-300 bg-white text-sm shadow-sm">

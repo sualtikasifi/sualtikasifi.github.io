@@ -12,6 +12,8 @@ interface Props {
   pectolitPending: boolean;
   alertNote?: boolean;
   alertExam?: boolean;
+  alertPectolitResponse?: boolean;
+  alertAntibiotic?: boolean;
   selected: boolean;
   onClick: () => void;
   draggable?: boolean;
@@ -35,6 +37,8 @@ export function CalfSlotBox({
   pectolitPending,
   alertNote,
   alertExam,
+  alertPectolitResponse,
+  alertAntibiotic,
   selected,
   onClick,
   draggable,
@@ -83,15 +87,37 @@ export function CalfSlotBox({
         selected ? "ring-2 ring-offset-1 ring-green-700" : ""
       } ${className ?? "h-14 w-14"}`}
     >
-      {animal && (alertExam || alertNote) && (
-        <span className="absolute -right-1 -top-1 flex gap-0.5">
+      {animal && (alertExam || alertNote || alertPectolitResponse || alertAntibiotic) && (
+        <span className="absolute -right-1 -top-1 flex flex-wrap justify-end gap-0.5" style={{ maxWidth: 28 }}>
+          {alertAntibiotic && (
+            <span
+              title="Antibiyotik tedavisi öneriliyor"
+              className="flex h-3.5 w-3.5 animate-pulse items-center justify-center rounded-full bg-purple-600 text-[8px] font-bold leading-none text-white shadow"
+            >
+              Rx
+            </span>
+          )}
           {alertExam && (
-            <span className="flex h-3.5 w-3.5 animate-pulse items-center justify-center rounded-full bg-red-600 text-[9px] font-bold leading-none text-white shadow">
+            <span
+              title="Muayene bekliyor"
+              className="flex h-3.5 w-3.5 animate-pulse items-center justify-center rounded-full bg-red-600 text-[9px] font-bold leading-none text-white shadow"
+            >
               !
             </span>
           )}
+          {alertPectolitResponse && (
+            <span
+              title="Pectolit: iyileşti mi?"
+              className="flex h-3.5 w-3.5 animate-pulse items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold leading-none text-white shadow"
+            >
+              ?
+            </span>
+          )}
           {alertNote && (
-            <span className="flex h-3.5 w-3.5 animate-pulse items-center justify-center rounded-full bg-amber-400 text-[9px] font-bold leading-none text-white shadow">
+            <span
+              title="Aktif not var"
+              className="flex h-3.5 w-3.5 animate-pulse items-center justify-center rounded-full bg-amber-400 text-[9px] font-bold leading-none text-white shadow"
+            >
               !
             </span>
           )}

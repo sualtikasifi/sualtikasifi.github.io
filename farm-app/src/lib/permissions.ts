@@ -5,7 +5,6 @@ export type PermissionKey =
   | "can_manage_mastitis"
   | "can_manage_tasks"
   | "can_manage_bulls_semen"
-  | "can_manage_inseminations"
   | "can_manage_opu"
   | "can_manage_calves"
   | "can_manage_medicines"
@@ -16,7 +15,6 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   can_manage_mastitis: "Mastitis kayıtları",
   can_manage_tasks: "Görev oluşturma ve atama",
   can_manage_bulls_semen: "Boğa ve sperma stoğu",
-  can_manage_inseminations: "Tohumlama kayıtları",
   can_manage_opu: "OPU/Embriyo kayıtları",
   can_manage_calves: "Buzağı besleme ve not kayıtları",
   can_manage_medicines: "İlaç stoğu",

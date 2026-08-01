@@ -24,6 +24,7 @@ import { getTodaysMastitisReminders, isMastitisReminderActive, isMastitisWarning
 import { MastitisReminderCard } from "@/components/MastitisReminderCard";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { ProfileMultiPicker } from "@/components/ProfileMultiPicker";
+import { PageHeader } from "@/components/PageHeader";
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -176,14 +177,19 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Görevler</h1>
-        {hasPermission(profile, "can_manage_tasks") && (
-          <Link href="/tasks/new" className="rounded-md bg-green-700 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-800">
-            Yeni görev
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        icon="✅"
+        title="Görevler"
+        subtitle="Ekip içi iş atama ve programlama"
+        color="amber"
+        actions={
+          hasPermission(profile, "can_manage_tasks") && (
+            <Link href="/tasks/new" className="btn-primary">
+              + Yeni görev
+            </Link>
+          )
+        }
+      />
 
       {isMastitisReminderActive() && mastitisReminders.length > 0 && (
         <MastitisReminderCard reminders={mastitisReminders} warning={isMastitisWarningActive()} />

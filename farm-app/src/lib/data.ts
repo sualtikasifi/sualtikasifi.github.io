@@ -10,7 +10,7 @@ import {
   CalfMeal,
   CalfMealHour,
   CalfNote,
-  CalfPectolit,
+  CalfPectolitCourse,
   CalfProtocol,
   CalfProtocolDay,
   CalfTreatment,
@@ -957,33 +957,46 @@ export async function upsertCalfBirthRecord(
   return data as CalfBirthRecord;
 }
 
-// --- Pectolit takibi ---
+// --- Pectolit kurleri ---
 
-export async function listCalfPectolit(): Promise<CalfPectolit[]> {
-  if (isDemoMode) return mock.demoListCalfPectolit();
-  const { data, error } = await supabase!.from("calf_pectolit").select("*");
-  if (error) throw error;
-  return data as CalfPectolit[];
+export async function listCalfPectolitCourses(): Promise<CalfPectolitCourse[]> {
+  if (isDemoMode) return mock.demoListCalfPectolitCourses();
+  return fetchAllPages<CalfPectolitCourse>((from, to) =>
+    supabase!
+      .from("calf_pectolit_courses")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to)
+  );
 }
 
-export async function setCalfPectolit(
+export async function createCalfPectolitCourse(
   animalId: string,
-  remainingMeals: number,
-  startedBy: string | null
-): Promise<CalfPectolit> {
-  if (isDemoMode) return mock.demoSetCalfPectolit(animalId, remainingMeals, startedBy);
+  createdBy: string | null
+): Promise<CalfPectolitCourse> {
+  if (isDemoMode) return mock.demoCreateCalfPectolitCourse(animalId, createdBy);
   const { data, error } = await supabase!
-    .from("calf_pectolit")
-    .upsert({
-      animal_id: animalId,
-      remaining_meals: remainingMeals,
-      started_at: new Date().toISOString(),
-      started_by: startedBy,
-    })
+    .from("calf_pectolit_courses")
+    .insert({ animal_id: animalId, created_by: createdBy })
     .select()
     .single();
   if (error) throw error;
-  return data as CalfPectolit;
+  return data as CalfPectolitCourse;
+}
+
+export async function updateCalfPectolitCourse(
+  id: string,
+  patch: Partial<Pick<CalfPectolitCourse, "total_days" | "status" | "antibiotic_warning">>
+): Promise<CalfPectolitCourse | undefined> {
+  if (isDemoMode) return mock.demoUpdateCalfPectolitCourse(id, patch);
+  const { data, error } = await supabase!
+    .from("calf_pectolit_courses")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CalfPectolitCourse;
 }
 
 // --- Asi planlari (persembe) ---

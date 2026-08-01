@@ -60,22 +60,28 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-lg font-semibold text-neutral-900">Panel</h1>
+      <div className="page-header">
+        <span className="page-header-icon bg-gradient-to-br from-green-500 to-green-700 text-white">🌾</span>
+        <div>
+          <h1 className="text-xl font-bold text-neutral-900">Panel</h1>
+          <p className="text-xs text-neutral-500">Çiftliğin bugünkü genel durumu</p>
+        </div>
+      </div>
 
       {isMastitisReminderActive() && mastitisReminders.length > 0 && (
         <MastitisReminderCard reminders={mastitisReminders} warning={isMastitisWarningActive()} />
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
-        <StatCard label="Aktif hayvan" value={activeAnimals.length} />
-        <StatCard label="Bugünkü görev" value={todayTasks.length} />
-        <StatCard label="Geciken görev" value={overdueTasks.length} tone={overdueTasks.length > 0 ? "warn" : undefined} />
-        <StatCard label="Devam eden mastitis" value={inTreatment.length} />
-        <StatCard label="Düşük sperma stoğu" value={lowStockRows.length} tone={lowStockRows.length > 0 ? "warn" : undefined} />
-        <StatCard label="Gelişen embriyo" value={developingEmbryos.length} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard icon="🐮" label="Aktif hayvan" value={activeAnimals.length} color="green" />
+        <StatCard icon="📅" label="Bugünkü görev" value={todayTasks.length} color="sky" />
+        <StatCard icon="⏰" label="Geciken görev" value={overdueTasks.length} color={overdueTasks.length > 0 ? "amber" : "neutral"} />
+        <StatCard icon="💉" label="Devam eden mastitis" value={inTreatment.length} color="rose" />
+        <StatCard icon="🧊" label="Düşük sperma stoğu" value={lowStockRows.length} color={lowStockRows.length > 0 ? "amber" : "neutral"} />
+        <StatCard icon="🧬" label="Gelişen embriyo" value={developingEmbryos.length} color="purple" />
       </div>
 
-      <Section title="Bugünün görevleri" href="/tasks">
+      <Section title="Bugünün görevleri" icon="📅" href="/tasks">
         {todayTasks.length === 0 ? (
           <EmptyRow text="Bugün için bekleyen görev yok." />
         ) : (
@@ -83,7 +89,7 @@ export default function DashboardPage() {
         )}
       </Section>
 
-      <Section title="Geciken görevler" href="/tasks">
+      <Section title="Geciken görevler" icon="⏰" href="/tasks">
         {overdueTasks.length === 0 ? (
           <EmptyRow text="Geciken görev yok." />
         ) : (
@@ -91,7 +97,7 @@ export default function DashboardPage() {
         )}
       </Section>
 
-      <Section title="Son mastitis kayıtları" href="/treatments">
+      <Section title="Son mastitis kayıtları" icon="💉" href="/treatments">
         {mastitisTreatments.length === 0 ? (
           <EmptyRow text="Henüz mastitis kaydı yok." />
         ) : (
@@ -122,21 +128,58 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ label, value, tone }: { label: string; value: number; tone?: "warn" }) {
+const STAT_COLORS = {
+  green: "border-green-200 bg-green-50/70 text-green-900",
+  sky: "border-sky-200 bg-sky-50/70 text-sky-900",
+  amber: "border-amber-300 bg-amber-50 text-amber-900",
+  rose: "border-rose-200 bg-rose-50/70 text-rose-900",
+  purple: "border-purple-200 bg-purple-50/70 text-purple-900",
+  neutral: "border-neutral-200 bg-white text-neutral-900",
+} as const;
+
+function StatCard({
+  icon,
+  label,
+  value,
+  color = "neutral",
+}: {
+  icon: string;
+  label: string;
+  value: number;
+  color?: keyof typeof STAT_COLORS;
+}) {
   return (
-    <div className={`rounded-xl border p-3 shadow-sm transition-colors ${tone === "warn" && value > 0 ? "border-amber-300 bg-amber-50" : "border-neutral-200 bg-white"}`}>
-      <p className="text-2xl font-semibold text-neutral-900">{value}</p>
-      <p className="text-xs text-neutral-500">{label}</p>
+    <div className={`stat-tile ${STAT_COLORS[color]}`}>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-lg">{icon}</span>
+        <p className="text-2xl font-bold">{value}</p>
+      </div>
+      <p className="text-xs font-medium opacity-80">{label}</p>
     </div>
   );
 }
 
-function Section({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
+function Section({
+  title,
+  icon,
+  href,
+  children,
+}: {
+  title: string;
+  icon: string;
+  href: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="card">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-neutral-800">{title}</h2>
-        <Link href={href} className="text-xs font-medium text-green-700 hover:underline">Tümünü gör</Link>
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
+          <span aria-hidden>{icon}</span>
+          {title}
+        </h2>
+        <Link href={href} className="text-xs font-semibold text-green-700 hover:underline">
+          Tümünü gör →
+        </Link>
       </div>
       <div className="divide-y divide-neutral-100">{children}</div>
     </div>
