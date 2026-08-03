@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Animal, CalfProtocol, CalfProtocolDay, CalfTreatment, CalfTreatmentCourse } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { Animal, CalfProtocol, CalfProtocolDay, CalfTreatment, CalfTreatmentCourse, Profile } from "@/lib/types";
 import { todayIso } from "@/lib/format";
 import { exportRowsToExcel } from "@/lib/excelExport";
+import { listProfiles } from "@/lib/data";
 
 interface Props {
   courses: CalfTreatmentCourse[];
@@ -41,6 +42,7 @@ interface Row {
   medicines: string;
   done: boolean;
   doneTreatmentId: string | null;
+  doneBy: string | null;
 }
 
 // Aktif tedavi kurlerinden secilen gunun gorev tablosu: hangi buzagiya o
@@ -63,6 +65,14 @@ export function DailyTreatmentTable({
   const [noteText, setNoteText] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+
+  useEffect(() => {
+    listProfiles().then(setProfiles);
+  }, []);
+
+  const nameFor = (id: string | null): string | null =>
+    id ? (profiles.find((p) => p.id === id)?.full_name ?? null) : null;
 
   const targetDate = date ?? todayIso();
   const rows: Row[] = [];
@@ -91,6 +101,7 @@ export function DailyTreatmentTable({
       medicines: meds,
       done: !!doneRecord,
       doneTreatmentId: doneRecord?.id ?? null,
+      doneBy: doneRecord?.created_by ?? null,
     });
   }
 
@@ -141,7 +152,7 @@ export function DailyTreatmentTable({
           row.protocolName,
           `${row.day}/${row.maxDay}`,
           row.medicines,
-          row.done ? "Yapıldı" : "Bekliyor",
+          row.done ? `Yapıldı (${nameFor(row.doneBy) ?? "?"})` : "Bekliyor",
         ])
       );
     } finally {
@@ -187,19 +198,25 @@ export function DailyTreatmentTable({
                   <td className="py-1.5">
                     {row.done ? (
                       canManage ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-green-700">Yapıldı</span>
-                          <button
-                            type="button"
-                            disabled={savingId === row.course.id}
-                            onClick={() => undoDone(row)}
-                            className="text-[11px] font-medium text-red-600 underline hover:no-underline disabled:opacity-50"
-                          >
-                            {savingId === row.course.id ? "..." : "Geri Al"}
-                          </button>
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-green-700">Yapıldı</span>
+                            <button
+                              type="button"
+                              disabled={savingId === row.course.id}
+                              onClick={() => undoDone(row)}
+                              className="text-[11px] font-medium text-red-600 underline hover:no-underline disabled:opacity-50"
+                            >
+                              {savingId === row.course.id ? "..." : "Geri Al"}
+                            </button>
+                          </div>
+                          <span className="text-[10px] text-neutral-400">{nameFor(row.doneBy) ?? "Bilinmiyor"}</span>
                         </div>
                       ) : (
-                        <span className="font-medium text-green-700">Yapıldı</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-green-700">Yapıldı</span>
+                          <span className="text-[10px] text-neutral-400">{nameFor(row.doneBy) ?? "Bilinmiyor"}</span>
+                        </div>
                       )
                     ) : canManage ? (
                       <div className="flex flex-col gap-1">

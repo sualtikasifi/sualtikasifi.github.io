@@ -2,15 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  listAllMastitisDoses,
-  listAnimals,
-  listEmbryos,
-  listMastitisTreatments,
-  listSemenInventory,
-  listTasks,
-} from "@/lib/data";
-import { Animal, Embryo, MastitisDose, MastitisTreatment, SemenInventory, Task } from "@/lib/types";
+import { listAllMastitisDoses, listAnimals, listMastitisTreatments, listTasks } from "@/lib/data";
+import { Animal, MastitisDose, MastitisTreatment, Task } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { formatDate, todayIso } from "@/lib/format";
 import { getTodaysMastitisReminders, isMastitisReminderActive, isMastitisWarningActive } from "@/lib/mastitisReminder";
@@ -21,27 +14,18 @@ export default function DashboardPage() {
   const [mastitisTreatments, setMastitisTreatments] = useState<MastitisTreatment[]>([]);
   const [mastitisDoses, setMastitisDoses] = useState<MastitisDose[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
-  const [inventory, setInventory] = useState<SemenInventory[]>([]);
-  const [embryos, setEmbryos] = useState<Embryo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      listTasks(),
-      listMastitisTreatments(),
-      listAllMastitisDoses(),
-      listAnimals(),
-      listSemenInventory(),
-      listEmbryos(),
-    ]).then(([t, mt, doses, a, inv, emb]) => {
-      setTasks(t);
-      setMastitisTreatments(mt);
-      setMastitisDoses(doses);
-      setAnimals(a);
-      setInventory(inv);
-      setEmbryos(emb);
-      setLoading(false);
-    });
+    Promise.all([listTasks(), listMastitisTreatments(), listAllMastitisDoses(), listAnimals()]).then(
+      ([t, mt, doses, a]) => {
+        setTasks(t);
+        setMastitisTreatments(mt);
+        setMastitisDoses(doses);
+        setAnimals(a);
+        setLoading(false);
+      }
+    );
   }, []);
 
   if (loading) {
@@ -52,10 +36,7 @@ export default function DashboardPage() {
   const pending = tasks.filter((t) => t.status === "bekliyor");
   const todayTasks = pending.filter((t) => t.due_date === today);
   const overdueTasks = pending.filter((t) => t.due_date < today);
-  const activeAnimals = animals.filter((a) => a.status === "aktif");
   const inTreatment = mastitisTreatments.filter((t) => !t.ended_at);
-  const lowStockRows = inventory.filter((i) => i.straw_count + i.tank_straw_count <= 5);
-  const developingEmbryos = embryos.filter((e) => e.status === "gelisiyor");
   const mastitisReminders = getTodaysMastitisReminders(mastitisTreatments, mastitisDoses, animals);
 
   return (
@@ -72,13 +53,10 @@ export default function DashboardPage() {
         <MastitisReminderCard reminders={mastitisReminders} warning={isMastitisWarningActive()} />
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard icon="🐮" label="Aktif hayvan" value={activeAnimals.length} color="green" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard icon="📅" label="Bugünkü görev" value={todayTasks.length} color="sky" />
         <StatCard icon="⏰" label="Geciken görev" value={overdueTasks.length} color={overdueTasks.length > 0 ? "amber" : "neutral"} />
         <StatCard icon="💉" label="Devam eden mastitis" value={inTreatment.length} color="rose" />
-        <StatCard icon="🧊" label="Düşük sperma stoğu" value={lowStockRows.length} color={lowStockRows.length > 0 ? "amber" : "neutral"} />
-        <StatCard icon="🧬" label="Gelişen embriyo" value={developingEmbryos.length} color="purple" />
       </div>
 
       <Section title="Bugünün görevleri" icon="📅" href="/tasks">
