@@ -10,6 +10,9 @@ interface Props {
   treatmentLabel?: string | null;
   meals: CalfMeal[];
   ageDays?: number | null;
+  // true ise gun yazisi kirmizi gosterilir (orn. Buzagilikta 30 gunu
+  // gecmis, Igloya tasinmasi gereken buzagilar icin).
+  ageOverdue?: boolean;
   pectolitPending: boolean;
   alertNote?: boolean;
   alertExam?: boolean;
@@ -36,6 +39,7 @@ export function CalfSlotBox({
   treatmentLabel,
   meals,
   ageDays,
+  ageOverdue,
   pectolitPending,
   alertNote,
   alertExam,
@@ -140,7 +144,14 @@ export function CalfSlotBox({
         </div>
       )}
       {animal && ageDays != null && (
-        <span className="w-full truncate text-[7px] leading-none text-neutral-500">{ageDays} Günlük</span>
+        <span
+          title={ageOverdue ? "30 günü geçti, İglo'ya taşınmalı" : undefined}
+          className={`w-full truncate text-[7px] leading-none ${
+            ageOverdue ? "font-bold text-red-600" : "text-neutral-500"
+          }`}
+        >
+          {ageDays} Günlük
+        </span>
       )}
     </button>
   );
