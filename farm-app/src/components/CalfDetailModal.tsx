@@ -323,11 +323,13 @@ export function CalfDetailModal({
                         setNewBornAt("");
                       } catch (err) {
                         const msg = err instanceof Error ? err.message : "";
-                        setCreateError(
-                          /duplicate|unique/i.test(msg)
-                            ? "Bu küpe numarası zaten kayıtlı."
-                            : "Buzağı oluşturulamadı. Tekrar deneyin."
-                        );
+                        if (/duplicate|unique/i.test(msg)) {
+                          setCreateError("Bu küpe numarası zaten kayıtlı.");
+                        } else if (/row-level security|permission denied/i.test(msg)) {
+                          setCreateError("Bu işlem için yetkiniz yok. Yöneticinize başvurun.");
+                        } else {
+                          setCreateError(`Buzağı oluşturulamadı: ${msg || "bilinmeyen hata"}`);
+                        }
                       } finally {
                         setBusy(false);
                       }
@@ -360,15 +362,25 @@ export function CalfDetailModal({
                         Erkek
                       </button>
                     </div>
-                    <label className="block">
+                    <div>
                       <span className="mb-1 block text-xs font-medium text-neutral-600">Irk (opsiyonel)</span>
-                      <input
-                        value={newBreed}
-                        onChange={(e) => setNewBreed(e.target.value)}
-                        placeholder="örn. Holstein"
-                        className="input"
-                      />
-                    </label>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setNewBreed(newBreed === "Simental" ? "" : "Simental")}
+                          className={`chip ${newBreed === "Simental" ? "chip-selected" : "chip-unselected"}`}
+                        >
+                          Simental
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewBreed(newBreed === "Holstein" ? "" : "Holstein")}
+                          className={`chip ${newBreed === "Holstein" ? "chip-selected" : "chip-unselected"}`}
+                        >
+                          Holstein
+                        </button>
+                      </div>
+                    </div>
                     <label className="block">
                       <span className="mb-1 block text-xs font-medium text-neutral-600">
                         Doğum tarihi ve saati (opsiyonel)

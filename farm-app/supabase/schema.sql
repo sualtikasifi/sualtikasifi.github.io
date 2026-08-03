@@ -599,7 +599,9 @@ create policy "profiles_update_own" on profiles for update to authenticated usin
 create policy "profiles_update_admin" on profiles for update to authenticated using (is_admin_user());
 
 create policy "animals_select" on animals for select to authenticated using (true);
-create policy "animals_insert" on animals for insert to authenticated with check (has_perm('animals'));
+-- Buzagilik/Iglo kulubelerinden yeni dogan buzagi kaydi olusturmak da
+-- (calves yetkisi) insert yapabilsin diye has_perm('calves') de eklendi.
+create policy "animals_insert" on animals for insert to authenticated with check (has_perm('animals') or has_perm('calves'));
 create policy "animals_update" on animals for update to authenticated using (has_perm('animals'));
 create policy "animals_delete" on animals for delete to authenticated using (has_perm('animals'));
 
