@@ -156,6 +156,7 @@ export default function IgloPage() {
                       underTreatment={!!(slot.animal_id && care.underTreatment(slot.animal_id))}
                       treatmentLabel={slot.animal_id ? care.activeProtocolNameFor(slot.animal_id) : null}
                       meals={slot.animal_id ? care.mealsFor(slot.animal_id) : []}
+                      ageDays={slot.animal_id ? care.ageDaysFor(slot.animal_id) : null}
                       pectolitPending={!!(slot.animal_id && care.pectolitPending(slot.animal_id))}
                       alertNote={!!(slot.animal_id && care.activeNotesFor(slot.animal_id).length > 0)}
                       alertExam={!!(slot.animal_id && care.unexaminedMissedFor(slot.animal_id).length > 0)}
@@ -171,7 +172,7 @@ export default function IgloPage() {
                         if (dragSlotId && dragSlotId !== slot.id) care.handleMove(dragSlotId, slot.id);
                         setDragSlotId(null);
                       }}
-                      className="h-12 w-12"
+                      className="h-16 w-16"
                     />
                   ))}
                 </div>

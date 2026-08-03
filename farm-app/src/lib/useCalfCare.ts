@@ -154,6 +154,15 @@ export function useCalfCare(structure: CalfHousingStructure) {
   const treatmentsFor = (animalId: string) => treatments.filter((t) => t.animal_id === animalId);
   const coursesFor = (animalId: string) => courses.filter((c) => c.animal_id === animalId);
   const birthRecordFor = (animalId: string) => birthRecords.find((b) => b.animal_id === animalId);
+  // Buzagi kac gunluk: once dogum kaydindaki born_at (saat bilgili), yoksa
+  // hayvanin birth_date alani kullanilir. Ikisi de yoksa null doner.
+  const ageDaysFor = (animalId: string): number | null => {
+    const animal = animalById(animalId);
+    const born = birthRecordFor(animalId)?.born_at ?? animal?.birth_date ?? null;
+    if (!born) return null;
+    const diff = Math.floor((Date.now() - new Date(born).getTime()) / 86400000);
+    return diff >= 0 ? diff : null;
+  };
   const activePectolitCourseFor = (animalId: string) =>
     pectolitCourses.find((c) => c.animal_id === animalId && c.status === "aktif");
   const pectolitCoursesFor = (animalId: string) =>
@@ -423,6 +432,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
     treatmentsFor,
     coursesFor,
     birthRecordFor,
+    ageDaysFor,
     activePectolitCourseFor,
     pectolitCoursesFor,
     notesFor,

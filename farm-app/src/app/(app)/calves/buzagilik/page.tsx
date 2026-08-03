@@ -75,7 +75,7 @@ export default function BuzagilikPage() {
     setMealSelection(new Set());
   }
 
-  const BOX_HEIGHT = 44;
+  const BOX_HEIGHT = 52;
   const BOX_GAP = 4;
   const COLUMN_HEIGHT = HUTS_PER_COLUMN * BOX_HEIGHT + (HUTS_PER_COLUMN - 1) * BOX_GAP + 12;
 
@@ -95,6 +95,7 @@ export default function BuzagilikPage() {
               underTreatment={!!(slot.animal_id && care.underTreatment(slot.animal_id))}
               treatmentLabel={slot.animal_id ? care.activeProtocolNameFor(slot.animal_id) : null}
               meals={slot.animal_id ? care.mealsFor(slot.animal_id) : []}
+              ageDays={slot.animal_id ? care.ageDaysFor(slot.animal_id) : null}
               pectolitPending={!!(slot.animal_id && care.pectolitPending(slot.animal_id))}
               alertNote={!!(slot.animal_id && care.activeNotesFor(slot.animal_id).length > 0)}
               alertExam={!!(slot.animal_id && care.unexaminedMissedFor(slot.animal_id).length > 0)}
@@ -110,7 +111,7 @@ export default function BuzagilikPage() {
                 if (dragSlotId && dragSlotId !== slot.id) care.handleMove(dragSlotId, slot.id);
                 setDragSlotId(null);
               }}
-              className="h-11 w-full shrink-0"
+              className="h-[52px] w-full shrink-0"
             />
           ))}
         </div>

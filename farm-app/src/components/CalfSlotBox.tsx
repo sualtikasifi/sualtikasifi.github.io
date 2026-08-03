@@ -9,6 +9,7 @@ interface Props {
   underTreatment: boolean;
   treatmentLabel?: string | null;
   meals: CalfMeal[];
+  ageDays?: number | null;
   pectolitPending: boolean;
   alertNote?: boolean;
   alertExam?: boolean;
@@ -34,6 +35,7 @@ export function CalfSlotBox({
   underTreatment,
   treatmentLabel,
   meals,
+  ageDays,
   pectolitPending,
   alertNote,
   alertExam,
@@ -136,6 +138,9 @@ export function CalfSlotBox({
             <span key={i} className={`h-1.5 w-1.5 rounded-full ${cls}`} />
           ))}
         </div>
+      )}
+      {animal && ageDays != null && (
+        <span className="w-full truncate text-[7px] leading-none text-neutral-500">{ageDays} Günlük</span>
       )}
     </button>
   );
