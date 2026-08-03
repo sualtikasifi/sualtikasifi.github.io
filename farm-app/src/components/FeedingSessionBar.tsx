@@ -39,12 +39,12 @@ export function FeedingSessionBar({
   const idSet = new Set(slotAnimalIds);
 
   return (
-    <div className="card space-y-2">
+    <div className="card space-y-1.5 py-2.5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-neutral-800">Bugünün Beslenmesi</h2>
-        <span className="text-xs text-neutral-500">{formatToday()}</span>
+        <h2 className="text-xs font-semibold text-neutral-800">Bugünün Beslenmesi</h2>
+        <span className="text-[11px] text-neutral-500">{formatToday()}</span>
       </div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-1.5">
         {slots.map((slot) => {
           const entries = meals.filter(
             (m) => m.meal_date === slot.date && m.meal_hour === slot.hour && idSet.has(m.animal_id)
@@ -57,14 +57,14 @@ export function FeedingSessionBar({
               type="button"
               disabled={!canManage}
               onClick={() => (isActive ? onFinish() : onSelectMeal(slot))}
-              className={`rounded-lg border p-2 text-center transition-colors disabled:opacity-60 ${
+              className={`rounded-lg border px-2 py-1.5 text-center transition-colors disabled:opacity-60 ${
                 isActive
                   ? "border-green-700 bg-green-700 text-white shadow"
                   : "border-neutral-200 bg-neutral-50 text-neutral-800 hover:border-green-400"
               }`}
             >
-              <span className="block text-sm font-bold">{formatMealHour(slot.hour)}</span>
-              <span className={`block text-[11px] ${isActive ? "text-green-100" : "text-neutral-500"}`}>
+              <span className="block text-xs font-bold">{formatMealHour(slot.hour)}</span>
+              <span className={`block text-[10px] ${isActive ? "text-green-100" : "text-neutral-500"}`}>
                 {entries.length === 0 ? "kayıt yok" : missed > 0 ? `${missed} içmedi` : "hepsi içti"}
               </span>
             </button>
@@ -72,8 +72,8 @@ export function FeedingSessionBar({
         })}
       </div>
       {activeMeal && (
-        <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
-          <p className="text-xs text-amber-900">
+        <div className="space-y-1.5 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5">
+          <p className="text-[11px] text-amber-900">
             <span className="font-semibold">{formatMealHour(activeMeal.hour)} öğünü işaretleniyor.</span> Kulübelere
             tıklayarak tek veya birden çok buzağı seçin, sonra İçti/İçmedi&apos;ye basın. Bilgi girilmeyenler
             &quot;içti&quot; sayılır.

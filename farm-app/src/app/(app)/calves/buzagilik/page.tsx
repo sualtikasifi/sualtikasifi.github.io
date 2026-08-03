@@ -11,8 +11,6 @@ import { CalfSlotBox } from "@/components/CalfSlotBox";
 import { CalfDetailModal, MoveTarget } from "@/components/CalfDetailModal";
 import { FeedingSessionBar } from "@/components/FeedingSessionBar";
 import { MealHistoryPanel } from "@/components/MealHistoryPanel";
-import { DailyTreatmentTable } from "@/components/DailyTreatmentTable";
-import { VaccinationPanel } from "@/components/VaccinationPanel";
 import { PageHeader } from "@/components/PageHeader";
 
 const COLUMN_COUNT = 6;
@@ -156,27 +154,12 @@ export default function BuzagilikPage() {
 
       {!care.loading && <MealHistoryPanel animals={care.animals} />}
 
-      {!care.loading && (
-        <DailyTreatmentTable
-          courses={care.courses.filter((c) => care.slots.some((s) => s.animal_id === c.animal_id))}
-          protocols={care.protocols}
-          protocolDays={care.protocolDays}
-          animals={care.animals}
-          treatments={care.treatments}
-          canManage={canManage}
-          onLogDone={({ course, day, diagnosis, medicines, note }) =>
-            care.handleAddTreatment(course.animal_id, {
-              treatment_date: new Date().toISOString().slice(0, 10),
-              diagnosis,
-              protocol_day: day,
-              description: medicines,
-              note,
-              course_id: course.id,
-            })
-          }
-          onUndo={(treatmentId) => care.handleUndoTreatment(treatmentId)}
-        />
-      )}
+      <Link
+        href="/calves/tedaviler"
+        className="btn-primary flex items-center justify-center gap-1.5 bg-gradient-to-r from-rose-600 to-rose-700"
+      >
+        🩺 Tedavi Listesi
+      </Link>
 
       {care.loading ? (
         <p className="text-sm text-neutral-500">Yükleniyor...</p>
@@ -203,8 +186,6 @@ export default function BuzagilikPage() {
           </p>
         </div>
       )}
-
-      <VaccinationPanel />
 
       {selectedSlot && !entryMeal && (
         <CalfDetailModal
