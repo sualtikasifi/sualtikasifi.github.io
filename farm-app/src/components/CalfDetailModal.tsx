@@ -322,13 +322,25 @@ export function CalfDetailModal({
                         setNewBreed("");
                         setNewBornAt("");
                       } catch (err) {
-                        const msg = err instanceof Error ? err.message : "";
+                        // Supabase network-level hatalarinda (Postgrest istekten
+                        // once fetch basarisiz olursa) hata gercek bir Error
+                        // degil, sadece {message,...} tasiyan duz bir nesne
+                        // olabilir; bu yuzden instanceof Error'a guvenmeyip
+                        // message alanini dogrudan da kontrol ediyoruz.
+                        const msg =
+                          err instanceof Error
+                            ? err.message
+                            : err && typeof err === "object" && typeof (err as { message?: unknown }).message === "string"
+                              ? ((err as { message: string }).message)
+                              : "";
                         if (/duplicate|unique/i.test(msg)) {
                           setCreateError("Bu küpe numarası zaten kayıtlı.");
                         } else if (/row-level security|permission denied/i.test(msg)) {
                           setCreateError("Bu işlem için yetkiniz yok. Yöneticinize başvurun.");
+                        } else if (!msg || /failed to fetch|network|abort|load failed|timeout/i.test(msg)) {
+                          setCreateError("Bağlantı hatası. İnternet bağlantınızı kontrol edip tekrar deneyin.");
                         } else {
-                          setCreateError(`Buzağı oluşturulamadı: ${msg || "bilinmeyen hata"}`);
+                          setCreateError(`Buzağı oluşturulamadı: ${msg}`);
                         }
                       } finally {
                         setBusy(false);
