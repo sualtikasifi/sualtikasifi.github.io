@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { CalfHousingSlot } from "@/lib/types";
 import { useCalfCare } from "@/lib/useCalfCare";
@@ -71,10 +70,7 @@ export default function IgloPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/calves" className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-green-700">
-        ← Buzağılar
-      </Link>
-      <PageHeader icon="⛺" title="İglo" subtitle="6 iglo · 60 kutucuk" color="sky" />
+      <PageHeader icon="⛺" title="İglo" subtitle="6 iglo · 60 kutucuk" color="sky" backHref="/calves" />
 
       <CalfNotesPanel />
 

@@ -119,10 +119,13 @@ export default function BuzagilikPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/calves" className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-green-700">
-        ← Buzağılar
-      </Link>
-      <PageHeader icon="🏠" title="Buzağılık" subtitle="120 kulübe · beslenme, tedavi ve raporlar" color="green" />
+      <PageHeader
+        icon="🏠"
+        title="Buzağılık"
+        subtitle="120 kulübe · beslenme, tedavi ve raporlar"
+        color="green"
+        backHref="/calves"
+      />
 
       <CalfNotesPanel />
 
