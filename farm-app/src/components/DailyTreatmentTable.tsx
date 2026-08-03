@@ -135,6 +135,16 @@ export function DailyTreatmentTable({
   async function handleExport() {
     setExporting(true);
     try {
+      // Excel ciktisi ekrandaki (yapildi/yapilmadi) siralamasindan bagimsiz:
+      // once konuma gore (Sira/Iglo numarasi), sonra o grup icinde kupe
+      // numarasina gore kucukten buyuge siralanir - saha turunda oda oda
+      // kontrol icin.
+      const exportRows = [...rows].sort((a, b) => {
+        const groupOf = (loc: string | null) => (loc ? loc.replace(/\s·\s\d+$/, "") : "");
+        const groupCompare = groupOf(a.location).localeCompare(groupOf(b.location), "tr", { numeric: true });
+        if (groupCompare !== 0) return groupCompare;
+        return a.earTag.localeCompare(b.earTag, "tr", { numeric: true });
+      });
       await exportRowsToExcel(
         `tedavi-listesi-${targetDate}`,
         "Tedavi Listesi",
@@ -146,14 +156,15 @@ export function DailyTreatmentTable({
           "İlaçlar",
           "Durum",
         ],
-        rows.map((row) => [
+        exportRows.map((row) => [
           row.earTag,
           ...(locationFor ? [row.location ?? "-"] : []),
           row.protocolName,
           `${row.day}/${row.maxDay}`,
           row.medicines,
           row.done ? `Yapıldı (${nameFor(row.doneBy) ?? "?"})` : "Bekliyor",
-        ])
+        ]),
+        locationFor ? [10, 24, 20, 8, 30, 22] : [10, 20, 8, 30, 22]
       );
     } finally {
       setExporting(false);

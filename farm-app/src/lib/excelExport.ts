@@ -148,16 +148,14 @@ export async function exportRowsToExcel(
   filename: string,
   sheetName: string,
   headers: string[],
-  rows: (string | number)[][]
+  rows: (string | number)[][],
+  columnWidths?: number[]
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Marder Çiftlik Yönetimi";
+  workbook.created = new Date();
   const sheet = workbook.addWorksheet(sheetName);
-  sheet.addRow(headers);
-  sheet.getRow(1).font = { bold: true };
-  for (const row of rows) sheet.addRow(row);
-  sheet.columns.forEach((col) => {
-    col.width = 20;
-  });
+  styleDataSheet(sheet, headers, rows, { columnWidths });
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {

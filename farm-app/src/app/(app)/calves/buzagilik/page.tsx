@@ -94,6 +94,7 @@ export default function BuzagilikPage() {
               treatmentLabel={slot.animal_id ? care.activeProtocolNameFor(slot.animal_id) : null}
               meals={slot.animal_id ? care.mealsFor(slot.animal_id) : []}
               ageDays={slot.animal_id ? care.ageDaysFor(slot.animal_id) : null}
+              ageOverdue={!!(slot.animal_id && (care.ageDaysFor(slot.animal_id) ?? 0) > 30)}
               pectolitPending={!!(slot.animal_id && care.pectolitPending(slot.animal_id))}
               alertNote={!!(slot.animal_id && care.activeNotesFor(slot.animal_id).length > 0)}
               alertExam={!!(slot.animal_id && care.unexaminedMissedFor(slot.animal_id).length > 0)}
