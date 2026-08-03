@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   assignCalfToSlot,
+  createAnimal,
   createCalfNote,
   deleteCalfNote,
   createCalfProtocol,
   createCalfTreatment,
+  deleteCalfTreatment,
   createCalfTreatmentCourse,
   createCalfPectolitCourse,
   listAnimals,
@@ -31,6 +33,7 @@ import {
 } from "./data";
 import {
   Animal,
+  AnimalGender,
   CalfBirthRecord,
   CalfHousingSlot,
   CalfHousingStructure,
@@ -215,6 +218,31 @@ export function useCalfCare(structure: CalfHousingStructure) {
     await refresh();
   }
 
+  // Yeni dogan buzagilar sistemde kayitli olmayabilir: kulubeye tiklayinca
+  // var olani atamak yerine sifirdan hayvan olusturup ayni anda atar.
+  async function handleCreateAndAssign(
+    slotId: string,
+    input: { ear_tag: string; gender: AnimalGender | null; breed: string | null; born_at: string | null }
+  ) {
+    const created = await createAnimal({
+      ear_tag: input.ear_tag,
+      name: null,
+      birth_date: input.born_at ? input.born_at.slice(0, 10) : null,
+      breed: input.breed,
+      gender: input.gender,
+      status: "aktif",
+      mother_ear_tag: null,
+      weaned_at: null,
+      notes: null,
+      created_by: profile?.id ?? null,
+    });
+    if (input.born_at) {
+      await upsertCalfBirthRecord(created.id, { born_at: new Date(input.born_at).toISOString() }, profile?.id ?? null);
+    }
+    await assignCalfToSlot(slotId, created.id);
+    await refresh();
+  }
+
   async function handleMove(fromSlotId: string, toSlotId: string) {
     const from = slots.find((s) => s.id === fromSlotId) ?? otherSlots.find((s) => s.id === fromSlotId);
     const to = slots.find((s) => s.id === toSlotId) ?? otherSlots.find((s) => s.id === toSlotId);
@@ -274,6 +302,11 @@ export function useCalfCare(structure: CalfHousingStructure) {
       description: input.description,
       note: input.note,
     });
+    await refresh();
+  }
+
+  async function handleUndoTreatment(treatmentId: string) {
+    await deleteCalfTreatment(treatmentId);
     await refresh();
   }
 
@@ -399,11 +432,13 @@ export function useCalfCare(structure: CalfHousingStructure) {
     pectolitNeedsResponse,
     pectolitAntibioticWarning,
     handleAssign,
+    handleCreateAndAssign,
     handleMove,
     handleMarkMeal,
     handleStartCourse,
     handleSetCourseStatus,
     handleAddTreatment,
+    handleUndoTreatment,
     handleSaveBirth,
     handleStartPectolit,
     handleCancelPectolit,

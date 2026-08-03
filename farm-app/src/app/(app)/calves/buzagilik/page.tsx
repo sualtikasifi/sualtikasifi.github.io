@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { CalfHousingSlot } from "@/lib/types";
 import { useCalfCare } from "@/lib/useCalfCare";
@@ -119,6 +120,9 @@ export default function BuzagilikPage() {
 
   return (
     <div className="space-y-4">
+      <Link href="/calves" className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-green-700">
+        ← Buzağılar
+      </Link>
       <PageHeader icon="🏠" title="Buzağılık" subtitle="120 kulübe · beslenme, tedavi ve raporlar" color="green" />
 
       <CalfNotesPanel />
@@ -169,6 +173,7 @@ export default function BuzagilikPage() {
               course_id: course.id,
             })
           }
+          onUndo={(treatmentId) => care.handleUndoTreatment(treatmentId)}
         />
       )}
 
@@ -219,6 +224,7 @@ export default function BuzagilikPage() {
           legacyStatus={selectedSlot.animal_id ? care.legacyStatusFor(selectedSlot.animal_id) : undefined}
           moveTargets={emptyTargets}
           onAssign={(animalId) => care.handleAssign(selectedSlot.id, animalId)}
+          onCreateAndAssign={(input) => care.handleCreateAndAssign(selectedSlot.id, input)}
           onUnassign={async () => {
             await care.handleAssign(selectedSlot.id, null);
             setSelectedSlotId(null);

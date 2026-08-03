@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Animal,
+  AnimalGender,
   CalfBirthRecord,
   CalfMeal,
   CalfNote,
@@ -73,6 +74,12 @@ interface Props {
   legacyStatus: CalfTreatmentStatus | undefined;
   moveTargets: MoveTarget[];
   onAssign: (animalId: string) => Promise<void>;
+  onCreateAndAssign: (input: {
+    ear_tag: string;
+    gender: AnimalGender | null;
+    breed: string | null;
+    born_at: string | null;
+  }) => Promise<void>;
   onUnassign: () => Promise<void>;
   onMove: (targetSlotId: string) => Promise<void>;
   onStartCourse: (protocolId: string, startDate: string) => Promise<void>;
@@ -118,6 +125,7 @@ export function CalfDetailModal({
   legacyStatus,
   moveTargets,
   onAssign,
+  onCreateAndAssign,
   onUnassign,
   onMove,
   onStartCourse,
@@ -139,6 +147,12 @@ export function CalfDetailModal({
 
   const [pickerAnimalId, setPickerAnimalId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [assignMode, setAssignMode] = useState<"existing" | "new">("existing");
+  const [newEarTag, setNewEarTag] = useState("");
+  const [newGender, setNewGender] = useState<AnimalGender | null>(null);
+  const [newBreed, setNewBreed] = useState("");
+  const [newBornAt, setNewBornAt] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const [bornAtInput, setBornAtInput] = useState(toLocalInputValue(birthRecord?.born_at ?? null));
   const [brixInput, setBrixInput] = useState(birthRecord?.blood_brix != null ? String(birthRecord.blood_brix) : "");
@@ -251,24 +265,127 @@ export function CalfDetailModal({
         </div>
 
         {!animal ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-sm text-neutral-400">Bu kutucuk boş.</p>
             {canManage && (
-              <div className="space-y-2">
-                <EarTagPicker
-                  animals={availableCalves}
-                  selectedId={pickerAnimalId}
-                  onSelect={setPickerAnimalId}
-                  onClear={() => setPickerAnimalId(null)}
-                />
-                <button
-                  type="button"
-                  onClick={() => pickerAnimalId && run(() => onAssign(pickerAnimalId))}
-                  disabled={!pickerAnimalId || busy}
-                  className="btn-primary"
-                >
-                  {busy ? "Ekleniyor..." : "Buzağı Ata"}
-                </button>
+              <div className="space-y-3">
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAssignMode("existing")}
+                    className={`chip ${assignMode === "existing" ? "chip-selected" : "chip-unselected"}`}
+                  >
+                    Var Olanı Ata
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignMode("new")}
+                    className={`chip ${assignMode === "new" ? "chip-selected" : "chip-unselected"}`}
+                  >
+                    Yeni Buzağı Ekle
+                  </button>
+                </div>
+
+                {assignMode === "existing" ? (
+                  <div className="space-y-2">
+                    <EarTagPicker
+                      animals={availableCalves}
+                      selectedId={pickerAnimalId}
+                      onSelect={setPickerAnimalId}
+                      onClear={() => setPickerAnimalId(null)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => pickerAnimalId && run(() => onAssign(pickerAnimalId))}
+                      disabled={!pickerAnimalId || busy}
+                      className="btn-primary"
+                    >
+                      {busy ? "Ekleniyor..." : "Buzağı Ata"}
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!newEarTag.trim()) return;
+                      setCreateError(null);
+                      setBusy(true);
+                      try {
+                        await onCreateAndAssign({
+                          ear_tag: newEarTag.trim(),
+                          gender: newGender,
+                          breed: newBreed.trim() || null,
+                          born_at: newBornAt || null,
+                        });
+                        setNewEarTag("");
+                        setNewGender(null);
+                        setNewBreed("");
+                        setNewBornAt("");
+                      } catch (err) {
+                        const msg = err instanceof Error ? err.message : "";
+                        setCreateError(
+                          /duplicate|unique/i.test(msg)
+                            ? "Bu küpe numarası zaten kayıtlı."
+                            : "Buzağı oluşturulamadı. Tekrar deneyin."
+                        );
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                    className="space-y-2 rounded-md border border-neutral-200 p-2"
+                  >
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-neutral-600">Küpe Numarası *</span>
+                      <input
+                        value={newEarTag}
+                        onChange={(e) => setNewEarTag(e.target.value)}
+                        placeholder="örn. 3841"
+                        className="input"
+                        required
+                      />
+                    </label>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setNewGender(newGender === "disi" ? null : "disi")}
+                        className={`chip ${newGender === "disi" ? "chip-selected" : "chip-unselected"}`}
+                      >
+                        Dişi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewGender(newGender === "erkek" ? null : "erkek")}
+                        className={`chip ${newGender === "erkek" ? "chip-selected" : "chip-unselected"}`}
+                      >
+                        Erkek
+                      </button>
+                    </div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-neutral-600">Irk (opsiyonel)</span>
+                      <input
+                        value={newBreed}
+                        onChange={(e) => setNewBreed(e.target.value)}
+                        placeholder="örn. Holstein"
+                        className="input"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-neutral-600">
+                        Doğum tarihi ve saati (opsiyonel)
+                      </span>
+                      <input
+                        type="datetime-local"
+                        value={newBornAt}
+                        onChange={(e) => setNewBornAt(e.target.value)}
+                        className="input"
+                      />
+                    </label>
+                    {createError && <p className="text-xs text-red-600">{createError}</p>}
+                    <button type="submit" disabled={busy || !newEarTag.trim()} className="btn-primary">
+                      {busy ? "Ekleniyor..." : "Buzağı Oluştur ve Ata"}
+                    </button>
+                  </form>
+                )}
               </div>
             )}
           </div>
