@@ -863,6 +863,12 @@ export function demoCreateCalfTreatment(input: Omit<CalfTreatment, "id" | "creat
   return treatment;
 }
 
+export function demoDeleteCalfTreatment(id: string): void {
+  const db = loadDb();
+  db.calfTreatments = db.calfTreatments.filter((t) => t.id !== id);
+  saveDb(db);
+}
+
 // --- Buzagi mama ogunleri ---
 
 export function demoListCalfMeals(sinceDate?: string): CalfMeal[] {

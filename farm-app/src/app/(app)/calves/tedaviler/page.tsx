@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   createCalfTreatment,
+  deleteCalfTreatment,
   listAnimals,
   listCalfHousingSlots,
   listCalfProtocolDays,
@@ -133,6 +135,11 @@ export default function CalfTreatmentListPage() {
     await refresh();
   }
 
+  async function handleUndo(treatmentId: string) {
+    await deleteCalfTreatment(treatmentId);
+    await refresh();
+  }
+
   const activeCourses = courses
     .filter((c) => c.status === "aktif")
     .map((c) => {
@@ -163,6 +170,9 @@ export default function CalfTreatmentListPage() {
 
   return (
     <div className="space-y-4">
+      <Link href="/calves" className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-green-700">
+        ← Buzağılar
+      </Link>
       <PageHeader
         icon="🩺"
         title="Tedavi Listesi"
@@ -250,6 +260,7 @@ export default function CalfTreatmentListPage() {
             treatments={treatments}
             canManage={canManage}
             onLogDone={handleLogDone}
+            onUndo={handleUndo}
             date={selectedDate}
             heading={isToday ? "Bugünün Tedavi Görevleri" : `${formatDate(selectedDate)} Tedavi Görevleri`}
             locationFor={locationFor}

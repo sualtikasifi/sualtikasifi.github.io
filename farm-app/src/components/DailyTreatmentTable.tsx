@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Animal, CalfProtocol, CalfProtocolDay, CalfTreatment, CalfTreatmentCourse } from "@/lib/types";
 import { todayIso } from "@/lib/format";
+import { exportRowsToExcel } from "@/lib/excelExport";
 
 interface Props {
   courses: CalfTreatmentCourse[];
@@ -18,6 +19,9 @@ interface Props {
     medicines: string;
     note: string | null;
   }) => Promise<void>;
+  // Yanlislikla "Yapildi" isaretlenirse geri almak icin: ilgili tedavi
+  // kaydini siler.
+  onUndo: (treatmentId: string) => Promise<void>;
   // Verilmezse bugun kullanilir (oda sayfalarindaki varsayilan davranis).
   date?: string;
   heading?: string;
@@ -36,6 +40,7 @@ interface Row {
   maxDay: number;
   medicines: string;
   done: boolean;
+  doneTreatmentId: string | null;
 }
 
 // Aktif tedavi kurlerinden secilen gunun gorev tablosu: hangi buzagiya o
@@ -48,6 +53,7 @@ export function DailyTreatmentTable({
   treatments,
   canManage,
   onLogDone,
+  onUndo,
   date,
   heading = "Bugünün Tedavi Görevleri",
   locationFor,
@@ -56,6 +62,7 @@ export function DailyTreatmentTable({
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const targetDate = date ?? todayIso();
   const rows: Row[] = [];
@@ -73,7 +80,7 @@ export function DailyTreatmentTable({
     const meds = days.find((d) => d.day_number === day)?.medicines;
     if (!meds) continue;
     const animal = animals.find((a) => a.id === course.animal_id);
-    const done = treatments.some((t) => t.course_id === course.id && t.treatment_date === targetDate);
+    const doneRecord = treatments.find((t) => t.course_id === course.id && t.treatment_date === targetDate);
     rows.push({
       course,
       earTag: animal?.ear_tag ?? "?",
@@ -82,7 +89,8 @@ export function DailyTreatmentTable({
       day,
       maxDay,
       medicines: meds,
-      done,
+      done: !!doneRecord,
+      doneTreatmentId: doneRecord?.id ?? null,
     });
   }
 
@@ -90,6 +98,7 @@ export function DailyTreatmentTable({
   rows.sort((a, b) => Number(a.done) - Number(b.done) || a.earTag.localeCompare(b.earTag, "tr", { numeric: true }));
 
   async function markDone(row: Row) {
+    if (!window.confirm(`${row.earTag} için bu tedaviyi "Yapıldı" olarak işaretlemek istediğinize emin misiniz?`)) return;
     setSavingId(row.course.id);
     await onLogDone({
       course: row.course,
@@ -103,9 +112,53 @@ export function DailyTreatmentTable({
     setNoteText("");
   }
 
+  async function undoDone(row: Row) {
+    if (!row.doneTreatmentId) return;
+    if (!window.confirm(`${row.earTag} için "Yapıldı" işaretini geri almak istediğinize emin misiniz? Kayıt silinecek.`))
+      return;
+    setSavingId(row.course.id);
+    await onUndo(row.doneTreatmentId);
+    setSavingId(null);
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await exportRowsToExcel(
+        `tedavi-listesi-${targetDate}`,
+        "Tedavi Listesi",
+        [
+          "Küpe",
+          ...(locationFor ? ["Konum"] : []),
+          "Protokol",
+          "Gün",
+          "İlaçlar",
+          "Durum",
+        ],
+        rows.map((row) => [
+          row.earTag,
+          ...(locationFor ? [row.location ?? "-"] : []),
+          row.protocolName,
+          `${row.day}/${row.maxDay}`,
+          row.medicines,
+          row.done ? "Yapıldı" : "Bekliyor",
+        ])
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="card space-y-2">
-      <h2 className="text-sm font-semibold text-neutral-800">{heading}</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-neutral-800">{heading}</h2>
+        {rows.length > 0 && (
+          <button type="button" onClick={handleExport} disabled={exporting} className="btn-secondary shrink-0 text-xs">
+            {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
+          </button>
+        )}
+      </div>
       {rows.length === 0 ? (
         <p className="text-sm text-neutral-400">Bu tarih için görev yok.</p>
       ) : (
@@ -133,7 +186,21 @@ export function DailyTreatmentTable({
                   <td className="py-1.5 pr-2 text-neutral-600">{row.medicines}</td>
                   <td className="py-1.5">
                     {row.done ? (
-                      <span className="font-medium text-green-700">Yapıldı</span>
+                      canManage ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-green-700">Yapıldı</span>
+                          <button
+                            type="button"
+                            disabled={savingId === row.course.id}
+                            onClick={() => undoDone(row)}
+                            className="text-[11px] font-medium text-red-600 underline hover:no-underline disabled:opacity-50"
+                          >
+                            {savingId === row.course.id ? "..." : "Geri Al"}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-green-700">Yapıldı</span>
+                      )
                     ) : canManage ? (
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">

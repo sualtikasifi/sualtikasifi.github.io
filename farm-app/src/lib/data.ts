@@ -797,6 +797,12 @@ export async function createCalfTreatment(
   return data as CalfTreatment;
 }
 
+export async function deleteCalfTreatment(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteCalfTreatment(id);
+  const { error } = await supabase!.from("calf_treatments").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // --- Buzagi mama ogunleri (09/15/21/03) ---
 
 export async function listCalfMeals(sinceDate?: string): Promise<CalfMeal[]> {
