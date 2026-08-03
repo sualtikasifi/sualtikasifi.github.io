@@ -18,6 +18,12 @@ body {
   background-attachment: fixed;
   color: var(--foreground);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  /* Bir parmak Buzagilik Odasi'ndaki pinch-zoom alaninin disina tasarsa
+     bile (native pull-to-refresh tetiklenip zayif baglantida sayfanin
+     "This page couldn't load" hatasiyla yeniden yuklenmeye calismasini
+     onlemek icin) tarayicinin kendi kaydirma-zincirleme/yenileme
+     hareketini burada durduruyoruz. */
+  overscroll-behavior-y: contain;
 }
 
 @layer components {

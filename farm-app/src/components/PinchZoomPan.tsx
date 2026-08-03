@@ -144,7 +144,14 @@ export function PinchZoomPan({ children, className, maxZoom = 3 }: Props) {
     <div
       ref={outerRef}
       className={`relative overflow-hidden ${className ?? ""}`}
-      style={{ height: Math.round(natural.height * totalScale) || undefined, touchAction: "none" }}
+      style={{
+        height: Math.round(natural.height * totalScale) || undefined,
+        // Zoom yapilmadigi surece tek parmakla dikey sayfa kaydirmasi
+        // normal calissin (JS tarafi zaten o durumda hicbir sey yapmiyor);
+        // sadece zoom yapildiginda (parmakla kaydirma bizim islemimiz
+        // oldugunda) tarayicinin varsayilan davranisini tamamen kapatiyoruz.
+        touchAction: transform.zoom > 1 ? "none" : "pan-y",
+      }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
