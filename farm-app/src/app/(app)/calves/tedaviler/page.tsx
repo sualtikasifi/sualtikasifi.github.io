@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   createCalfTreatment,
@@ -170,14 +169,12 @@ export default function CalfTreatmentListPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/calves" className="inline-flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-green-700">
-        ← Buzağılar
-      </Link>
       <PageHeader
         icon="🩺"
         title="Tedavi Listesi"
         subtitle="Hasta buzağıların günlük takibi (Buzağılık + İglo)"
         color="rose"
+        backHref="/calves"
       />
 
       {loading ? (
