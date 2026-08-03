@@ -12,6 +12,7 @@ import { CalfDetailModal, MoveTarget } from "@/components/CalfDetailModal";
 import { FeedingSessionBar } from "@/components/FeedingSessionBar";
 import { MealHistoryPanel } from "@/components/MealHistoryPanel";
 import { PageHeader } from "@/components/PageHeader";
+import { PinchZoomPan } from "@/components/PinchZoomPan";
 
 const COLUMN_COUNT = 6;
 const HUTS_PER_COLUMN = 20;
@@ -180,9 +181,12 @@ export default function BuzagilikPage() {
               {" · "}Muayene bekleyen: <span className="font-semibold text-red-700">{examPendingCount}</span>
             </p>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {columns.map((column, g) => renderHutColumn(column, `Sıra ${g + 1}`))}
-          </div>
+          <p className="mb-1.5 text-[11px] text-neutral-400">
+            İki parmakla yakınlaştırıp uzaklaştırabilir, yakınlaştırınca parmağınızla kaydırabilirsiniz.
+          </p>
+          <PinchZoomPan className="rounded-lg bg-neutral-50/50">
+            <div className="flex gap-2 p-0.5">{columns.map((column, g) => renderHutColumn(column, `Sıra ${g + 1}`))}</div>
+          </PinchZoomPan>
           <p className="mt-2 text-[11px] leading-relaxed text-neutral-400">
             Kırmızı çerçeve: tedavide (üstte protokol adı) · Noktalar: son 5 öğün, soldan en yeni (yeşil içti, kırmızı
             içmedi, sarı Pectolit) · Yanıp sönen sarı nokta: Pectolit içecek · Kırmızı ünlem: muayene bekliyor · Sarı
