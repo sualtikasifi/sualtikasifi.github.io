@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 interface Props {
   children: React.ReactNode;
@@ -32,6 +32,31 @@ export function PinchZoomPan({ children, className, maxZoom = 3 }: Props) {
   );
   const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const lastTap = useRef<{ time: number; x: number; y: number } | null>(null);
+  const rafId = useRef<number | null>(null);
+  const pendingTransform = useRef<Transform | null>(null);
+
+  // Gercek dokunma girisi ekran yenileme hizindan (60-120Hz) cok daha sik
+  // pointermove uretebilir; her birinde dogrudan setTransform cagirmak
+  // yavas/dusuk guclu cihazlarda render yiginlanmasina yol acabiliyordu.
+  // Bunun yerine sadece en son degeri saklayip animasyon karesi basina en
+  // fazla bir kez state guncelliyoruz.
+  function scheduleTransform(next: Transform) {
+    pendingTransform.current = next;
+    if (rafId.current != null) return;
+    rafId.current = requestAnimationFrame(() => {
+      rafId.current = null;
+      if (pendingTransform.current) {
+        setTransform(pendingTransform.current);
+        pendingTransform.current = null;
+      }
+    });
+  }
+
+  useEffect(() => {
+    return () => {
+      if (rafId.current != null) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     function measure() {
@@ -42,14 +67,29 @@ export function PinchZoomPan({ children, className, maxZoom = 3 }: Props) {
       const w = inner.scrollWidth;
       const h = inner.scrollHeight;
       if (w === 0) return;
-      setNatural({ width: w, height: h });
-      setFitScale(Math.min(1, containerWidth / w));
+      // Ayni sayisal degerse ayni referansi dondurup gereksiz render'i
+      // engelle: aksi halde yeni bir nesne her zaman "degisti" sayilir.
+      setNatural((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
+      setFitScale((prev) => {
+        const next = Math.min(1, containerWidth / w);
+        return prev === next ? prev : next;
+      });
     }
     measure();
+    // DIKKAT: outer'in kendi boyutu (yukseklik) zoom durumuna gore bizim
+    // tarafimizdan ayarlaniyor; onu ResizeObserver ile izlemek kendi
+    // degisikligimizi tekrar tetikleyip surekli pinch sirasinda render
+    // yiginlanmasina (ve gercek cihazda donmaya/cokmeye) yol acabiliyor.
+    // Sadece dogal (transform'dan etkilenmeyen) inner icerigi izle;
+    // konteyner genisligi icin de pencere yeniden boyutlandirmasini
+    // dinlemek yeterli.
     const ro = new ResizeObserver(measure);
-    if (outerRef.current) ro.observe(outerRef.current);
     if (innerRef.current) ro.observe(innerRef.current);
-    return () => ro.disconnect();
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, []);
 
   const totalScale = fitScale * transform.zoom;
@@ -120,12 +160,12 @@ export function PinchZoomPan({ children, className, maxZoom = 3 }: Props) {
       const zoom = (dist / pinchStart.current.dist) * pinchStart.current.zoom;
       const dx = mid.x - pinchStart.current.mid.x;
       const dy = mid.y - pinchStart.current.mid.y;
-      setTransform(clamp({ zoom, x: pinchStart.current.tx + dx, y: pinchStart.current.ty + dy }));
+      scheduleTransform(clamp({ zoom, x: pinchStart.current.tx + dx, y: pinchStart.current.ty + dy }));
     } else if (pointers.current.size === 1 && panStart.current && transform.zoom > 1) {
       e.preventDefault();
       const dx = e.clientX - panStart.current.x;
       const dy = e.clientY - panStart.current.y;
-      setTransform((prev) => clamp({ zoom: prev.zoom, x: panStart.current!.tx + dx, y: panStart.current!.ty + dy }));
+      scheduleTransform(clamp({ zoom: transform.zoom, x: panStart.current.tx + dx, y: panStart.current.ty + dy }));
     }
   }
 
