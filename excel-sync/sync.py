@@ -308,20 +308,42 @@ def connect(cfg: Config, logger: logging.Logger) -> tuple:
     return client, auth_response.user.id
 
 
+PAGE_SIZE = 1000
+
+
+def fetch_all_pages(query_fn) -> list:
+    """PostgREST istekleri varsayilan olarak en fazla 1000 satir dondurur;
+    daha buyuk tablolarda (orn. yillar icinde biriken hayvanlar) sayfa sayfa
+    cekmezsek son satirlar sessizce eksik kalir ve "zaten var" kayitlar
+    yeniden olusturulmaya calisilip cakisma hatasi verir."""
+    out: list = []
+    offset = 0
+    while True:
+        page = query_fn(offset, offset + PAGE_SIZE - 1)
+        out.extend(page)
+        if len(page) < PAGE_SIZE:
+            return out
+        offset += PAGE_SIZE
+
+
 def fetch_animals_by_ear_tag(client) -> dict[str, str]:
-    result = client.table("animals").select("id,ear_tag").execute()
-    return {row["ear_tag"]: row["id"] for row in result.data}
+    rows = fetch_all_pages(
+        lambda start, end: client.table("animals").select("id,ear_tag").range(start, end).execute().data
+    )
+    return {row["ear_tag"]: row["id"] for row in rows}
 
 
 def fetch_site_treatments(client, since: date) -> list[SiteTreatment]:
-    result = (
-        client.table("calf_treatments")
+    rows = fetch_all_pages(
+        lambda start, end: client.table("calf_treatments")
         .select("id,animal_id,treatment_date,diagnosis,protocol_day,description,animals(ear_tag)")
         .gte("treatment_date", since.isoformat())
+        .range(start, end)
         .execute()
+        .data
     )
     out = []
-    for row in result.data:
+    for row in rows:
         animal = row.get("animals") or {}
         ear_tag = animal.get("ear_tag") if isinstance(animal, dict) else None
         if not ear_tag:
@@ -343,18 +365,30 @@ def fetch_site_treatments(client, since: date) -> list[SiteTreatment]:
 def get_or_create_animal(client, logger: logging.Logger, ear_tag: str, animal_cache: dict[str, str], sync_profile_id: str) -> str:
     if ear_tag in animal_cache:
         return animal_cache[ear_tag]
-    result = client.table("animals").insert(
-        {
-            "ear_tag": ear_tag,
-            "gender": None,
-            "status": "aktif",
-            "created_by": sync_profile_id,
-        }
-    ).execute()
-    animal_id = result.data[0]["id"]
-    animal_cache[ear_tag] = animal_id
-    logger.info("Yeni hayvan olusturuldu (kupe %s, Excel'den).", ear_tag)
-    return animal_id
+    try:
+        result = client.table("animals").insert(
+            {
+                "ear_tag": ear_tag,
+                "gender": None,
+                "status": "aktif",
+                "created_by": sync_profile_id,
+            }
+        ).execute()
+        animal_id = result.data[0]["id"]
+        animal_cache[ear_tag] = animal_id
+        logger.info("Yeni hayvan olusturuldu (kupe %s, Excel'den).", ear_tag)
+        return animal_id
+    except Exception as exc:  # noqa: BLE001
+        # Bu kupe no sitede baska bir yerden (site arayuzu, es zamanli
+        # calisma) zaten olusturulmus olabilir - hata yerine var olani bul.
+        if getattr(exc, "code", None) == "23505" or "duplicate key" in str(exc):
+            existing = client.table("animals").select("id").eq("ear_tag", ear_tag).execute()
+            if existing.data:
+                animal_id = existing.data[0]["id"]
+                animal_cache[ear_tag] = animal_id
+                logger.info("Kupe %s sitede zaten kayitliymis, tedavi ona baglaniyor.", ear_tag)
+                return animal_id
+        raise
 
 
 def create_site_treatment(client, sync_profile_id: str, animal_id: str, row: ExcelRow) -> str:
