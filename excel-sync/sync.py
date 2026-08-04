@@ -194,16 +194,45 @@ def load_excel(cfg: Config, logger: logging.Logger):
     return wb, ws
 
 
-def detect_date_format(ws) -> str:
-    """Yeni eklenen satirlarin tarih hucrelerinin, kullanicinin zaten
-    kullandigi bicimle (orn. 4.08.2026) ayni gorunmesi icin: mevcut
-    satirlardan birinin gercek bicimini kopyalar. Bos sayfada makul bir
-    varsayilana duser."""
+# Kullanicinin tarih sutununda kullandigi bicim: saat YOK, nokta ile
+# ayrilmis (orn. "4.08.2026"). Sayfadan otomatik "tahmin etmeye"
+# calismak (onceki surum) kararsizdi - onceki (hatali) calistirmalardan
+# kalan hucreler yanlislikla ornek alinabiliyordu. Sabit deger daha
+# guvenilir.
+DATE_FORMAT = "d.mm.yyyy"
+
+
+def detect_reference_style(ws) -> dict[int, dict]:
+    """Yeni eklenen bir satirin yazi tipi/hizalama/kenarlik gibi gorunumu,
+    kullanicinin elle girdigi satirlarla AYNI olsun diye: mevcut, gercek
+    veri iceren bir satirin her sutunundaki hucre bicimini kopyalamak
+    icin orneklerini toplar."""
+    import copy
+
     for r in range(2, min(ws.max_row, 500) + 1):
-        cell = ws.cell(row=r, column=COL_TARIH)
-        if isinstance(cell.value, (date, datetime)) and cell.number_format not in ("General", None):
-            return cell.number_format
-    return "d.mm.yyyy"
+        kupe_cell = ws.cell(row=r, column=COL_KUPE)
+        if kupe_cell.value in (None, ""):
+            continue
+        styles = {}
+        for col in (COL_TARIH, COL_GRUP, COL_KUPE, COL_TESHIS, COL_TEDAVI):
+            src = ws.cell(row=r, column=col)
+            styles[col] = {
+                "font": copy.copy(src.font),
+                "alignment": copy.copy(src.alignment),
+                "border": copy.copy(src.border),
+                "fill": copy.copy(src.fill),
+            }
+        return styles
+    return {}
+
+
+def apply_reference_style(ws, row_number: int, styles: dict[int, dict]) -> None:
+    for col, style in styles.items():
+        cell = ws.cell(row=row_number, column=col)
+        cell.font = style["font"]
+        cell.alignment = style["alignment"]
+        cell.border = style["border"]
+        cell.fill = style["fill"]
 
 
 def read_excel_rows(ws, since: date) -> list[ExcelRow]:
@@ -248,9 +277,11 @@ def read_excel_rows(ws, since: date) -> list[ExcelRow]:
     return rows
 
 
-def write_excel_row(ws, row: ExcelRow, date_format: str = "d.mm.yyyy") -> None:
+def write_excel_row(ws, row: ExcelRow) -> None:
+    # Saat YOK - sadece tarih (datetime.min.time() ile gece yarisina
+    # sabitleniyor, DATE_FORMAT da saat kismini hic gostermiyor).
     date_cell = ws.cell(row=row.row_number, column=COL_TARIH, value=datetime.combine(row.treatment_date, datetime.min.time()))
-    date_cell.number_format = date_format
+    date_cell.number_format = DATE_FORMAT
     ws.cell(row=row.row_number, column=COL_GRUP, value=row.group_raw)
     ws.cell(row=row.row_number, column=COL_KUPE, value=int(row.ear_tag) if row.ear_tag.isdigit() else row.ear_tag)
     ws.cell(row=row.row_number, column=COL_TESHIS, value=row.diagnosis)
@@ -258,10 +289,12 @@ def write_excel_row(ws, row: ExcelRow, date_format: str = "d.mm.yyyy") -> None:
     ws.cell(row=row.row_number, column=COL_SENKRON_ID, value=row.site_id)
 
 
-def append_excel_row(ws, row: ExcelRow, date_format: str = "d.mm.yyyy") -> int:
+def append_excel_row(ws, row: ExcelRow, reference_styles: Optional[dict[int, dict]] = None) -> int:
     new_row_number = ws.max_row + 1
     row.row_number = new_row_number
-    write_excel_row(ws, row, date_format)
+    write_excel_row(ws, row)
+    if reference_styles:
+        apply_reference_style(ws, new_row_number, reference_styles)
     return new_row_number
 
 
@@ -515,7 +548,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
         logger.info("Yedek alindi: %s", backup_name)
 
     wb, ws = load_excel(cfg, logger)
-    date_format = detect_date_format(ws)
+    reference_styles = detect_reference_style(ws)
     excel_rows = read_excel_rows(ws, since)
     logger.info("Excel'de pencere icinde %d satir bulundu.", len(excel_rows))
 
@@ -598,7 +631,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             row.protocol_day = site_row.protocol_day
             row.description = site_row.description
             if not cfg.dry_run:
-                write_excel_row(ws, row, date_format)
+                write_excel_row(ws, row)
             state[row.site_id] = site_snapshot
             stats.pulled_to_excel += 1
 
@@ -620,7 +653,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             row.site_id = existing.id
             linked_site_ids.add(existing.id)
             if not cfg.dry_run:
-                write_excel_row(ws, row, date_format)
+                write_excel_row(ws, row)
             state[existing.id] = snapshot_of(row.ear_tag, row.treatment_date, row.diagnosis, row.protocol_day, row.description)
             stats.linked += 1
             continue
@@ -630,7 +663,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             new_id = create_site_treatment(client, sync_profile_id, animal_id, row) if not cfg.dry_run else "dry-run-id"
             row.site_id = new_id
             if not cfg.dry_run:
-                write_excel_row(ws, row, date_format)
+                write_excel_row(ws, row)
                 state[new_id] = snapshot_of(row.ear_tag, row.treatment_date, row.diagnosis, row.protocol_day, row.description)
             stats.pushed_to_site += 1
             logger.info("Kupe %s (%s) siteye eklendi.", row.ear_tag, row.treatment_date)
@@ -639,7 +672,14 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             stats.errors.append(f"Satir {row.row_number} (kupe {row.ear_tag}): {exc}")
 
     # 3) Sitede olup Excel'de hic gorunmeyen kayitlar: Excel'e yeni satir
-    #    olarak ekle.
+    #    olarak ekle. Once dogal anahtarla eslesenleri baglayip devre disi
+    #    birak, gercekten yeni olanlari ise TEK TEK eklemek yerine
+    #    kupe numarasi + tedavi tarihine gore sirala ve OYLE ekle - aksi
+    #    halde veritabanindan gelen sirali OLMAYAN sira ile satirlar
+    #    "2-3-2-5" gibi karisik/kronolojik olmayan bir duzende Excel'e
+    #    dusuyordu (kullanicinin elle girdigi satirlar her zaman kupeye
+    #    gore gruplanip tarihe gore artan sirada duzenli).
+    genuinely_new: list[SiteTreatment] = []
     for t in site_treatments:
         if t.id in linked_site_ids:
             continue
@@ -648,11 +688,20 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             existing_row = excel_by_natural_key[key]
             existing_row.site_id = t.id
             if not cfg.dry_run:
-                write_excel_row(ws, existing_row, date_format)
+                write_excel_row(ws, existing_row)
                 state[t.id] = snapshot_of(existing_row.ear_tag, existing_row.treatment_date, existing_row.diagnosis, existing_row.protocol_day, existing_row.description)
             stats.linked += 1
             continue
+        genuinely_new.append(t)
 
+    def sort_key(t: SiteTreatment):
+        ear_tag = t.ear_tag or ""
+        ear_sort = (0, int(ear_tag)) if ear_tag.isdigit() else (1, ear_tag)
+        return (ear_sort, t.treatment_date, t.protocol_day if t.protocol_day is not None else 0)
+
+    genuinely_new.sort(key=sort_key)
+
+    for t in genuinely_new:
         group_raw = fetch_current_location(client, t.animal_id) if not cfg.dry_run else "-"
         new_row = ExcelRow(
             row_number=-1,
@@ -665,7 +714,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             site_id=t.id,
         )
         if not cfg.dry_run:
-            append_excel_row(ws, new_row, date_format)
+            append_excel_row(ws, new_row, reference_styles)
             state[t.id] = snapshot_of(t.ear_tag, t.treatment_date, t.diagnosis, t.protocol_day, t.description)
         stats.pulled_to_excel += 1
         logger.info("Kupe %s (%s) Excel'e eklendi (siteden).", t.ear_tag, t.treatment_date)
