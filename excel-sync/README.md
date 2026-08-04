@@ -28,22 +28,14 @@ Bu program **sadece bu bilgisayarda, bilgisayar açık ve internete bağlıyken*
 
 [python.org/downloads](https://www.python.org/downloads/) adresinden Python
 3.11 veya üzerini indirip kurun. Kurulum ekranında **"Add python.exe to PATH"**
-kutusunu mutlaka işaretleyin.
+kutusunu mutlaka işaretleyin. (Zaten kuruluysa bu adımı atlayın.)
 
 ### 1.2 Bu klasörü bilgisayara indirin
 
 Bu `excel-sync` klasörünü (içindeki tüm dosyalarla) bilgisayarınızda kalıcı
 bir yere kopyalayın, örn. `C:\MarderCiftlik\excel-sync\`.
 
-### 1.3 Gerekli kütüphaneleri kurun
-
-Bu klasörde bir komut satırı (PowerShell veya CMD) açıp:
-
-```
-pip install -r requirements.txt
-```
-
-### 1.4 Siteye özel bir "senkronizasyon" hesabı oluşturun
+### 1.3 Siteye özel bir "senkronizasyon" hesabı oluşturun
 
 Bu programın sitede kendi adına işlem yapabilmesi için ayrı bir hesaba
 ihtiyacı var (kendi hesabınızı kullanmayın):
@@ -57,48 +49,25 @@ ihtiyacı var (kendi hesabınızı kullanmayın):
    Bu, o hesaba sadece buzağı tedavilerini ekleme/silme yetkisi verir —
    başka hiçbir şeye erişemez.
 
-### 1.5 Ayar dosyasını oluşturun
+Bu hesabın e-postasını ve şifresini bir kenara not edin, bir sonraki adımda
+lazım olacak.
 
-`config.example.json` dosyasını aynı klasörde `config.json` olarak
-kopyalayın ve içindeki değerleri doldurun:
+### 1.4 Kurulum sihirbazını çalıştırın
 
-| Alan | Ne yazılacak |
-|---|---|
-| `excel_path` | Excel dosyanızın tam yolu (örn. `C:\\Users\\Ahmet\\OneDrive\\...\\BUZAĞILIK TEDAVİLER.xlsx`) |
-| `sheet_name` | Genelde değiştirmeyin: `BUZAĞI TEDAVİ 2025` |
-| `supabase_url` | Supabase panelinde Project Settings → API → Project URL |
-| `supabase_anon_key` | Aynı sayfada **anon public** key (service_role değil!) |
-| `sync_email` / `sync_password` | 1.4'te oluşturduğunuz hesabın bilgileri |
+`kurulum.bat` dosyasına **çift tıklayın**. Sırayla:
 
-**`config.json` dosyasını kimseyle paylaşmayın ve asla GitHub'a yüklemeyin**
-(zaten `.gitignore` ile hariç tutuldu) — içinde şifre var.
+- Gerekli kütüphaneleri kendisi kurar,
+- Excel dosyanızı seçmeniz için bir pencere açar (elle yol yazmanız gerekmez),
+- Supabase adresinizi ve 1.3'te oluşturduğunuz hesabın bilgilerini sorar,
+- isterseniz hemen bir deneme çalıştırması yapıp sonucu gösterir,
+- isterseniz günde 2 kez (07:00/19:00) otomatik çalışmasını kurar.
 
-### 1.6 İlk çalıştırmayı elle yapıp kontrol edin
+Hepsi bu — `config.json` dosyasını elle oluşturmanıza veya komut satırı
+kullanmanıza gerek yok. Sorulara cevap verip Enter'a basmanız yeterli.
 
-```
-python sync.py
-```
-
-Ekranda ne yapıldığını göreceksiniz. `logs\sync.log` dosyasından da her zaman
-geçmişi görebilirsiniz. Sonrasında Excel dosyanızı açıp yeni bir `SENKRON_ID`
-sütununun eklendiğini ve (varsa) yeni satırların geldiğini kontrol edin.
-
-Hiçbir şeyi değiştirmeden sadece ne olacağını görmek isterseniz
-`config.json`'da `"dry_run": true` yapıp tekrar çalıştırabilirsiniz.
-
-### 1.7 Günde 2 kez otomatik çalışmasını sağlayın
-
-Bu klasörde PowerShell açıp:
-
-```
-powershell -ExecutionPolicy Bypass -File install_task_scheduler.ps1
-```
-
-Bu, Windows Görev Zamanlayıcı'ya `MarderCiftlik-ExcelSenkron` adında, her gün
-07:00 ve 19:00'da çalışacak bir görev ekler.
-
-**Eğer bu script çalışmazsa** (bazı kurumsal bilgisayarlarda PowerShell
-script'leri engellenmiş olabilir), elle kurmak için:
+**PowerShell script'leri engellenmiş bir kurumsal bilgisayardaysanız** son
+adımda ("Görev Zamanlayıcı" kurulumu) hata alabilirsiniz — bu durumda elle
+kurmak için:
 
 1. Başlat menüsünden **"Görev Zamanlayıcı"** (Task Scheduler) açın.
 2. Sağdan **"Temel Görev Oluştur"**a tıklayın, bir isim verin (örn.
@@ -109,6 +78,11 @@ script'leri engellenmiş olabilir), elle kurmak için:
    `sync.py`'nin tam yolunu, "Başlangıç konumu" olarak da bu klasörü girin.
 5. Görevi bitirin, sonra görevin özelliklerine girip **Tetikleyiciler**
    sekmesinden ikinci bir tetikleyici ekleyip saat **19:00** yapın.
+
+### Elle senkronizasyon çalıştırmak isterseniz
+
+Otomatik saatleri beklemeden hemen bir senkronizasyon yapmak isterseniz
+`senkronize_et.bat` dosyasına çift tıklamanız yeterli.
 
 ---
 
@@ -138,7 +112,7 @@ döner.
 
 | Belirti | Muhtemel sebep / çözüm |
 |---|---|
-| `Yapilandirma dosyasi bulunamadi` | `config.json` oluşturulmamış, adım 1.5'i tekrarlayın |
+| `Yapilandirma dosyasi bulunamadi` | `config.json` oluşturulmamış, `kurulum.bat`'ı çalıştırın |
 | `Siteye giris yapilamadi` | `sync_email`/`sync_password` yanlış, ya da internet yok |
 | `Excel dosyasi acik veya kilitli` | Excel'i kapatıp tekrar çalıştırın (veya bir sonraki otomatik çalıştırmayı bekleyin) |
 | Bir küpe no siteye eklenmiyor, log'da hata var | `logs\sync.log`'daki hata mesajını okuyun — genelde geçersiz/boş bir değer olur |
