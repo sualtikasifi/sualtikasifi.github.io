@@ -521,6 +521,109 @@ def test_new_rows_match_existing_date_format():
         check("yeni satirin tarih formati eskiyle ayni", new_row_format == "d.mm.yyyy", new_row_format)
 
 
+def test_new_rows_match_existing_font_style():
+    """Gercek olayin regresyon testi: kullanici yeni eklenen satirlarin yazi
+    tipinin elle girilen satirlardan farkli gorundugunu bildirdi. Yeni
+    satirlar, mevcut veri iceren bir satirdan (font/hizalama/kenarlik/dolgu)
+    kopyalanmali."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        today = date.today()
+        excel_path = make_workbook(
+            tmp, [[datetime.combine(today, datetime.min.time()), "BUZAĞILIK", 10, "İSHAL", "1-A"]]
+        )
+        wb = openpyxl.load_workbook(excel_path)
+        ws = wb["BUZAĞI TEDAVİ 2025"]
+        from openpyxl.styles import Font
+
+        reference_font = Font(name="Calibri", size=11, bold=True)
+        for col in range(1, 6):
+            ws.cell(row=2, column=col).font = reference_font
+        wb.save(excel_path)
+
+        cfg = make_config(tmp, excel_path)
+        client = FakeClient("sync-profile-id", "secret")
+        animal_id = str(uuid.uuid4())
+        client.db["animals"].append({"id": animal_id, "ear_tag": "999"})
+        client.db["calf_treatments"].append(
+            {
+                "id": str(uuid.uuid4()),
+                "animal_id": animal_id,
+                "treatment_date": today.isoformat(),
+                "diagnosis": "PNÖMONİ",
+                "protocol_day": 1,
+                "description": "X",
+                "created_by": "someone-else",
+            }
+        )
+
+        with Ctx(client, "sync-profile-id"):
+            S.run_sync(cfg, S.setup_logging(cfg.log_path))
+
+        wb2 = openpyxl.load_workbook(excel_path)
+        ws2 = wb2["BUZAĞI TEDAVİ 2025"]
+        new_font = ws2.cell(row=3, column=S.COL_KUPE).font
+        check("yeni satirin yazi tipi eskiyle ayni (kalin)", new_font.bold is True, new_font)
+        check("yeni satirin yazi tipi eskiyle ayni (boyut)", new_font.size == 11, new_font.size)
+
+
+def test_new_site_rows_sorted_by_ear_tag_and_date():
+    """Gercek olayin regresyon testi: sitede kayitli tedaviler veritabanindan
+    sirasiz geldigi icin Excel'e '2-3-2-5' gibi karisik/kronolojik olmayan
+    bir sirada ekleniyordu. Bu testte iki farkli kupe icin gunler kasten
+    ters/karisik sirada eklenir; sonucta Excel'de kupe numarasina gore
+    once, sonra o kupenin tedavi tarihine gore ARTAN sirada olmalilar -
+    kullanicinin elle girdigi satirlarla ayni duzen."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        excel_path = make_workbook(tmp, [])
+        cfg = make_config(tmp, excel_path)
+
+        client = FakeClient("sync-profile-id", "secret")
+        animal_47 = str(uuid.uuid4())
+        animal_48 = str(uuid.uuid4())
+        client.db["animals"].append({"id": animal_47, "ear_tag": "47"})
+        client.db["animals"].append({"id": animal_48, "ear_tag": "48"})
+
+        today = date.today()
+        # Kasten karisik/sirasiz eklendi (gercek veritabani donusunu taklit eder).
+        scrambled = [
+            (animal_48, today - timedelta(days=2), 3),
+            (animal_47, today, 5),
+            (animal_48, today - timedelta(days=3), 2),
+            (animal_47, today - timedelta(days=4), 1),
+            (animal_47, today - timedelta(days=1), 4),
+            (animal_48, today - timedelta(days=1), 4),
+        ]
+        for animal_id, treatment_date, day_no in scrambled:
+            client.db["calf_treatments"].append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "animal_id": animal_id,
+                    "treatment_date": treatment_date.isoformat(),
+                    "diagnosis": "PNÖMONİ",
+                    "protocol_day": day_no,
+                    "description": "TEDAVI",
+                    "created_by": "someone-else",
+                }
+            )
+
+        with Ctx(client, "sync-profile-id"):
+            S.run_sync(cfg, S.setup_logging(cfg.log_path))
+
+        rows = read_sheet(excel_path)
+        actual = [(row[2], row[0].date() if hasattr(row[0], "date") else row[0]) for row in rows]
+        expected = [
+            (47, today - timedelta(days=4)),
+            (47, today - timedelta(days=1)),
+            (47, today),
+            (48, today - timedelta(days=3)),
+            (48, today - timedelta(days=2)),
+            (48, today - timedelta(days=1)),
+        ]
+        check("yeni satirlar kupeye gore gruplanip tarihe gore sirali", actual == expected, actual)
+
+
 def test_animal_lookup_survives_over_1000_existing_animals():
     """Gercek olayin regresyon testi: PostgREST varsayilan olarak sayfa
     basina en fazla 1000 satir dondurur. animals tablosunda 1000'den fazla
