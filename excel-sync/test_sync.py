@@ -480,6 +480,47 @@ def test_locked_file_fails_fast_without_touching_site():
         check("siteye hicbir sey yazilmadi", len(client.db["calf_treatments"]) == 0 and len(client.db["animals"]) == 0, str(client.db))
 
 
+def test_new_rows_match_existing_date_format():
+    """Gercek olayin regresyon testi: yeni eklenen satirlarin tarih hucresi
+    openpyxl'in varsayilan (genis) formatinda degil, kullanicinin sayfada
+    zaten kullandigi formatta (orn. 4.08.2026) olmali - aksi halde sutun
+    dar oldugunda Excel '#####' gosteriyordu."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        today = date.today()
+        excel_path = make_workbook(
+            tmp, [[datetime.combine(today, datetime.min.time()), "BUZAĞILIK", 10, "İSHAL", "1-A"]]
+        )
+        wb = openpyxl.load_workbook(excel_path)
+        ws = wb["BUZAĞI TEDAVİ 2025"]
+        ws.cell(row=2, column=S.COL_TARIH).number_format = "d.mm.yyyy"
+        wb.save(excel_path)
+
+        cfg = make_config(tmp, excel_path)
+        client = FakeClient("sync-profile-id", "secret")
+        animal_id = str(uuid.uuid4())
+        client.db["animals"].append({"id": animal_id, "ear_tag": "999"})
+        client.db["calf_treatments"].append(
+            {
+                "id": str(uuid.uuid4()),
+                "animal_id": animal_id,
+                "treatment_date": today.isoformat(),
+                "diagnosis": "PNÖMONİ",
+                "protocol_day": 1,
+                "description": "X",
+                "created_by": "someone-else",
+            }
+        )
+
+        with Ctx(client, "sync-profile-id"):
+            S.run_sync(cfg, S.setup_logging(cfg.log_path))
+
+        wb2 = openpyxl.load_workbook(excel_path)
+        ws2 = wb2["BUZAĞI TEDAVİ 2025"]
+        new_row_format = ws2.cell(row=3, column=S.COL_TARIH).number_format
+        check("yeni satirin tarih formati eskiyle ayni", new_row_format == "d.mm.yyyy", new_row_format)
+
+
 def test_animal_lookup_survives_over_1000_existing_animals():
     """Gercek olayin regresyon testi: PostgREST varsayilan olarak sayfa
     basina en fazla 1000 satir dondurur. animals tablosunda 1000'den fazla
