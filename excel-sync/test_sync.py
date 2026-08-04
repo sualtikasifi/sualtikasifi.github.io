@@ -56,6 +56,15 @@ class FakeAuth:
         return FakeAuthResponse(self.profile_id)
 
 
+class FakeAPIError(Exception):
+    """postgrest.exceptions.APIError'in sync.py'nin kontrol ettigi kismini
+    (str(exc) icinde mesaj, .code niteligi) taklit eder."""
+
+    def __init__(self, message: str, code: str):
+        super().__init__({"message": message, "code": code, "hint": None, "details": None})
+        self.code = code
+
+
 class FakeQuery:
     def __init__(self, db, table_name):
         self.db = db
@@ -64,6 +73,7 @@ class FakeQuery:
         self._select_cols = None
         self._filters = []
         self._limit = None
+        self._range = None
         self._mode = None
         self._payload = None
 
@@ -89,6 +99,10 @@ class FakeQuery:
         self._limit = n
         return self
 
+    def range(self, start, end):
+        self._range = (start, end)
+        return self
+
     def insert(self, payload):
         self._mode = "insert"
         self._payload = payload
@@ -105,6 +119,10 @@ class FakeQuery:
 
         if self._mode == "insert":
             row = dict(self._payload)
+            if self.table_name == "animals" and any(a["ear_tag"] == row.get("ear_tag") for a in table):
+                raise FakeAPIError(
+                    'duplicate key value violates unique constraint "animals_ear_tag_key"', code="23505"
+                )
             row.setdefault("id", str(uuid.uuid4()))
             row.setdefault("created_at", datetime.now().isoformat())
             table.append(row)
@@ -118,6 +136,9 @@ class FakeQuery:
 
         # select
         matched = self._apply_filters(table)
+        if self._range is not None:
+            start, end = self._range
+            matched = matched[start : end + 1]
         if self._limit is not None:
             matched = matched[: self._limit]
 
@@ -457,6 +478,65 @@ def test_locked_file_fails_fast_without_touching_site():
 
         check("kilitli dosyada SystemExit firlatildi", raised)
         check("siteye hicbir sey yazilmadi", len(client.db["calf_treatments"]) == 0 and len(client.db["animals"]) == 0, str(client.db))
+
+
+def test_animal_lookup_survives_over_1000_existing_animals():
+    """Gercek olayin regresyon testi: PostgREST varsayilan olarak sayfa
+    basina en fazla 1000 satir dondurur. animals tablosunda 1000'den fazla
+    kayit varsa ve fetch_animals_by_ear_tag sayfalama yapmiyorsa, son
+    satirlar sessizce cache'e girmiyor ve o hayvanlar icin "zaten var"
+    olan bir kupe numarasi yeniden olusturulmaya calisilip cakisma
+    hatasi aliniyordu."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        today = date.today()
+        # Excel'de, halihazirda sitede kayitli (ama 1000. satirdan SONRA
+        # eklenmis, yani sayfalanmadan cekilirse gorulmeyecek) bir hayvana
+        # ait tedavi satiri var.
+        excel_path = make_workbook(
+            tmp, [[datetime.combine(today, datetime.min.time()), "BUZAĞILIK", "9999", "İSHAL", "1-B VİT"]]
+        )
+        cfg = make_config(tmp, excel_path)
+        client = FakeClient("sync-profile-id", "secret")
+
+        for i in range(1200):
+            client.db["animals"].append({"id": str(uuid.uuid4()), "ear_tag": str(i)})
+        # 9999 numarali kupe, ilk 1000'in DISINDA - sayfalama olmadan
+        # cache'e girmeyecek konumda.
+        client.db["animals"].append({"id": str(uuid.uuid4()), "ear_tag": "9999"})
+
+        with Ctx(client, "sync-profile-id"):
+            stats = S.run_sync(cfg, S.setup_logging(cfg.log_path))
+
+        check("1200+ hayvan arasinda dogru hayvan bulundu, cakisma hatasi yok", len(stats.errors) == 0, str(stats.errors))
+        check("zaten var olan hayvan tekrar olusturulmadi (dogru sayida hayvan)", len(client.db["animals"]) == 1201, len(client.db["animals"]))
+        check("tedavi dogru hayvana baglandi", stats.linked == 0 and stats.pushed_to_site == 1, str(stats))
+
+
+def test_duplicate_key_falls_back_to_existing_animal():
+    """Yukaridaki sayfalama duzeltmesi olmasa bile (orn. baska bir yol
+    yuzunden ayni anda olusma gibi), duplicate key hatasi sessizce
+    hata olarak loglanmak yerine var olan hayvani bulup kullanmali."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        today = date.today()
+        excel_path = make_workbook(
+            tmp, [[datetime.combine(today, datetime.min.time()), "BUZAĞILIK", "555", "İSHAL", "1-A"]]
+        )
+        cfg = make_config(tmp, excel_path)
+        client = FakeClient("sync-profile-id", "secret")
+        existing_id = str(uuid.uuid4())
+        client.db["animals"].append({"id": existing_id, "ear_tag": "555"})
+
+        # fetch_animals_by_ear_tag'in bu hayvani KACIRDIGINI simule etmek
+        # icin cache'i bilerek atlayan bir surumle test edelim: get_or_create_animal'i
+        # bos bir cache ile dogrudan cagiralim.
+        logger = S.setup_logging(cfg.log_path)
+        with Ctx(client, "sync-profile-id"):
+            animal_id = S.get_or_create_animal(client, logger, "555", {}, "sync-profile-id")
+
+        check("cakisan kupe icin var olan hayvan ID'si donduruldu", animal_id == existing_id, animal_id)
+        check("ikinci bir hayvan olusturulmadi", len(client.db["animals"]) == 1, client.db["animals"])
 
 
 def main():
