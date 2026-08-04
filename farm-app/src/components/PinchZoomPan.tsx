@@ -27,9 +27,17 @@ export function PinchZoomPan({ children, className, maxZoom = 3 }: Props) {
   const [transform, setTransform] = useState<Transform>({ zoom: 1, x: 0, y: 0 });
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinchStart = useRef<{ dist: number; zoom: number; mid: { x: number; y: number }; tx: number; ty: number } | null>(
-    null
-  );
+  // contentAnchor: pinch baslarken parmaklarin ortasindaki noktanin,
+  // icerigin kendi (olceklenmemis) merkezine gore konumu - pinch boyunca
+  // bu nokta HEP parmaklarin altinda kalacak sekilde pan hesaplanir.
+  // outerCenter: konteynerin ekran uzerindeki merkezi, jest basinda bir
+  // kez olculur (jest sirasinda sayfa kaymadigi icin sabit kabul edilir).
+  const pinchStart = useRef<{
+    dist: number;
+    zoom: number;
+    contentAnchor: { x: number; y: number };
+    outerCenter: { x: number; y: number };
+  } | null>(null);
   const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const lastTap = useRef<{ time: number; x: number; y: number } | null>(null);
   const rafId = useRef<number | null>(null);
@@ -126,13 +134,20 @@ export function PinchZoomPan({ children, className, maxZoom = 3 }: Props) {
     if (pointers.current.size === 2) {
       const pts = [...pointers.current.values()];
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      pinchStart.current = {
-        dist,
-        zoom: transform.zoom,
-        mid: { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 },
-        tx: transform.x,
-        ty: transform.y,
+      const mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      const outerRect = outerRef.current?.getBoundingClientRect();
+      const outerCenter = outerRect
+        ? { x: outerRect.left + outerRect.width / 2, y: outerRect.top + outerRect.height / 2 }
+        : mid;
+      const scaleNow = fitScale * transform.zoom;
+      const midRelative = { x: mid.x - outerCenter.x, y: mid.y - outerCenter.y };
+      // Su an parmaklarin oldugu ekran noktasinin altinda hangi icerik
+      // noktasi var, onu sabitliyoruz.
+      const contentAnchor = {
+        x: scaleNow !== 0 ? (midRelative.x - transform.x) / scaleNow : 0,
+        y: scaleNow !== 0 ? (midRelative.y - transform.y) / scaleNow : 0,
       };
+      pinchStart.current = { dist, zoom: transform.zoom, contentAnchor, outerCenter };
       panStart.current = null;
     } else if (pointers.current.size === 1) {
       const now = Date.now();
@@ -157,10 +172,21 @@ export function PinchZoomPan({ children, className, maxZoom = 3 }: Props) {
       const pts = [...pointers.current.values()];
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       const mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
-      const zoom = (dist / pinchStart.current.dist) * pinchStart.current.zoom;
-      const dx = mid.x - pinchStart.current.mid.x;
-      const dy = mid.y - pinchStart.current.mid.y;
-      scheduleTransform(clamp({ zoom, x: pinchStart.current.tx + dx, y: pinchStart.current.ty + dy }));
+      // Once zoom'u kirpiyoruz: aksi halde parmaklar maksimum zoom'u
+      // asacak sekilde acilmaya devam ettiginde (zoom sabitlenmis olsa
+      // bile) pan hesabi kirpilmamis, hep buyuyen bir "hayali" scale
+      // kullanmaya devam edip iceriği kaydirmaya devam ediyordu.
+      const rawZoom = (dist / pinchStart.current.dist) * pinchStart.current.zoom;
+      const zoom = Math.min(maxZoom, Math.max(1, rawZoom));
+      const scaleNew = fitScale * zoom;
+      const midRelative = {
+        x: mid.x - pinchStart.current.outerCenter.x,
+        y: mid.y - pinchStart.current.outerCenter.y,
+      };
+      // contentAnchor'i su anki parmak konumunun (mid) altinda tutacak pan.
+      const nextX = midRelative.x - pinchStart.current.contentAnchor.x * scaleNew;
+      const nextY = midRelative.y - pinchStart.current.contentAnchor.y * scaleNew;
+      scheduleTransform(clamp({ zoom, x: nextX, y: nextY }));
     } else if (pointers.current.size === 1 && panStart.current && transform.zoom > 1) {
       e.preventDefault();
       const dx = e.clientX - panStart.current.x;
@@ -185,7 +211,13 @@ export function PinchZoomPan({ children, className, maxZoom = 3 }: Props) {
       ref={outerRef}
       className={`relative overflow-hidden ${className ?? ""}`}
       style={{
-        height: Math.round(natural.height * totalScale) || undefined,
+        // DIKKAT: yukseklik sadece fitScale'e gore sabit - zoom'a gore
+        // BUYUMEMELI. Buyurse konteynerin kendi merkezi (top:50%) jest
+        // sirasinda kayar ve pinch'in "parmaklarin oldugu yere degil,
+        // yukari dogru" yakinlasmasina yol acar (anchor hesaplari sabit
+        // bir merkez varsayiyor). Konteyner sabit boyutlu bir "pencere",
+        // icerik onun icinde zoom'lanip kayiyor.
+        height: Math.round(natural.height * fitScale) || undefined,
         // Zoom yapilmadigi surece tek parmakla dikey sayfa kaydirmasi
         // normal calissin (JS tarafi zaten o durumda hicbir sey yapmiyor);
         // sadece zoom yapildiginda (parmakla kaydirma bizim islemimiz
