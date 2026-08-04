@@ -194,6 +194,18 @@ def load_excel(cfg: Config, logger: logging.Logger):
     return wb, ws
 
 
+def detect_date_format(ws) -> str:
+    """Yeni eklenen satirlarin tarih hucrelerinin, kullanicinin zaten
+    kullandigi bicimle (orn. 4.08.2026) ayni gorunmesi icin: mevcut
+    satirlardan birinin gercek bicimini kopyalar. Bos sayfada makul bir
+    varsayilana duser."""
+    for r in range(2, min(ws.max_row, 500) + 1):
+        cell = ws.cell(row=r, column=COL_TARIH)
+        if isinstance(cell.value, (date, datetime)) and cell.number_format not in ("General", None):
+            return cell.number_format
+    return "d.mm.yyyy"
+
+
 def read_excel_rows(ws, since: date) -> list[ExcelRow]:
     rows: list[ExcelRow] = []
     for r in range(2, ws.max_row + 1):
@@ -236,8 +248,9 @@ def read_excel_rows(ws, since: date) -> list[ExcelRow]:
     return rows
 
 
-def write_excel_row(ws, row: ExcelRow) -> None:
-    ws.cell(row=row.row_number, column=COL_TARIH, value=datetime.combine(row.treatment_date, datetime.min.time()))
+def write_excel_row(ws, row: ExcelRow, date_format: str = "d.mm.yyyy") -> None:
+    date_cell = ws.cell(row=row.row_number, column=COL_TARIH, value=datetime.combine(row.treatment_date, datetime.min.time()))
+    date_cell.number_format = date_format
     ws.cell(row=row.row_number, column=COL_GRUP, value=row.group_raw)
     ws.cell(row=row.row_number, column=COL_KUPE, value=int(row.ear_tag) if row.ear_tag.isdigit() else row.ear_tag)
     ws.cell(row=row.row_number, column=COL_TESHIS, value=row.diagnosis)
@@ -245,10 +258,10 @@ def write_excel_row(ws, row: ExcelRow) -> None:
     ws.cell(row=row.row_number, column=COL_SENKRON_ID, value=row.site_id)
 
 
-def append_excel_row(ws, row: ExcelRow) -> int:
+def append_excel_row(ws, row: ExcelRow, date_format: str = "d.mm.yyyy") -> int:
     new_row_number = ws.max_row + 1
     row.row_number = new_row_number
-    write_excel_row(ws, row)
+    write_excel_row(ws, row, date_format)
     return new_row_number
 
 
@@ -435,7 +448,12 @@ def fetch_current_location(client, animal_id: str) -> str:
         )
         if result.data:
             return label_fn(result.data[0]["group_index"])
-    return "-"
+    # Site sadece hayvanin SU ANKI kulube atamasini tutar, gecmis
+    # tedavinin hangi odada yapildigini degil - hayvan artik hicbir
+    # kulubede degilse (sutten kesilmis, satilmis, vb.) geriye donuk
+    # gercek konum bilinemez. Sitenin kendi arayuzunde de ayni durum
+    # icin kullanilan ifade.
+    return "Barınakta değil"
 
 
 # --------------------------------------------------------------------------
@@ -497,6 +515,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
         logger.info("Yedek alindi: %s", backup_name)
 
     wb, ws = load_excel(cfg, logger)
+    date_format = detect_date_format(ws)
     excel_rows = read_excel_rows(ws, since)
     logger.info("Excel'de pencere icinde %d satir bulundu.", len(excel_rows))
 
@@ -579,7 +598,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             row.protocol_day = site_row.protocol_day
             row.description = site_row.description
             if not cfg.dry_run:
-                write_excel_row(ws, row)
+                write_excel_row(ws, row, date_format)
             state[row.site_id] = site_snapshot
             stats.pulled_to_excel += 1
 
@@ -601,7 +620,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             row.site_id = existing.id
             linked_site_ids.add(existing.id)
             if not cfg.dry_run:
-                write_excel_row(ws, row)
+                write_excel_row(ws, row, date_format)
             state[existing.id] = snapshot_of(row.ear_tag, row.treatment_date, row.diagnosis, row.protocol_day, row.description)
             stats.linked += 1
             continue
@@ -611,7 +630,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             new_id = create_site_treatment(client, sync_profile_id, animal_id, row) if not cfg.dry_run else "dry-run-id"
             row.site_id = new_id
             if not cfg.dry_run:
-                write_excel_row(ws, row)
+                write_excel_row(ws, row, date_format)
                 state[new_id] = snapshot_of(row.ear_tag, row.treatment_date, row.diagnosis, row.protocol_day, row.description)
             stats.pushed_to_site += 1
             logger.info("Kupe %s (%s) siteye eklendi.", row.ear_tag, row.treatment_date)
@@ -629,7 +648,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             existing_row = excel_by_natural_key[key]
             existing_row.site_id = t.id
             if not cfg.dry_run:
-                write_excel_row(ws, existing_row)
+                write_excel_row(ws, existing_row, date_format)
                 state[t.id] = snapshot_of(existing_row.ear_tag, existing_row.treatment_date, existing_row.diagnosis, existing_row.protocol_day, existing_row.description)
             stats.linked += 1
             continue
@@ -646,7 +665,7 @@ def run_sync(cfg: Config, logger: logging.Logger) -> SyncStats:
             site_id=t.id,
         )
         if not cfg.dry_run:
-            append_excel_row(ws, new_row)
+            append_excel_row(ws, new_row, date_format)
             state[t.id] = snapshot_of(t.ear_tag, t.treatment_date, t.diagnosis, t.protocol_day, t.description)
         stats.pulled_to_excel += 1
         logger.info("Kupe %s (%s) Excel'e eklendi (siteden).", t.ear_tag, t.treatment_date)
