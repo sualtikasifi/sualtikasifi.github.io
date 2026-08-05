@@ -8,9 +8,10 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onClear: () => void;
+  locationFor?: (animalId: string) => string | null;
 }
 
-export function EarTagPicker({ animals, selectedId, onSelect, onClear }: Props) {
+export function EarTagPicker({ animals, selectedId, onSelect, onClear, locationFor }: Props) {
   const [search, setSearch] = useState("");
   const [focused, setFocused] = useState(false);
 
@@ -51,16 +52,20 @@ export function EarTagPicker({ animals, selectedId, onSelect, onClear }: Props) 
       />
       {focused && (
         <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-neutral-200">
-          {filtered.slice(0, 20).map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => onSelect(a.id)}
-              className="block w-full px-3 py-1.5 text-left text-sm hover:bg-neutral-50"
-            >
-              {a.ear_tag} {a.name && `(${a.name})`}
-            </button>
-          ))}
+          {filtered.slice(0, 20).map((a) => {
+            const location = locationFor?.(a.id) ?? null;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => onSelect(a.id)}
+                className="block w-full px-3 py-1.5 text-left text-sm hover:bg-neutral-50"
+              >
+                {a.ear_tag} {a.name && `(${a.name})`}
+                {location && <span className="ml-1 text-[11px] text-amber-700">· şu an: {location}</span>}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
