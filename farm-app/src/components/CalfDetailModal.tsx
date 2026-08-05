@@ -60,6 +60,7 @@ interface Props {
   label: string;
   animal: Animal | undefined;
   availableCalves: Animal[];
+  locationFor?: (animalId: string) => string | null;
   meals: CalfMeal[];
   birthRecord: CalfBirthRecord | undefined;
   pectolit: CalfPectolitCourse | undefined;
@@ -111,6 +112,7 @@ export function CalfDetailModal({
   label,
   animal,
   availableCalves,
+  locationFor,
   meals,
   birthRecord,
   pectolit,
@@ -293,14 +295,24 @@ export function CalfDetailModal({
                       selectedId={pickerAnimalId}
                       onSelect={setPickerAnimalId}
                       onClear={() => setPickerAnimalId(null)}
+                      locationFor={locationFor}
                     />
+                    {pickerAnimalId && locationFor?.(pickerAnimalId) && (
+                      <p className="text-xs text-amber-700">
+                        Bu buzağı şu an {locationFor(pickerAnimalId)} konumunda — atarsan oradan otomatik taşınır.
+                      </p>
+                    )}
                     <button
                       type="button"
                       onClick={() => pickerAnimalId && run(() => onAssign(pickerAnimalId))}
                       disabled={!pickerAnimalId || busy}
                       className="btn-primary"
                     >
-                      {busy ? "Ekleniyor..." : "Buzağı Ata"}
+                      {busy
+                        ? "Ekleniyor..."
+                        : pickerAnimalId && locationFor?.(pickerAnimalId)
+                          ? "Buzağıyı Taşı"
+                          : "Buzağı Ata"}
                     </button>
                   </div>
                 ) : (

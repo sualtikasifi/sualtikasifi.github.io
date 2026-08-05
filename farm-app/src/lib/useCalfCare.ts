@@ -216,13 +216,26 @@ export function useCalfCare(structure: CalfHousingStructure) {
     return record?.diagnosis ?? null;
   };
 
-  const assignedAnywhere = new Set(
-    [...slots, ...otherSlots].map((s) => s.animal_id).filter((id): id is string => !!id)
-  );
-  const availableCalves = animals.filter((a) => a.weaned_at === null && !assignedAnywhere.has(a.id));
+  const slotByAnimalId = new Map<string, CalfHousingSlot>();
+  for (const s of [...slots, ...otherSlots]) {
+    if (s.animal_id) slotByAnimalId.set(s.animal_id, s);
+  }
+  // "Var olani ata" arama kutusunda sadece bos duran hayvanlar degil, baska
+  // bir bolmede/yapida zaten barinan (sutten kesilmemis) hayvanlar da
+  // gorunur - aksi halde araninan kupe numarasi listede hic cikmiyor ve
+  // kullanici bunu bir "oneri siniri" hatasi saniyordu. Zaten baska yerde
+  // duran bir hayvan secilirse handleAssign onu oradan otomatik tasir.
+  const availableCalves = animals.filter((a) => a.weaned_at === null);
+  const currentSlotForAnimal = (animalId: string): CalfHousingSlot | null => slotByAnimalId.get(animalId) ?? null;
 
   // --- Islemler ---
   async function handleAssign(slotId: string, animalId: string | null) {
+    if (animalId) {
+      const existing = slotByAnimalId.get(animalId);
+      if (existing && existing.id !== slotId) {
+        await assignCalfToSlot(existing.id, null);
+      }
+    }
     await assignCalfToSlot(slotId, animalId);
     await refresh();
   }
@@ -426,6 +439,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
     protocols,
     protocolDays,
     availableCalves,
+    currentSlotForAnimal,
     brixAlerts,
     animalById,
     mealsFor,

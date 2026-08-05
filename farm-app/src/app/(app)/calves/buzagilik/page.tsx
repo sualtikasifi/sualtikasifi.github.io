@@ -13,14 +13,10 @@ import { FeedingSessionBar } from "@/components/FeedingSessionBar";
 import { MealHistoryPanel } from "@/components/MealHistoryPanel";
 import { PageHeader } from "@/components/PageHeader";
 import { PinchZoomPan } from "@/components/PinchZoomPan";
+import { slotLabel } from "@/lib/format";
 
 const COLUMN_COUNT = 6;
 const HUTS_PER_COLUMN = 20;
-
-function slotLabel(slot: CalfHousingSlot): string {
-  if (slot.structure === "iglo") return `İglo ${slot.group_index + 1} · ${slot.slot_index + 1}`;
-  return `Sıra ${slot.group_index + 1} · ${slot.slot_index + 1}`;
-}
 
 export default function BuzagilikPage() {
   const care = useCalfCare("buzagilik");
@@ -200,6 +196,10 @@ export default function BuzagilikPage() {
           label={slotLabel(selectedSlot)}
           animal={care.animalById(selectedSlot.animal_id)}
           availableCalves={care.availableCalves}
+          locationFor={(animalId) => {
+            const slot = care.currentSlotForAnimal(animalId);
+            return slot ? slotLabel(slot) : null;
+          }}
           meals={selectedSlot.animal_id ? care.mealsFor(selectedSlot.animal_id) : []}
           birthRecord={selectedSlot.animal_id ? care.birthRecordFor(selectedSlot.animal_id) : undefined}
           pectolit={selectedSlot.animal_id ? care.activePectolitCourseFor(selectedSlot.animal_id) : undefined}
