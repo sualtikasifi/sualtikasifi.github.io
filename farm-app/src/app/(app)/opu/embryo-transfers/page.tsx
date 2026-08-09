@@ -87,6 +87,7 @@ export default function EmbryoTransfersPage() {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [planned, setPlanned] = useState<PlannedEmbryoTransfer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
@@ -98,12 +99,21 @@ export default function EmbryoTransfersPage() {
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
 
   function refresh() {
-    return Promise.all([listEmbryos(), listAnimals(), listPlannedEmbryoTransfers()]).then(([e, a, p]) => {
-      setEmbryos(e);
-      setAnimals(a);
-      setPlanned(p);
-      setLoading(false);
-    });
+    return Promise.all([listEmbryos(), listAnimals(), listPlannedEmbryoTransfers()])
+      .then(([e, a, p]) => {
+        setEmbryos(e);
+        setAnimals(a);
+        setPlanned(p);
+        setLoadError(null);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        // planned_embryo_transfers tablosu/embryos'un yeni sutunlari henuz
+        // Supabase'e uygulanmamis olabilir (schema.sql tekrar calistirilmadan) -
+        // sonsuza kadar "Yukleniyor..." gostermek yerine bunu acikca soyle.
+        setLoadError(err instanceof Error ? err.message : "Veriler yüklenemedi.");
+        setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -276,7 +286,18 @@ export default function EmbryoTransfersPage() {
         </form>
       )}
 
-      {!loading && planned.length > 0 && (
+      {loadError && (
+        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+          <p className="font-medium">Veriler yüklenemedi: {loadError}</p>
+          <p className="mt-1 text-xs text-red-700">
+            Supabase&apos;de &quot;planned_embryo_transfers&quot; tablosu ya da embriyo alanları henüz eklenmemiş
+            olabilir — <code className="rounded bg-red-100 px-1">farm-app/supabase/schema.sql</code> dosyasını
+            Supabase SQL Editor&apos;da tekrar çalıştırın, sonra sayfayı yenileyin.
+          </p>
+        </div>
+      )}
+
+      {!loading && !loadError && planned.length > 0 && (
         <div>
           <h2 className="mb-1 text-sm font-semibold text-neutral-800">Planlanan Transferler &middot; {planned.length}</h2>
           <div className="card-list">
@@ -315,7 +336,7 @@ export default function EmbryoTransfersPage() {
 
       {loading ? (
         <p className="text-sm text-neutral-500">Yükleniyor...</p>
-      ) : groups.length === 0 ? (
+      ) : loadError ? null : groups.length === 0 ? (
         <p className="text-sm text-neutral-400">Henüz transfer edilmiş embriyo yok.</p>
       ) : (
         <div>
