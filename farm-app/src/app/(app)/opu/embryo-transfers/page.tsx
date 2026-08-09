@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  createEmbryo,
+  createOpuSession,
   createPlannedEmbryoTransfer,
   createTask,
   createTaskAnimals,
@@ -98,6 +100,17 @@ export default function EmbryoTransfersPage() {
   const [planSubmitting, setPlanSubmitting] = useState(false);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
 
+  const [showPastForm, setShowPastForm] = useState(false);
+  const [pastDonorId, setPastDonorId] = useState<string | null>(null);
+  const [pastRecipientId, setPastRecipientId] = useState<string | null>(null);
+  const [pastDate, setPastDate] = useState(todayIso());
+  const [pastSeedCount, setPastSeedCount] = useState("1");
+  const [pastTechnician, setPastTechnician] = useState("");
+  const [pastPregnancyResult, setPastPregnancyResult] = useState<PregnancyResult>("bekleniyor");
+  const [pastPregnancyCheckDate, setPastPregnancyCheckDate] = useState("");
+  const [pastNotes, setPastNotes] = useState("");
+  const [pastSubmitting, setPastSubmitting] = useState(false);
+
   function refresh() {
     return Promise.all([listEmbryos(), listAnimals(), listPlannedEmbryoTransfers()])
       .then(([e, a, p]) => {
@@ -186,6 +199,69 @@ export default function EmbryoTransfersPage() {
     }
   }
 
+  async function handlePastSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pastDonorId || !pastRecipientId || !pastDate) return;
+    const seedCount = Math.max(1, Number(pastSeedCount) || 1);
+    setPastSubmitting(true);
+    try {
+      // Gecmise donuk kayitlar icin gercek OPU seans detaylari (folikul,
+      // oosit sayilari vb.) genelde elimizde olmuyor - sadece transfer
+      // gecmisini yakalamak icin minimal bir OPU seansi olusturup
+      // altina, tohum sayisi kadar zaten "transfer edildi" durumunda
+      // embriyo ekliyoruz.
+      const session = await createOpuSession({
+        donor_animal_id: pastDonorId,
+        session_date: pastDate,
+        session_time: null,
+        technician_name: pastTechnician.trim() || null,
+        follicle_count_right: null,
+        follicle_count_left: null,
+        oocyte_count: null,
+        oocyte_grade_a: null,
+        oocyte_grade_b: null,
+        oocyte_grade_c: null,
+        oocyte_grade_d: null,
+        cleaved_count: null,
+        fertilization_bull_id: null,
+        fertilization_semen_type: null,
+        embryo_count: seedCount,
+        notes: "Geçmiş kayıt - Embriyo Transferleri sayfasından geriye dönük eklendi.",
+        created_by: profile?.id ?? null,
+      });
+      const checkDate = pastPregnancyResult === "bekleniyor" ? null : pastPregnancyCheckDate || pastDate;
+      for (let i = 1; i <= seedCount; i++) {
+        await createEmbryo({
+          opu_session_id: session.id,
+          label: `E${i}`,
+          grade: null,
+          stage: null,
+          day_reached: null,
+          status: "transfer_edildi",
+          recipient_animal_id: pastRecipientId,
+          transfer_date: pastDate,
+          transfer_technician_name: pastTechnician.trim() || null,
+          pregnancy_check_date: checkDate,
+          pregnancy_result: pastPregnancyResult,
+          notes: pastNotes.trim() || null,
+          created_by: profile?.id ?? null,
+        });
+      }
+      setPastDonorId(null);
+      setPastRecipientId(null);
+      setPastDate(todayIso());
+      setPastSeedCount("1");
+      setPastTechnician("");
+      setPastPregnancyResult("bekleniyor");
+      setPastPregnancyCheckDate("");
+      setPastNotes("");
+      setShowPastForm(false);
+      await refresh();
+    } finally {
+      setPastSubmitting(false);
+    }
+  }
+
   async function handleDeletePlanned(p: PlannedEmbryoTransfer) {
     setDeletingPlanId(p.id);
     try {
@@ -240,6 +316,11 @@ export default function EmbryoTransfersPage() {
               {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
             </button>
             {canManage && (
+              <button type="button" onClick={() => setShowPastForm((v) => !v)} className="btn-secondary">
+                + Geçmiş Transfer Ekle
+              </button>
+            )}
+            {canManage && (
               <button type="button" onClick={() => setShowPlanForm((v) => !v)} className="btn-primary">
                 + İleri Tarihli Transfer Planla
               </button>
@@ -247,6 +328,106 @@ export default function EmbryoTransfersPage() {
           </>
         }
       />
+
+      {showPastForm && (
+        <form onSubmit={handlePastSubmit} className="card space-y-3">
+          <h2 className="text-sm font-semibold text-neutral-800">Geçmiş transfer ekle</h2>
+          <p className="text-xs text-neutral-500">
+            Zaten yapılmış ama sisteme hiç girilmemiş eski bir embriyo transferini kaydetmek için kullanın.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <span className="mb-1 block text-sm font-medium text-neutral-700">Donör hayvan (embriyonun geldiği)</span>
+              <EarTagPicker
+                animals={animals}
+                selectedId={pastDonorId}
+                onSelect={setPastDonorId}
+                onClear={() => setPastDonorId(null)}
+              />
+            </div>
+            <div>
+              <span className="mb-1 block text-sm font-medium text-neutral-700">Alıcı hayvan</span>
+              <EarTagPicker
+                animals={animals}
+                selectedId={pastRecipientId}
+                onSelect={setPastRecipientId}
+                onClear={() => setPastRecipientId(null)}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-neutral-700">Transfer tarihi</span>
+              <input type="date" required value={pastDate} onChange={(e) => setPastDate(e.target.value)} className="input" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-neutral-700">Tohum sayısı</span>
+              <input
+                type="number"
+                min={1}
+                required
+                value={pastSeedCount}
+                onChange={(e) => setPastSeedCount(e.target.value)}
+                className="input"
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-neutral-700">Tohumlayıcı (transferi yapan, opsiyonel)</span>
+            <input
+              placeholder="örn. Dr. Elif Kaya"
+              value={pastTechnician}
+              onChange={(e) => setPastTechnician(e.target.value)}
+              className="input"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-neutral-700">Gebelik durumu</span>
+              <select
+                value={pastPregnancyResult}
+                onChange={(e) => setPastPregnancyResult(e.target.value as PregnancyResult)}
+                className="input"
+              >
+                <option value="bekleniyor">Bekleniyor</option>
+                <option value="gebe">Gebe</option>
+                <option value="gebe_degil">Gebe değil</option>
+              </select>
+            </label>
+            {pastPregnancyResult !== "bekleniyor" && (
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-neutral-700">Teşhis tarihi</span>
+                <input
+                  type="date"
+                  value={pastPregnancyCheckDate}
+                  onChange={(e) => setPastPregnancyCheckDate(e.target.value)}
+                  className="input"
+                />
+              </label>
+            )}
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-neutral-700">Notlar (opsiyonel)</span>
+            <textarea value={pastNotes} onChange={(e) => setPastNotes(e.target.value)} className="input" rows={2} />
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={pastSubmitting || !pastDonorId || !pastRecipientId}
+              className="btn-primary"
+            >
+              {pastSubmitting ? "Kaydediliyor..." : "Kaydet"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPastForm(false)}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm transition-colors hover:bg-neutral-50"
+            >
+              Vazgeç
+            </button>
+          </div>
+        </form>
+      )}
 
       {showPlanForm && (
         <form onSubmit={handlePlanSubmit} className="card space-y-3">
