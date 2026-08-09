@@ -12,11 +12,7 @@ import { FeedingSessionBar } from "@/components/FeedingSessionBar";
 import { MealHistoryPanel } from "@/components/MealHistoryPanel";
 import { DailyTreatmentTable } from "@/components/DailyTreatmentTable";
 import { PageHeader } from "@/components/PageHeader";
-
-function slotLabel(slot: CalfHousingSlot): string {
-  if (slot.structure === "iglo") return `İglo ${slot.group_index + 1} · ${slot.slot_index + 1}`;
-  return `Sıra ${slot.group_index + 1} · ${slot.slot_index + 1}`;
-}
+import { compareEarTags, slotLabel } from "@/lib/format";
 
 export default function IgloPage() {
   const care = useCalfCare("iglo");
@@ -28,7 +24,22 @@ export default function IgloPage() {
   const [marking, setMarking] = useState(false);
   const [dragSlotId, setDragSlotId] = useState<string | null>(null);
 
-  const igloGroups = Array.from({ length: 6 }, (_, g) => care.slots.filter((s) => s.group_index === g));
+  // Iglo bolmesindeki buzagilar birlikte kalir, fiziksel kutucuk konumu
+  // onemli degil - kucukten buyuge kupe numarasina gore siralanir, bos
+  // kutucuklar sonda kalir.
+  const igloGroups = Array.from({ length: 6 }, (_, g) =>
+    care.slots
+      .filter((s) => s.group_index === g)
+      .slice()
+      .sort((a, b) => {
+        const tagA = a.animal_id ? care.animalById(a.animal_id)?.ear_tag : undefined;
+        const tagB = b.animal_id ? care.animalById(b.animal_id)?.ear_tag : undefined;
+        if (tagA && tagB) return compareEarTags(tagA, tagB);
+        if (tagA) return -1;
+        if (tagB) return 1;
+        return a.slot_index - b.slot_index;
+      })
+  );
   const selectedSlot = care.slots.find((s) => s.id === selectedSlotId);
 
   const emptyTargets: MoveTarget[] = [...care.slots, ...care.otherSlots]
@@ -188,6 +199,10 @@ export default function IgloPage() {
           label={slotLabel(selectedSlot)}
           animal={care.animalById(selectedSlot.animal_id)}
           availableCalves={care.availableCalves}
+          locationFor={(animalId) => {
+            const slot = care.currentSlotForAnimal(animalId);
+            return slot ? slotLabel(slot) : null;
+          }}
           meals={selectedSlot.animal_id ? care.mealsFor(selectedSlot.animal_id) : []}
           birthRecord={selectedSlot.animal_id ? care.birthRecordFor(selectedSlot.animal_id) : undefined}
           pectolit={selectedSlot.animal_id ? care.activePectolitCourseFor(selectedSlot.animal_id) : undefined}

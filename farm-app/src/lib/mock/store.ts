@@ -22,6 +22,7 @@ import {
   MastitisTreatment,
   Medicine,
   OpuSession,
+  PlannedEmbryoTransfer,
   Profile,
   PushSubscriptionRecord,
   SemenInventory,
@@ -69,6 +70,7 @@ interface DemoDb {
   inseminations: Insemination[];
   opuSessions: OpuSession[];
   embryos: Embryo[];
+  plannedEmbryoTransfers: PlannedEmbryoTransfer[];
   calfFeedings: CalfFeeding[];
   medicines: Medicine[];
   shiftNotes: ShiftNote[];
@@ -100,6 +102,7 @@ function initialDb(): DemoDb {
     inseminations: seedInseminations,
     opuSessions: seedOpuSessions,
     embryos: seedEmbryos,
+    plannedEmbryoTransfers: [],
     calfFeedings: seedCalfFeedings,
     medicines: seedMedicines,
     shiftNotes: [],
@@ -142,6 +145,7 @@ function loadDb(): DemoDb {
     inseminations: parsed.inseminations ?? seedInseminations,
     opuSessions: parsed.opuSessions ?? seedOpuSessions,
     embryos: parsed.embryos ?? seedEmbryos,
+    plannedEmbryoTransfers: parsed.plannedEmbryoTransfers ?? [],
     calfFeedings: parsed.calfFeedings ?? seedCalfFeedings,
     medicines: parsed.medicines ?? seedMedicines,
     shiftNotes: parsed.shiftNotes ?? [],
@@ -694,6 +698,26 @@ export function demoUpdateEmbryo(id: string, patch: Partial<Embryo>): Embryo | u
   db.embryos[idx] = { ...db.embryos[idx], ...patch, updated_at: new Date().toISOString() };
   saveDb(db);
   return db.embryos[idx];
+}
+
+export function demoListPlannedEmbryoTransfers(): PlannedEmbryoTransfer[] {
+  return loadDb().plannedEmbryoTransfers.sort((a, b) => a.planned_date.localeCompare(b.planned_date));
+}
+
+export function demoCreatePlannedEmbryoTransfer(
+  input: Omit<PlannedEmbryoTransfer, "id" | "created_at">
+): PlannedEmbryoTransfer {
+  const db = loadDb();
+  const planned: PlannedEmbryoTransfer = { ...input, id: newId("planned-transfer"), created_at: new Date().toISOString() };
+  db.plannedEmbryoTransfers.push(planned);
+  saveDb(db);
+  return planned;
+}
+
+export function demoDeletePlannedEmbryoTransfer(id: string): void {
+  const db = loadDb();
+  db.plannedEmbryoTransfers = db.plannedEmbryoTransfers.filter((p) => p.id !== id);
+  saveDb(db);
 }
 
 // --- Calf feedings ---

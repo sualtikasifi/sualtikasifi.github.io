@@ -287,6 +287,9 @@ export default function OpuSessionsPage() {
             <Link href="/opu/stats" className="btn-secondary">
               İstatistikler
             </Link>
+            <Link href="/opu/embryo-transfers" className="btn-secondary">
+              Embriyo Transferleri
+            </Link>
             <button type="button" onClick={() => setShowExportModal(true)} className="btn-secondary">
               Excel&apos;e Aktar
             </button>
