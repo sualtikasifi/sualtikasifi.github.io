@@ -1,6 +1,0 @@
-config.json
-sync_state.json
-logs/
-backups/
-__pycache__/
-*.pyc
