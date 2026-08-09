@@ -46,6 +46,9 @@ function NewEmbryoContent() {
       status: "gelisiyor",
       recipient_animal_id: null,
       transfer_date: null,
+      transfer_technician_name: null,
+      pregnancy_check_date: null,
+      pregnancy_result: "bekleniyor",
       notes: form.notes.trim() || null,
       created_by: profile?.id ?? null,
     });

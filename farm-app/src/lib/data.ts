@@ -24,6 +24,7 @@ import {
   MastitisTreatment,
   Medicine,
   OpuSession,
+  PlannedEmbryoTransfer,
   Profile,
   PushSubscriptionRecord,
   SemenInventory,
@@ -611,6 +612,32 @@ export async function updateEmbryo(id: string, patch: Partial<Embryo>): Promise<
   const { data, error } = await supabase!.from("embryos").update(patch).eq("id", id).select().single();
   if (error) throw error;
   return data as Embryo;
+}
+
+export async function listPlannedEmbryoTransfers(): Promise<PlannedEmbryoTransfer[]> {
+  if (isDemoMode) return mock.demoListPlannedEmbryoTransfers();
+  return fetchAllPages<PlannedEmbryoTransfer>((from, to) =>
+    supabase!
+      .from("planned_embryo_transfers")
+      .select("*", { count: "exact" })
+      .order("planned_date", { ascending: true })
+      .range(from, to)
+  );
+}
+
+export async function createPlannedEmbryoTransfer(
+  input: Omit<PlannedEmbryoTransfer, "id" | "created_at">
+): Promise<PlannedEmbryoTransfer> {
+  if (isDemoMode) return mock.demoCreatePlannedEmbryoTransfer(input);
+  const { data, error } = await supabase!.from("planned_embryo_transfers").insert(input).select().single();
+  if (error) throw error;
+  return data as PlannedEmbryoTransfer;
+}
+
+export async function deletePlannedEmbryoTransfer(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeletePlannedEmbryoTransfer(id);
+  const { error } = await supabase!.from("planned_embryo_transfers").delete().eq("id", id);
+  if (error) throw error;
 }
 
 // --- Calf feedings ---

@@ -402,6 +402,28 @@ create index if not exists calf_treatment_courses_status_idx on calf_treatment_c
 alter table calf_treatments add column if not exists note text;
 alter table calf_treatments add column if not exists course_id uuid references calf_treatment_courses (id) on delete set null;
 
+-- Embriyo transferini yapan kisi + alicidaki gebelik teshisi
+alter table embryos add column if not exists transfer_technician_name text;
+alter table embryos add column if not exists pregnancy_check_date date;
+alter table embryos add column if not exists pregnancy_result text not null default 'bekleniyor' check (pregnancy_result in ('bekleniyor', 'gebe', 'gebe_degil'));
+
+-- 9b. Ileri tarihli embriyo transfer planlari: henuz embriyo uretilmemis/
+-- transfer edilmemis, sadece "bu hayvana su tarihte transfer yapilacak" notu.
+-- Eklendiginde gorevler sayfasina hatirlatma gorevi olarak da dusurulur
+-- (task_id ile baglanir).
+create table if not exists planned_embryo_transfers (
+  id uuid primary key default gen_random_uuid(),
+  recipient_animal_id uuid not null references animals (id) on delete cascade,
+  planned_date date not null,
+  notes text,
+  task_id uuid references tasks (id) on delete set null,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists planned_embryo_transfers_recipient_idx on planned_embryo_transfers (recipient_animal_id);
+create index if not exists planned_embryo_transfers_date_idx on planned_embryo_transfers (planned_date);
+
 -- 15f. Dogum kayitlari: dogum tarihi+saati, kan brix (dogumdan 36 saat
 -- sonra bakilir) ve ilk 2 kolostrumun litre/brix bilgisi.
 create table if not exists calf_birth_records (
@@ -577,6 +599,7 @@ alter table semen_inventory enable row level security;
 alter table inseminations enable row level security;
 alter table opu_sessions enable row level security;
 alter table embryos enable row level security;
+alter table planned_embryo_transfers enable row level security;
 alter table calf_feedings enable row level security;
 alter table medicines enable row level security;
 alter table shift_notes enable row level security;
@@ -661,6 +684,11 @@ create policy "embryos_select" on embryos for select to authenticated using (tru
 create policy "embryos_insert" on embryos for insert to authenticated with check (has_perm('opu'));
 create policy "embryos_update" on embryos for update to authenticated using (has_perm('opu'));
 create policy "embryos_delete" on embryos for delete to authenticated using (has_perm('opu'));
+
+create policy "planned_embryo_transfers_select" on planned_embryo_transfers for select to authenticated using (true);
+create policy "planned_embryo_transfers_insert" on planned_embryo_transfers for insert to authenticated with check (has_perm('opu'));
+create policy "planned_embryo_transfers_update" on planned_embryo_transfers for update to authenticated using (has_perm('opu'));
+create policy "planned_embryo_transfers_delete" on planned_embryo_transfers for delete to authenticated using (has_perm('opu'));
 
 create policy "calf_feedings_select" on calf_feedings for select to authenticated using (true);
 create policy "calf_feedings_insert" on calf_feedings for insert to authenticated with check (has_perm('calves'));

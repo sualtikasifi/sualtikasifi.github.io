@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getAnimal, getEmbryo, getOpuSession, listAnimals, updateEmbryo } from "@/lib/data";
-import { Animal, Embryo, EmbryoGrade, EmbryoStage, EmbryoStatus, OpuSession } from "@/lib/types";
+import { Animal, Embryo, EmbryoGrade, EmbryoStage, EmbryoStatus, OpuSession, PregnancyResult } from "@/lib/types";
 import { Badge } from "@/components/Badge";
 import { EarTagPicker } from "@/components/EarTagPicker";
 
@@ -32,6 +32,9 @@ function EmbryoDetailContent() {
   const [status, setStatus] = useState<EmbryoStatus>("gelisiyor");
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [transferDate, setTransferDate] = useState("");
+  const [technicianName, setTechnicianName] = useState("");
+  const [pregnancyCheckDate, setPregnancyCheckDate] = useState("");
+  const [pregnancyResult, setPregnancyResult] = useState<PregnancyResult>("bekleniyor");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -48,6 +51,9 @@ function EmbryoDetailContent() {
       setStatus(e.status);
       setRecipientId(e.recipient_animal_id);
       setTransferDate(e.transfer_date ?? new Date().toISOString().slice(0, 10));
+      setTechnicianName(e.transfer_technician_name ?? "");
+      setPregnancyCheckDate(e.pregnancy_check_date ?? "");
+      setPregnancyResult(e.pregnancy_result);
       setNotes(e.notes ?? "");
 
       const [s, all] = await Promise.all([getOpuSession(e.opu_session_id), listAnimals()]);
@@ -69,6 +75,9 @@ function EmbryoDetailContent() {
       status,
       recipient_animal_id: status === "transfer_edildi" ? recipientId : null,
       transfer_date: status === "transfer_edildi" ? transferDate || null : null,
+      transfer_technician_name: status === "transfer_edildi" ? technicianName.trim() || null : null,
+      pregnancy_check_date: status === "transfer_edildi" ? pregnancyCheckDate || null : null,
+      pregnancy_result: status === "transfer_edildi" ? pregnancyResult : "bekleniyor",
       notes: notes.trim() || null,
     });
     if (updated) setEmbryo(updated);
@@ -146,6 +155,37 @@ function EmbryoDetailContent() {
             <Field label="Transfer tarihi">
               <input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className="input" />
             </Field>
+
+            <Field label="Tohumlayıcı (transferi yapan)">
+              <input
+                placeholder="örn. Dr. Elif Kaya"
+                value={technicianName}
+                onChange={(e) => setTechnicianName(e.target.value)}
+                className="input"
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Gebelik teşhis tarihi">
+                <input
+                  type="date"
+                  value={pregnancyCheckDate}
+                  onChange={(e) => setPregnancyCheckDate(e.target.value)}
+                  className="input"
+                />
+              </Field>
+              <Field label="Gebelik durumu">
+                <select
+                  value={pregnancyResult}
+                  onChange={(e) => setPregnancyResult(e.target.value as PregnancyResult)}
+                  className="input"
+                >
+                  <option value="bekleniyor">Bekleniyor</option>
+                  <option value="gebe">Gebe</option>
+                  <option value="gebe_degil">Gebe değil</option>
+                </select>
+              </Field>
+            </div>
           </>
         )}
 

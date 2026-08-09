@@ -184,10 +184,26 @@ export interface Embryo {
   status: EmbryoStatus;
   recipient_animal_id: string | null;
   transfer_date: string | null;
+  transfer_technician_name: string | null;
+  pregnancy_check_date: string | null;
+  pregnancy_result: PregnancyResult;
   notes: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Ileri tarihli, henuz gerceklesmemis embriyo transfer plani - gerceklesince
+// gercek transfer bilgisi embriyo kaydina (Embryo.transfer_date vb.) girilir,
+// bu kayit sadece hatirlatma amaclidir.
+export interface PlannedEmbryoTransfer {
+  id: string;
+  recipient_animal_id: string;
+  planned_date: string;
+  notes: string | null;
+  task_id: string | null;
+  created_by: string | null;
+  created_at: string;
 }
 
 export interface CalfFeeding {
