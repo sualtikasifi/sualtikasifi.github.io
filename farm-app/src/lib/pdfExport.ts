@@ -65,6 +65,18 @@ function drawSectionTitle(doc: jsPDF, cursorY: number, title: string): number {
   return cursorY + 8;
 }
 
+// Bir sonraki bolum en az bir baslik + bir kac satirlik yer kaplayacaksa ve
+// sayfada bu kadar yer kalmadiysa yeni sayfaya gecer - coklu tablolu uzun
+// raporlarda bolum basliklarinin sayfa altina sikismasini engeller.
+function ensureSpace(doc: jsPDF, cursorY: number, needed = 70): number {
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (cursorY + needed > pageHeight - 30) {
+    doc.addPage();
+    return 40;
+  }
+  return cursorY;
+}
+
 function drawTable(
   doc: jsPDF,
   startY: number,
@@ -149,6 +161,70 @@ export function exportDonorYieldReportToPdf(input: DonorYieldPdfInput): void {
 
   cursorY = drawSectionTitle(doc, cursorY, "Donör Verimleri");
   drawTable(doc, cursorY, input.headers, input.rows, { rightAlignFrom: 1 });
+
+  doc.save(input.filename);
+}
+
+export interface OpuStatsPdfInput {
+  filename: string;
+  generatedAtLabel: string;
+  dateRangeLabel: string;
+  summary: { label: string; value: string }[];
+  batchHeaders: string[];
+  batchRows: (string | number)[][];
+  technicianHeaders: string[];
+  technicianRows: (string | number)[][];
+  donorHeaders: string[];
+  donorRows: (string | number)[][];
+}
+
+export function exportOpuStatsReportToPdf(input: OpuStatsPdfInput): void {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+  let cursorY = drawReportHeader(doc, "Marder Çiftlik — OPU İstatistikleri Raporu", [
+    `${input.dateRangeLabel}  ·  Oluşturulma: ${input.generatedAtLabel}`,
+  ]);
+
+  cursorY = drawSectionTitle(doc, cursorY, "Genel Özet");
+  cursorY =
+    drawTable(
+      doc,
+      cursorY,
+      ["Gösterge", "Değer"],
+      input.summary.map((s) => [s.label, s.value]),
+      { fontSize: 10, rightAlignFrom: 1 }
+    ) + 26;
+
+  cursorY = ensureSpace(doc, cursorY);
+  cursorY = drawSectionTitle(doc, cursorY, "Gün Bazlı Havuz Performansı");
+  cursorY = drawTable(doc, cursorY, input.batchHeaders, input.batchRows, { fontSize: 8 }) + 26;
+
+  cursorY = ensureSpace(doc, cursorY);
+  cursorY = drawSectionTitle(doc, cursorY, "Veteriner Hekim/Tekniker Başarı Oranları");
+  cursorY = drawTable(doc, cursorY, input.technicianHeaders, input.technicianRows) + 26;
+
+  cursorY = ensureSpace(doc, cursorY);
+  cursorY = drawSectionTitle(doc, cursorY, "Donör Verimleri");
+  drawTable(doc, cursorY, input.donorHeaders, input.donorRows, { fontSize: 8 });
+
+  doc.save(input.filename);
+}
+
+export interface OpuDaysPdfInput {
+  filename: string;
+  generatedAtLabel: string;
+  headers: string[];
+  rows: (string | number)[][];
+}
+
+export function exportOpuDaysReportToPdf(input: OpuDaysPdfInput): void {
+  const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+
+  const cursorY = drawReportHeader(doc, "Marder Çiftlik — OPU Günleri Raporu", [
+    `Oluşturulma: ${input.generatedAtLabel}`,
+  ]);
+  const titleY = drawSectionTitle(doc, cursorY, "Gün Bazlı Özet");
+  drawTable(doc, titleY, input.headers, input.rows, { fontSize: 8 });
 
   doc.save(input.filename);
 }

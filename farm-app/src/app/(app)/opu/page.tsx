@@ -5,7 +5,7 @@ import Link from "next/link";
 import { listAnimals, listOpuBatches, listOpuSessions } from "@/lib/data";
 import { Animal, OpuBatch, OpuSession } from "@/lib/types";
 import { formatDate } from "@/lib/format";
-import { exportRowsToExcel } from "@/lib/excelExport";
+import { exportOpuDaysReportToPdf } from "@/lib/pdfExport";
 import { useAuth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { PageHeader } from "@/components/PageHeader";
@@ -66,8 +66,13 @@ export default function OpuBatchesPage() {
     try {
       const headers = [
         "Tarih",
-        "Donör Sayısı",
+        "Donör",
         "Toplam Oosit",
+        "A",
+        "B",
+        "C",
+        "D",
+        "Ort. Oosit/Donör",
         "Maturasyona Konulan",
         "Maturasyon Oranı",
         "Embriyoya Dönüşen",
@@ -75,10 +80,15 @@ export default function OpuBatchesPage() {
         "Veteriner Hekim/Tekniker",
         "Notlar",
       ];
-      const rows = batchInfo.map(({ batch, donorCount, totalOocytes, technicianNames }) => [
+      const rows = batchInfo.map(({ batch, donorCount, totalOocytes, gradeTotals, technicianNames }) => [
         formatDate(batch.batch_date),
         donorCount,
         totalOocytes,
+        gradeTotals.a,
+        gradeTotals.b,
+        gradeTotals.c,
+        gradeTotals.d,
+        donorCount > 0 ? (totalOocytes / donorCount).toFixed(1) : "-",
         batch.maturation_count ?? "-",
         pct(batch.maturation_count, totalOocytes),
         batch.embryo_count ?? "-",
@@ -86,13 +96,12 @@ export default function OpuBatchesPage() {
         technicianNames.join(", ") || "-",
         batch.notes ?? "-",
       ]);
-      await exportRowsToExcel(
-        `opu-gunleri-${new Date().toISOString().slice(0, 10)}.xlsx`,
-        "OPU Günleri",
+      exportOpuDaysReportToPdf({
+        filename: `opu-gunleri-${new Date().toISOString().slice(0, 10)}.pdf`,
+        generatedAtLabel: new Date().toLocaleString("tr-TR"),
         headers,
         rows,
-        [14, 12, 12, 16, 14, 16, 18, 20, 24]
-      );
+      });
     } finally {
       setExporting(false);
     }
@@ -111,7 +120,7 @@ export default function OpuBatchesPage() {
               İstatistikler
             </Link>
             <button type="button" onClick={handleExport} disabled={exporting || batchInfo.length === 0} className="btn-secondary">
-              {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
+              {exporting ? "Hazırlanıyor..." : "PDF'e Aktar"}
             </button>
             {hasPermission(profile, "can_manage_opu") && (
               <Link href="/opu/new" className="btn-primary">
