@@ -154,6 +154,7 @@ export interface Insemination {
 export interface OpuSession {
   id: string;
   donor_animal_id: string;
+  batch_id: string | null;
   session_date: string;
   session_time: string | null;
   technician_name: string | null;
@@ -167,6 +168,22 @@ export interface OpuSession {
   cleaved_count: number | null;
   fertilization_bull_id: string | null;
   fertilization_semen_type: SemenType | null;
+  embryo_count: number | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Pazartesi/Persembe gunleri yapilan OPU'da, o gun toplanan tum donorlerin
+// oositleri fiziksel olarak tek bir havuzda birlestirilir - maturasyon ve
+// embriyoya donusme takibi donor bazinda degil, bu havuz (gun) bazinda
+// yapilir. Havuzdaki donor/oosit detayi OpuSession.batch_id ile bu kayda
+// baglanan satirlardan gelir.
+export interface OpuBatch {
+  id: string;
+  batch_date: string;
+  maturation_count: number | null;
   embryo_count: number | null;
   notes: string | null;
   created_by: string | null;

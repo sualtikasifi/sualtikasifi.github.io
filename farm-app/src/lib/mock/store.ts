@@ -21,6 +21,7 @@ import {
   MastitisProtocol,
   MastitisTreatment,
   Medicine,
+  OpuBatch,
   OpuSession,
   PlannedEmbryoTransfer,
   Profile,
@@ -47,6 +48,7 @@ import {
   seedMastitisProtocols,
   seedMastitisTreatments,
   seedMedicines,
+  seedOpuBatches,
   seedOpuSessions,
   seedProfiles,
   seedSemenInventory,
@@ -68,6 +70,7 @@ interface DemoDb {
   bulls: Bull[];
   semenInventory: SemenInventory[];
   inseminations: Insemination[];
+  opuBatches: OpuBatch[];
   opuSessions: OpuSession[];
   embryos: Embryo[];
   plannedEmbryoTransfers: PlannedEmbryoTransfer[];
@@ -100,6 +103,7 @@ function initialDb(): DemoDb {
     bulls: seedBulls,
     semenInventory: seedSemenInventory,
     inseminations: seedInseminations,
+    opuBatches: seedOpuBatches,
     opuSessions: seedOpuSessions,
     embryos: seedEmbryos,
     plannedEmbryoTransfers: [],
@@ -143,6 +147,7 @@ function loadDb(): DemoDb {
     bulls: parsed.bulls ?? seedBulls,
     semenInventory: parsed.semenInventory ?? seedSemenInventory,
     inseminations: parsed.inseminations ?? seedInseminations,
+    opuBatches: parsed.opuBatches ?? seedOpuBatches,
     opuSessions: parsed.opuSessions ?? seedOpuSessions,
     embryos: parsed.embryos ?? seedEmbryos,
     plannedEmbryoTransfers: parsed.plannedEmbryoTransfers ?? [],
@@ -632,10 +637,46 @@ export function demoDeleteInsemination(id: string): void {
   saveDb(db);
 }
 
-// --- OPU sessions & embryos ---
+// --- OPU gun havuzlari (batch) & seanslar & embriyolar ---
 
-export function demoListOpuSessions(): OpuSession[] {
-  return loadDb().opuSessions.sort((a, b) => b.session_date.localeCompare(a.session_date));
+export function demoListOpuBatches(): OpuBatch[] {
+  return loadDb().opuBatches.sort((a, b) => b.batch_date.localeCompare(a.batch_date));
+}
+
+export function demoGetOpuBatch(id: string): OpuBatch | undefined {
+  return loadDb().opuBatches.find((b) => b.id === id);
+}
+
+export function demoCreateOpuBatch(input: Omit<OpuBatch, "id" | "created_at" | "updated_at">): OpuBatch {
+  const db = loadDb();
+  const now = new Date().toISOString();
+  const batch: OpuBatch = { ...input, id: newId("opu-batch"), created_at: now, updated_at: now };
+  db.opuBatches.push(batch);
+  saveDb(db);
+  return batch;
+}
+
+export function demoUpdateOpuBatch(id: string, patch: Partial<OpuBatch>): OpuBatch | undefined {
+  const db = loadDb();
+  const idx = db.opuBatches.findIndex((b) => b.id === id);
+  if (idx === -1) return undefined;
+  db.opuBatches[idx] = { ...db.opuBatches[idx], ...patch, updated_at: new Date().toISOString() };
+  saveDb(db);
+  return db.opuBatches[idx];
+}
+
+export function demoDeleteOpuBatch(id: string): void {
+  const db = loadDb();
+  const sessionIds = db.opuSessions.filter((s) => s.batch_id === id).map((s) => s.id);
+  db.opuSessions = db.opuSessions.filter((s) => s.batch_id !== id);
+  db.embryos = db.embryos.filter((e) => !sessionIds.includes(e.opu_session_id));
+  db.opuBatches = db.opuBatches.filter((b) => b.id !== id);
+  saveDb(db);
+}
+
+export function demoListOpuSessions(batchId?: string): OpuSession[] {
+  const all = loadDb().opuSessions.sort((a, b) => b.session_date.localeCompare(a.session_date));
+  return batchId ? all.filter((s) => s.batch_id === batchId) : all;
 }
 
 export function demoGetOpuSession(id: string): OpuSession | undefined {
