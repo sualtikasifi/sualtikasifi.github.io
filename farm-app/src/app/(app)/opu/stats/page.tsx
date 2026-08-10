@@ -5,8 +5,7 @@ import Link from "next/link";
 import { listAnimals, listOpuBatches, listOpuSessions } from "@/lib/data";
 import { Animal, OpuBatch, OpuSession } from "@/lib/types";
 import { formatDate } from "@/lib/format";
-import { exportOpuReportToExcel } from "@/lib/excelExport";
-import { exportDonorYieldReportToPdf } from "@/lib/pdfExport";
+import { exportDonorYieldReportToPdf, exportOpuStatsReportToPdf } from "@/lib/pdfExport";
 
 interface Totals {
   count: number;
@@ -20,10 +19,6 @@ function emptyTotals(): Totals {
 function pct(numerator: number, denominator: number): string {
   if (denominator <= 0) return "-";
   return `%${Math.round((numerator / denominator) * 100)}`;
-}
-
-function pctOrNull(numerator: number, denominator: number): number | null {
-  return denominator > 0 ? numerator / denominator : null;
 }
 
 type DonorSortKey = "donor" | "count" | "oocytes" | "avg" | "a" | "b" | "c" | "d";
@@ -109,7 +104,19 @@ export default function OpuStatsPage() {
       .map((b) => {
         const batchSessions = sessions.filter((s) => s.batch_id === b.id);
         const totalOocytes = batchSessions.reduce((sum, s) => sum + (s.oocyte_count ?? 0), 0);
-        return { batch: b, donorCount: batchSessions.length, totalOocytes };
+        const gradeTotals = batchSessions.reduce(
+          (acc, s) => ({
+            a: acc.a + (s.oocyte_grade_a ?? 0),
+            b: acc.b + (s.oocyte_grade_b ?? 0),
+            c: acc.c + (s.oocyte_grade_c ?? 0),
+            d: acc.d + (s.oocyte_grade_d ?? 0),
+          }),
+          { a: 0, b: 0, c: 0, d: 0 }
+        );
+        const technicianNames = Array.from(
+          new Set(batchSessions.map((s) => s.technician_name).filter((n): n is string => !!n))
+        );
+        return { batch: b, donorCount: batchSessions.length, totalOocytes, gradeTotals, technicianNames };
       })
       .sort((a, b) => b.batch.batch_date.localeCompare(a.batch.batch_date));
   }, [batches, sessions]);
@@ -124,44 +131,51 @@ export default function OpuStatsPage() {
   async function handleExport() {
     setExporting(true);
     try {
-      await exportOpuReportToExcel({
-        filename: `opu-istatistikleri-${new Date().toISOString().slice(0, 10)}.xlsx`,
-        reportTitle: "OPU / Embriyo Programı İstatistikleri",
+      exportOpuStatsReportToPdf({
+        filename: `opu-istatistikleri-${new Date().toISOString().slice(0, 10)}.pdf`,
         generatedAtLabel: new Date().toLocaleString("tr-TR"),
         dateRangeLabel: "Tüm kayıtlar",
         summary: [
-          { label: "Toplam OPU Günü", value: batches.length },
-          { label: "Toplam Donör Kaydı", value: sessions.length },
-          { label: "Toplam Oosit", value: grandTotals.totalOocytes },
-          { label: "Toplam Maturasyona Konulan", value: grandTotals.totalMaturation },
-          { label: "Toplam Embriyo", value: grandTotals.totalEmbryo },
-          {
-            label: "Genel Maturasyon Oranı",
-            value: pctOrNull(grandTotals.totalMaturation, grandTotals.totalOocytes) ?? 0,
-            percent: true,
-          },
-          {
-            label: "Genel Embriyoya Dönüşme Oranı",
-            value: pctOrNull(grandTotals.totalEmbryo, grandTotals.totalMaturation) ?? 0,
-            percent: true,
-          },
+          { label: "Toplam OPU Günü", value: String(batches.length) },
+          { label: "Toplam Donör Kaydı", value: String(sessions.length) },
+          { label: "Toplam Oosit", value: String(grandTotals.totalOocytes) },
+          { label: "Toplam Maturasyona Konulan", value: String(grandTotals.totalMaturation) },
+          { label: "Toplam Embriyo", value: String(grandTotals.totalEmbryo) },
+          { label: "Genel Maturasyon Oranı", value: pct(grandTotals.totalMaturation, grandTotals.totalOocytes) },
+          { label: "Genel Embriyoya Dönüşme Oranı", value: pct(grandTotals.totalEmbryo, grandTotals.totalMaturation) },
         ],
-        sessionHeaders: ["Tarih", "Donör Sayısı", "Toplam Oosit", "Maturasyona Konulan", "Embriyoya Dönüşen", "Maturasyon Oranı", "Embriyo Oranı"],
-        sessionRows: batchStats.map(({ batch, donorCount, totalOocytes }) => [
+        batchHeaders: [
+          "Tarih",
+          "Donör",
+          "Oosit",
+          "A",
+          "B",
+          "C",
+          "D",
+          "Maturasyon",
+          "Mat. Oranı",
+          "Embriyo",
+          "Emb. Oranı",
+          "Veteriner Hekim/Tekniker",
+        ],
+        batchRows: batchStats.map(({ batch, donorCount, totalOocytes, gradeTotals, technicianNames }) => [
           formatDate(batch.batch_date),
           donorCount,
           totalOocytes,
-          batch.maturation_count,
-          batch.embryo_count,
-          pctOrNull(batch.maturation_count ?? 0, totalOocytes),
-          pctOrNull(batch.embryo_count ?? 0, batch.maturation_count ?? 0),
+          gradeTotals.a,
+          gradeTotals.b,
+          gradeTotals.c,
+          gradeTotals.d,
+          batch.maturation_count ?? "-",
+          pct(batch.maturation_count ?? 0, totalOocytes),
+          batch.embryo_count ?? "-",
+          pct(batch.embryo_count ?? 0, batch.maturation_count ?? 0),
+          technicianNames.join(", ") || "-",
         ]),
-        sessionPercentColumns: [5, 6],
         technicianHeaders: ["Veteriner Hekim/Tekniker", "Donör Sayısı", "Toplam Oosit", "Ort. Oosit/Donör"],
         technicianRows: technicianStats.map((t) => [t.name, t.count, t.oocytes, Number((t.oocytes / t.count).toFixed(1))]),
-        technicianPercentColumns: [],
-        donorHeaders: ["Küpe No", "Kaç Kez OPU", "Toplam Oosit", "Ort. Oosit/OPU"],
-        donorRows: donorStats.map((d) => [earTagFor(d.animalId), d.count, d.oocytes, Number(d.avg.toFixed(1))]),
+        donorHeaders: ["Küpe No", "Kaç Kez OPU", "Toplam Oosit", "Ort. Oosit/OPU", "A", "B", "C", "D"],
+        donorRows: donorStats.map((d) => [earTagFor(d.animalId), d.count, d.oocytes, Number(d.avg.toFixed(1)), d.a, d.b, d.c, d.d]),
       });
     } finally {
       setExporting(false);
@@ -203,7 +217,7 @@ export default function OpuStatsPage() {
             disabled={exporting || batches.length === 0}
             className="btn-secondary"
           >
-            {exporting ? "Hazırlanıyor..." : "Excel'e Aktar"}
+            {exporting ? "Hazırlanıyor..." : "Tüm Raporu PDF'e Aktar"}
           </button>
           <Link href="/opu" className="text-xs font-medium text-green-700 hover:underline">
             OPU listesine dön
@@ -288,7 +302,7 @@ export default function OpuStatsPage() {
                 disabled={exportingDonorPdf || donorStats.length === 0}
                 className="btn-secondary"
               >
-                {exportingDonorPdf ? "Hazırlanıyor..." : "PDF'e Aktar"}
+                {exportingDonorPdf ? "Hazırlanıyor..." : "Bu Tabloyu PDF'e Aktar"}
               </button>
             </div>
             <div className="overflow-x-auto">
