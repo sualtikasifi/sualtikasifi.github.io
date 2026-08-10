@@ -23,6 +23,7 @@ import {
   MastitisProtocol,
   MastitisTreatment,
   Medicine,
+  OpuBatch,
   OpuSession,
   PlannedEmbryoTransfer,
   Profile,
@@ -530,17 +531,55 @@ export async function deleteInsemination(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// --- OPU sessions & embryos ---
+// --- OPU gun havuzlari (batch) & seanslar & embriyolar ---
 
-export async function listOpuSessions(): Promise<OpuSession[]> {
-  if (isDemoMode) return mock.demoListOpuSessions();
-  return fetchAllPages<OpuSession>((from, to) =>
+export async function listOpuBatches(): Promise<OpuBatch[]> {
+  if (isDemoMode) return mock.demoListOpuBatches();
+  return fetchAllPages<OpuBatch>((from, to) =>
     supabase!
-      .from("opu_sessions")
+      .from("opu_batches")
       .select("*", { count: "exact" })
-      .order("session_date", { ascending: false })
+      .order("batch_date", { ascending: false })
       .range(from, to)
   );
+}
+
+export async function getOpuBatch(id: string): Promise<OpuBatch | undefined> {
+  if (isDemoMode) return mock.demoGetOpuBatch(id);
+  const { data, error } = await supabase!.from("opu_batches").select("*").eq("id", id).single();
+  if (error) return undefined;
+  return data as OpuBatch;
+}
+
+export async function createOpuBatch(
+  input: Omit<OpuBatch, "id" | "created_at" | "updated_at">
+): Promise<OpuBatch> {
+  if (isDemoMode) return mock.demoCreateOpuBatch(input);
+  const { data, error } = await supabase!.from("opu_batches").insert(input).select().single();
+  if (error) throw error;
+  return data as OpuBatch;
+}
+
+export async function updateOpuBatch(id: string, patch: Partial<OpuBatch>): Promise<OpuBatch | undefined> {
+  if (isDemoMode) return mock.demoUpdateOpuBatch(id, patch);
+  const { data, error } = await supabase!.from("opu_batches").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data as OpuBatch;
+}
+
+export async function deleteOpuBatch(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteOpuBatch(id);
+  const { error } = await supabase!.from("opu_batches").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function listOpuSessions(batchId?: string): Promise<OpuSession[]> {
+  if (isDemoMode) return mock.demoListOpuSessions(batchId);
+  return fetchAllPages<OpuSession>((from, to) => {
+    let query = supabase!.from("opu_sessions").select("*", { count: "exact" }).order("session_date", { ascending: false });
+    if (batchId) query = query.eq("batch_id", batchId);
+    return query.range(from, to);
+  });
 }
 
 export async function getOpuSession(id: string): Promise<OpuSession | undefined> {

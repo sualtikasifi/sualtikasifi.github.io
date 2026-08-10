@@ -196,6 +196,22 @@ create table if not exists inseminations (
 create index if not exists inseminations_animal_idx on inseminations (animal_id);
 create index if not exists inseminations_date_idx on inseminations (insemination_date);
 
+-- 7b. OPU gun havuzlari: Pazartesi/Persembe gunleri birden fazla donorden
+-- toplanan oositler fiziksel olarak tek bir havuzda birlestirilir. Maturasyon
+-- ve embriyoya donusme sayilari donor bazinda degil, bu havuz (gun) bazinda
+-- tutulur - hangi donorun kac oosit verdigi ise asagidaki opu_sessions'ta
+-- (batch_id ile bu kayda baglanan satirlarda) kalir.
+create table if not exists opu_batches (
+  id uuid primary key default gen_random_uuid(),
+  batch_date date not null unique,
+  maturation_count integer check (maturation_count >= 0),
+  embryo_count integer check (embryo_count >= 0),
+  notes text,
+  created_by uuid references profiles (id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- 8. OPU (Ovum Pick Up) seanslari
 -- Laboratuvar huni takibi birden fazla gunde tamamlanir: OPU gununde folikul/oosit
 -- sayilari, birkac gun sonra bolunme (cleavage) sayisi, D5-D8 arasinda embriyo sayisi.
@@ -402,6 +418,11 @@ create index if not exists calf_treatment_courses_status_idx on calf_treatment_c
 alter table calf_treatments add column if not exists note text;
 alter table calf_treatments add column if not exists course_id uuid references calf_treatment_courses (id) on delete set null;
 
+-- OPU seanslarini gun havuzuna baglar (bkz. opu_batches) - eski (havuzsuz)
+-- kayitlar icin null kalir.
+alter table opu_sessions add column if not exists batch_id uuid references opu_batches (id) on delete cascade;
+create index if not exists opu_sessions_batch_idx on opu_sessions (batch_id);
+
 -- Embriyo transferini yapan kisi + alicidaki gebelik teshisi
 alter table embryos add column if not exists transfer_technician_name text;
 alter table embryos add column if not exists pregnancy_check_date date;
@@ -597,6 +618,7 @@ alter table tasks enable row level security;
 alter table bulls enable row level security;
 alter table semen_inventory enable row level security;
 alter table inseminations enable row level security;
+alter table opu_batches enable row level security;
 alter table opu_sessions enable row level security;
 alter table embryos enable row level security;
 alter table planned_embryo_transfers enable row level security;
@@ -674,6 +696,11 @@ create policy "inseminations_select" on inseminations for select to authenticate
 create policy "inseminations_insert" on inseminations for insert to authenticated with check (has_perm('inseminations'));
 create policy "inseminations_update" on inseminations for update to authenticated using (has_perm('inseminations'));
 create policy "inseminations_delete" on inseminations for delete to authenticated using (has_perm('inseminations'));
+
+create policy "opu_batches_select" on opu_batches for select to authenticated using (true);
+create policy "opu_batches_insert" on opu_batches for insert to authenticated with check (has_perm('opu'));
+create policy "opu_batches_update" on opu_batches for update to authenticated using (has_perm('opu'));
+create policy "opu_batches_delete" on opu_batches for delete to authenticated using (has_perm('opu'));
 
 create policy "opu_sessions_select" on opu_sessions for select to authenticated using (true);
 create policy "opu_sessions_insert" on opu_sessions for insert to authenticated with check (has_perm('opu'));

@@ -212,6 +212,7 @@ export default function EmbryoTransfersPage() {
       // embriyo ekliyoruz.
       const session = await createOpuSession({
         donor_animal_id: pastDonorId,
+        batch_id: null,
         session_date: pastDate,
         session_time: null,
         technician_name: pastTechnician.trim() || null,
