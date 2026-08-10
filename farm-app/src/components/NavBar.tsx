@@ -41,9 +41,6 @@ export function NavBar() {
           <span className="text-sm font-bold tracking-tight text-green-900">Marder Çiftlik</span>
         </Link>
         <div className="flex items-center gap-1 text-sm text-neutral-500">
-          <Link href="/herd" className="rounded-lg px-2.5 py-1.5 font-medium transition-colors hover:bg-green-50 hover:text-green-800">
-            📋 Sürü
-          </Link>
           <Link
             href="/profile"
             className="max-w-[32vw] truncate rounded-lg px-2.5 py-1.5 font-medium transition-colors hover:bg-green-50 hover:text-green-800"

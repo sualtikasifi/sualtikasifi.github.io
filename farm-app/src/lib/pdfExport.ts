@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 
 const BRAND_GREEN: [number, number, number] = [22, 101, 52];
 const TEXT_DARK: [number, number, number] = [23, 23, 23];
+const MARGIN_X = 40;
 
 // jsPDF'in gomulu (Helvetica) fontlari yalnizca WinAnsi kodlamasini destekler:
 // ö/ü/ç dogru basiliyor ama i (noktasiz), s, g Turkce karakterleri
@@ -37,6 +38,57 @@ function lastTableEndY(doc: jsPDF, fallback: number): number {
   return withLastTable.lastAutoTable?.finalY ?? fallback;
 }
 
+// Marka basligini (yesil serit + baslik + alt bilgi satirlari) cizer ve
+// icerigin baslayacagi Y konumunu dondurur.
+function drawReportHeader(doc: jsPDF, title: string, subtitleLines: string[]): number {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const headerHeight = 50 + subtitleLines.length * 15;
+
+  doc.setFillColor(...BRAND_GREEN);
+  doc.rect(0, 0, pageWidth, headerHeight, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(17);
+  doc.text(tr(title), MARGIN_X, 32);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  subtitleLines.forEach((line, i) => doc.text(tr(line), MARGIN_X, 50 + i * 15));
+
+  doc.setTextColor(...TEXT_DARK);
+  return headerHeight + 22;
+}
+
+function drawSectionTitle(doc: jsPDF, cursorY: number, title: string): number {
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(tr(title), MARGIN_X, cursorY);
+  return cursorY + 8;
+}
+
+function drawTable(
+  doc: jsPDF,
+  startY: number,
+  head: string[],
+  body: (string | number)[][],
+  options?: { fontSize?: number; rightAlignFrom?: number }
+): number {
+  const rightAlignFrom = options?.rightAlignFrom;
+  autoTable(doc, {
+    startY,
+    margin: { left: MARGIN_X, right: MARGIN_X },
+    head: [head.map(tr)],
+    body: body.map(trRow),
+    theme: "grid",
+    headStyles: { fillColor: BRAND_GREEN, textColor: 255, fontStyle: "bold" },
+    styles: { fontSize: options?.fontSize ?? 9, cellPadding: 4 },
+    columnStyles:
+      rightAlignFrom !== undefined
+        ? Object.fromEntries(head.slice(rightAlignFrom).map((_, i) => [i + rightAlignFrom, { halign: "right" as const }]))
+        : undefined,
+  });
+  return lastTableEndY(doc, startY);
+}
+
 export interface OpuBatchPdfInput {
   filename: string;
   batchDateLabel: string;
@@ -51,66 +103,52 @@ export interface OpuBatchPdfInput {
 export function exportOpuBatchReportToPdf(input: OpuBatchPdfInput): void {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 40;
 
-  doc.setFillColor(...BRAND_GREEN);
-  doc.rect(0, 0, pageWidth, 74, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(17);
-  doc.text(tr("Marder Çiftlik — OPU Günü Raporu"), marginX, 32);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(tr(`${input.batchDateLabel}  ·  Oluşturulma: ${input.generatedAtLabel}`), marginX, 50);
-  doc.text(
-    tr(
-      `Veteriner Hekim/Tekniker: ${input.technicianNames.length > 0 ? input.technicianNames.join(", ") : "Belirtilmemiş"}`
-    ),
-    marginX,
-    65
-  );
+  let cursorY = drawReportHeader(doc, "Marder Çiftlik — OPU Günü Raporu", [
+    `${input.batchDateLabel}  ·  Oluşturulma: ${input.generatedAtLabel}`,
+    `Veteriner Hekim/Tekniker: ${input.technicianNames.length > 0 ? input.technicianNames.join(", ") : "Belirtilmemiş"}`,
+  ]);
 
-  doc.setTextColor(...TEXT_DARK);
+  cursorY = drawSectionTitle(doc, cursorY, "Özet");
+  cursorY =
+    drawTable(
+      doc,
+      cursorY,
+      ["Gösterge", "Değer"],
+      input.summary.map((s) => [s.label, s.value]),
+      { fontSize: 10, rightAlignFrom: 1 }
+    ) + 26;
 
-  let cursorY = 96;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text(tr("Özet"), marginX, cursorY);
-  cursorY += 8;
-
-  autoTable(doc, {
-    startY: cursorY,
-    margin: { left: marginX, right: marginX },
-    head: [[tr("Gösterge"), tr("Değer")]],
-    body: input.summary.map((s) => trRow([s.label, s.value])),
-    theme: "grid",
-    headStyles: { fillColor: BRAND_GREEN, textColor: 255, fontStyle: "bold" },
-    styles: { fontSize: 10, cellPadding: 5 },
-    columnStyles: { 1: { halign: "right" } },
-  });
-
-  cursorY = lastTableEndY(doc, cursorY) + 26;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text(tr("Donör Bazlı Toplama (Verim)"), marginX, cursorY);
-  cursorY += 8;
-
-  autoTable(doc, {
-    startY: cursorY,
-    margin: { left: marginX, right: marginX },
-    head: [input.donorHeaders.map(tr)],
-    body: input.donorRows.map(trRow),
-    theme: "grid",
-    headStyles: { fillColor: BRAND_GREEN, textColor: 255, fontStyle: "bold" },
-    styles: { fontSize: 9, cellPadding: 4 },
-  });
+  cursorY = drawSectionTitle(doc, cursorY, "Donör Bazlı Toplama (Verim)");
+  cursorY = drawTable(doc, cursorY, input.donorHeaders, input.donorRows);
 
   if (input.notes) {
-    const finalY = lastTableEndY(doc, cursorY) + 22;
+    const finalY = cursorY + 22;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.text(tr(`Not: ${input.notes}`), marginX, finalY, { maxWidth: pageWidth - marginX * 2 });
+    doc.text(tr(`Not: ${input.notes}`), MARGIN_X, finalY, { maxWidth: pageWidth - MARGIN_X * 2 });
   }
+
+  doc.save(input.filename);
+}
+
+export interface DonorYieldPdfInput {
+  filename: string;
+  generatedAtLabel: string;
+  dateRangeLabel: string;
+  headers: string[];
+  rows: (string | number)[][];
+}
+
+export function exportDonorYieldReportToPdf(input: DonorYieldPdfInput): void {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+  let cursorY = drawReportHeader(doc, "Marder Çiftlik — Donör Verimleri Raporu", [
+    `${input.dateRangeLabel}  ·  Oluşturulma: ${input.generatedAtLabel}`,
+  ]);
+
+  cursorY = drawSectionTitle(doc, cursorY, "Donör Verimleri");
+  drawTable(doc, cursorY, input.headers, input.rows, { rightAlignFrom: 1 });
 
   doc.save(input.filename);
 }

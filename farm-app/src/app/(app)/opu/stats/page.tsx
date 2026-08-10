@@ -6,6 +6,7 @@ import { listAnimals, listOpuBatches, listOpuSessions } from "@/lib/data";
 import { Animal, OpuBatch, OpuSession } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { exportOpuReportToExcel } from "@/lib/excelExport";
+import { exportDonorYieldReportToPdf } from "@/lib/pdfExport";
 
 interface Totals {
   count: number;
@@ -25,12 +26,27 @@ function pctOrNull(numerator: number, denominator: number): number | null {
   return denominator > 0 ? numerator / denominator : null;
 }
 
+type DonorSortKey = "donor" | "count" | "oocytes" | "avg" | "a" | "b" | "c" | "d";
+
+const DONOR_COLUMNS: { key: DonorSortKey; label: string }[] = [
+  { key: "donor", label: "Donör" },
+  { key: "count", label: "Kaç Kez OPU" },
+  { key: "oocytes", label: "Toplam Oosit" },
+  { key: "avg", label: "Ort. Oosit/OPU" },
+  { key: "a", label: "A" },
+  { key: "b", label: "B" },
+  { key: "c", label: "C" },
+  { key: "d", label: "D" },
+];
+
 export default function OpuStatsPage() {
   const [batches, setBatches] = useState<OpuBatch[]>([]);
   const [sessions, setSessions] = useState<OpuSession[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [exportingDonorPdf, setExportingDonorPdf] = useState(false);
+  const [donorSort, setDonorSort] = useState<{ key: DonorSortKey; dir: "asc" | "desc" }>({ key: "avg", dir: "desc" });
 
   useEffect(() => {
     Promise.all([listOpuBatches(), listOpuSessions(), listAnimals()]).then(([b, s, a]) => {
@@ -58,17 +74,35 @@ export default function OpuStatsPage() {
   }, [sessions]);
 
   const donorStats = useMemo(() => {
-    const map = new Map<string, Totals>();
+    const map = new Map<string, Totals & { a: number; b: number; c: number; d: number }>();
     for (const s of sessions) {
-      const t = map.get(s.donor_animal_id) ?? emptyTotals();
+      const t = map.get(s.donor_animal_id) ?? { ...emptyTotals(), a: 0, b: 0, c: 0, d: 0 };
       t.count += 1;
       t.oocytes += s.oocyte_count ?? 0;
+      t.a += s.oocyte_grade_a ?? 0;
+      t.b += s.oocyte_grade_b ?? 0;
+      t.c += s.oocyte_grade_c ?? 0;
+      t.d += s.oocyte_grade_d ?? 0;
       map.set(s.donor_animal_id, t);
     }
-    return Array.from(map.entries())
-      .map(([animalId, t]) => ({ animalId, ...t }))
-      .sort((a, b) => b.oocytes - a.oocytes);
+    return Array.from(map.entries()).map(([animalId, t]) => ({ animalId, ...t, avg: t.oocytes / t.count }));
   }, [sessions]);
+
+  const sortedDonorStats = useMemo(() => {
+    const rows = [...donorStats];
+    const { key, dir } = donorSort;
+    const sign = dir === "asc" ? 1 : -1;
+    rows.sort((x, y) => {
+      if (key === "donor") return sign * earTagFor(x.animalId).localeCompare(earTagFor(y.animalId));
+      return sign * (x[key] - y[key]);
+    });
+    return rows;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [donorStats, donorSort, animals]);
+
+  function toggleDonorSort(key: DonorSortKey) {
+    setDonorSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "desc" }));
+  }
 
   const batchStats = useMemo(() => {
     return batches
@@ -127,15 +161,34 @@ export default function OpuStatsPage() {
         technicianRows: technicianStats.map((t) => [t.name, t.count, t.oocytes, Number((t.oocytes / t.count).toFixed(1))]),
         technicianPercentColumns: [],
         donorHeaders: ["Küpe No", "Kaç Kez OPU", "Toplam Oosit", "Ort. Oosit/OPU"],
-        donorRows: donorStats.map((d) => [
-          earTagFor(d.animalId),
-          d.count,
-          d.oocytes,
-          Number((d.oocytes / d.count).toFixed(1)),
-        ]),
+        donorRows: donorStats.map((d) => [earTagFor(d.animalId), d.count, d.oocytes, Number(d.avg.toFixed(1))]),
       });
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleExportDonorPdf() {
+    setExportingDonorPdf(true);
+    try {
+      exportDonorYieldReportToPdf({
+        filename: `donor-verimleri-${new Date().toISOString().slice(0, 10)}.pdf`,
+        generatedAtLabel: new Date().toLocaleString("tr-TR"),
+        dateRangeLabel: "Tüm kayıtlar",
+        headers: ["Donör", "Kaç Kez OPU", "Toplam Oosit", "Ort. Oosit/OPU", "A", "B", "C", "D"],
+        rows: sortedDonorStats.map((d) => [
+          earTagFor(d.animalId),
+          d.count,
+          d.oocytes,
+          Number(d.avg.toFixed(1)),
+          d.a,
+          d.b,
+          d.c,
+          d.d,
+        ]),
+      });
+    } finally {
+      setExportingDonorPdf(false);
     }
   }
 
@@ -227,24 +280,48 @@ export default function OpuStatsPage() {
           </div>
 
           <div className="card">
-            <h2 className="mb-2 text-sm font-semibold text-neutral-800">Donör Verimleri</h2>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-neutral-800">Donör Verimleri</h2>
+              <button
+                type="button"
+                onClick={handleExportDonorPdf}
+                disabled={exportingDonorPdf || donorStats.length === 0}
+                className="btn-secondary"
+              >
+                {exportingDonorPdf ? "Hazırlanıyor..." : "PDF'e Aktar"}
+              </button>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[500px] text-sm">
+              <table className="w-full min-w-[600px] text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500">
-                    <th className="py-1.5 pr-2">Donör</th>
-                    <th className="py-1.5 pr-2">Kaç Kez OPU</th>
-                    <th className="py-1.5 pr-2">Toplam Oosit</th>
-                    <th className="py-1.5 pr-2">Ort. Oosit/OPU</th>
+                    {DONOR_COLUMNS.map((col) => (
+                      <th key={col.key} className="py-1.5 pr-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleDonorSort(col.key)}
+                          className={`flex items-center gap-0.5 font-medium transition-colors hover:text-neutral-800 ${
+                            donorSort.key === col.key ? "text-green-700" : ""
+                          }`}
+                        >
+                          {col.label}
+                          {donorSort.key === col.key && <span aria-hidden>{donorSort.dir === "asc" ? "▲" : "▼"}</span>}
+                        </button>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
-                  {donorStats.map((d) => (
+                  {sortedDonorStats.map((d) => (
                     <tr key={d.animalId}>
                       <td className="py-1.5 pr-2 font-medium text-neutral-900">{earTagFor(d.animalId)}</td>
                       <td className="py-1.5 pr-2">{d.count}</td>
                       <td className="py-1.5 pr-2">{d.oocytes}</td>
-                      <td className="py-1.5 pr-2">{(d.oocytes / d.count).toFixed(1)}</td>
+                      <td className="py-1.5 pr-2">{d.avg.toFixed(1)}</td>
+                      <td className="py-1.5 pr-2">{d.a}</td>
+                      <td className="py-1.5 pr-2">{d.b}</td>
+                      <td className="py-1.5 pr-2">{d.c}</td>
+                      <td className="py-1.5 pr-2">{d.d}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -35,14 +35,25 @@ export default function OpuBatchesPage() {
   const earTagFor = (animalId: string) => animals.find((a) => a.id === animalId)?.ear_tag ?? "?";
 
   const batchInfo = useMemo(() => {
-    return batches.map((b) => {
-      const batchSessions = sessions.filter((s) => s.batch_id === b.id);
-      const totalOocytes = batchSessions.reduce((sum, s) => sum + (s.oocyte_count ?? 0), 0);
-      const technicianNames = Array.from(
-        new Set(batchSessions.map((s) => s.technician_name).filter((n): n is string => !!n))
-      );
-      return { batch: b, donorCount: batchSessions.length, totalOocytes, technicianNames };
-    });
+    return batches
+      .map((b) => {
+        const batchSessions = sessions.filter((s) => s.batch_id === b.id);
+        const totalOocytes = batchSessions.reduce((sum, s) => sum + (s.oocyte_count ?? 0), 0);
+        const gradeTotals = batchSessions.reduce(
+          (acc, s) => ({
+            a: acc.a + (s.oocyte_grade_a ?? 0),
+            b: acc.b + (s.oocyte_grade_b ?? 0),
+            c: acc.c + (s.oocyte_grade_c ?? 0),
+            d: acc.d + (s.oocyte_grade_d ?? 0),
+          }),
+          { a: 0, b: 0, c: 0, d: 0 }
+        );
+        const technicianNames = Array.from(
+          new Set(batchSessions.map((s) => s.technician_name).filter((n): n is string => !!n))
+        );
+        return { batch: b, donorCount: batchSessions.length, totalOocytes, gradeTotals, technicianNames };
+      })
+      .sort((a, b) => b.batch.batch_date.localeCompare(a.batch.batch_date));
   }, [batches, sessions]);
 
   // Yeniden tasarim oncesi (havuz sistemine gecmeden) tek tek eklenmis,
@@ -116,8 +127,8 @@ export default function OpuBatchesPage() {
       ) : batchInfo.length === 0 ? (
         <p className="text-sm text-neutral-400">Kayıt yok.</p>
       ) : (
-        <div className="card-list">
-          {batchInfo.map(({ batch, donorCount, totalOocytes, technicianNames }) => {
+        <div className="space-y-3">
+          {batchInfo.map(({ batch, donorCount, totalOocytes, gradeTotals, technicianNames }) => {
             const stageLabel =
               batch.maturation_count === null
                 ? "Maturasyon bekleniyor"
@@ -125,38 +136,55 @@ export default function OpuBatchesPage() {
                   ? "Embriyo sayımı bekleniyor"
                   : "Tamamlandı";
             const stageDone = batch.maturation_count !== null && batch.embryo_count !== null;
+            const stageStarted = batch.maturation_count !== null;
             return (
               <Link
                 key={batch.id}
                 href={`/opu/batch?id=${batch.id}`}
-                className="block border-b border-neutral-100 px-4 py-3 text-sm last:border-b-0 transition-colors hover:bg-neutral-50"
+                className="card block transition-all hover:-translate-y-0.5 hover:border-green-200 hover:shadow-md"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <span className="font-medium text-neutral-900">{formatDate(batch.batch_date)}</span>
-                    <span className="ml-2 text-neutral-500">{donorCount} donör</span>
-                    {technicianNames.length > 0 && <p className="text-xs text-neutral-400">{technicianNames.join(", ")}</p>}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-neutral-600">
-                      {totalOocytes} oosit
-                      {batch.maturation_count !== null && ` · ${batch.maturation_count} maturasyon`}
-                      {batch.embryo_count !== null && ` · ${batch.embryo_count} embriyo`}
-                    </p>
-                    <p className="text-xs text-neutral-400">
-                      Maturasyon {pct(batch.maturation_count, totalOocytes)} · Embriyo{" "}
-                      {pct(batch.embryo_count, batch.maturation_count ?? 0)}
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-semibold text-neutral-900">{formatDate(batch.batch_date)}</span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          stageDone
+                            ? "bg-green-100 text-green-800"
+                            : stageStarted
+                              ? "bg-sky-100 text-sky-800"
+                              : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {stageLabel}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-neutral-500">
+                      {donorCount} donör{technicianNames.length > 0 && ` · ${technicianNames.join(", ")}`}
                     </p>
                   </div>
                 </div>
-                <div className="mt-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      stageDone ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
-                    }`}
-                  >
-                    {stageLabel}
-                  </span>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <MiniStat
+                    label="Toplanan Oosit"
+                    value={totalOocytes}
+                    sub={`A ${gradeTotals.a} · B ${gradeTotals.b} · C ${gradeTotals.c} · D ${gradeTotals.d}`}
+                  />
+                  <MiniStat
+                    label="Ort. Oosit/Donör"
+                    value={donorCount > 0 ? (totalOocytes / donorCount).toFixed(1) : "-"}
+                  />
+                  <MiniStat
+                    label="Maturasyon"
+                    value={batch.maturation_count ?? "-"}
+                    sub={`Oran: ${pct(batch.maturation_count, totalOocytes)}`}
+                  />
+                  <MiniStat
+                    label="Embriyo"
+                    value={batch.embryo_count ?? "-"}
+                    sub={`Oran: ${pct(batch.embryo_count, batch.maturation_count ?? 0)}`}
+                  />
                 </div>
               </Link>
             );
@@ -185,6 +213,16 @@ export default function OpuBatchesPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function MiniStat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="rounded-lg border border-neutral-100 bg-neutral-50/60 px-2.5 py-2">
+      <p className="text-lg font-semibold text-neutral-900">{value}</p>
+      <p className="text-[11px] text-neutral-500">{label}</p>
+      {sub && <p className="mt-0.5 text-[11px] text-neutral-400">{sub}</p>}
     </div>
   );
 }

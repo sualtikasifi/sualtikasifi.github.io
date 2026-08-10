@@ -9,9 +9,11 @@ import {
   getOpuBatch,
   listAnimals,
   listOpuSessions,
+  listProfiles,
   updateOpuBatch,
+  updateOpuSession,
 } from "@/lib/data";
-import { Animal, OpuBatch, OpuSession } from "@/lib/types";
+import { Animal, OpuBatch, OpuSession, Profile } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { exportOpuBatchReportToPdf } from "@/lib/pdfExport";
 import { useAuth } from "@/lib/auth";
@@ -42,6 +44,7 @@ function OpuBatchContent() {
   const [batch, setBatch] = useState<OpuBatch | null>(null);
   const [sessions, setSessions] = useState<OpuSession[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -52,12 +55,16 @@ function OpuBatchContent() {
   const [addOocyteCount, setAddOocyteCount] = useState("");
   const [addSubmitting, setAddSubmitting] = useState(false);
 
+  const [editingTechnician, setEditingTechnician] = useState(false);
+  const [savingTechnician, setSavingTechnician] = useState(false);
+
   function refresh() {
     if (!id) return Promise.resolve();
-    return Promise.all([getOpuBatch(id), listOpuSessions(id), listAnimals()]).then(([b, s, a]) => {
+    return Promise.all([getOpuBatch(id), listOpuSessions(id), listAnimals(), listProfiles()]).then(([b, s, a, p]) => {
       setBatch(b ?? null);
       setSessions(s);
       setAnimals(a);
+      setProfiles(p);
       setLoading(false);
     });
   }
@@ -127,6 +134,17 @@ function OpuBatchContent() {
   async function handleRemoveDonor(sessionId: string) {
     await deleteOpuSession(sessionId);
     await refresh();
+  }
+
+  async function handleSetTechnician(name: string) {
+    setSavingTechnician(true);
+    try {
+      await Promise.all(sessions.map((s) => updateOpuSession(s.id, { technician_name: name })));
+      await refresh();
+      setEditingTechnician(false);
+    } finally {
+      setSavingTechnician(false);
+    }
   }
 
   async function handleExportPdf() {
@@ -217,8 +235,49 @@ function OpuBatchContent() {
         <StatCard label="Toplanan Oosit" value={totalOocytes} sub={`A ${gradeTotals.a} · B ${gradeTotals.b} · C ${gradeTotals.c} · D ${gradeTotals.d}`} />
         <StatCard label="Maturasyona Konulan" value={batch.maturation_count ?? "-"} sub={`Oran: ${pct(batch.maturation_count, totalOocytes)}`} />
         <StatCard label="Embriyoya Dönüşen" value={batch.embryo_count ?? "-"} sub={`Oran: ${pct(batch.embryo_count, batch.maturation_count)}`} />
-        <StatCard label="Veteriner Hekim/Tekniker" value={technicianNames.length > 0 ? technicianNames.join(", ") : "-"} />
+        <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+          <p className="truncate text-2xl font-semibold text-neutral-900">
+            {technicianNames.length > 0 ? technicianNames.join(", ") : "-"}
+          </p>
+          <p className="text-xs text-neutral-500">Veteriner Hekim/Tekniker</p>
+          {canManage && sessions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setEditingTechnician((v) => !v)}
+              className="mt-1 text-xs font-medium text-green-700 hover:underline"
+            >
+              Düzenle
+            </button>
+          )}
+        </div>
       </div>
+
+      {editingTechnician && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
+          <p className="mb-2 text-sm font-medium text-green-800">Bu havuzdaki tüm kayıtlar için veteriner hekim/tekniker seç</p>
+          <div className="flex flex-wrap gap-2">
+            {profiles.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                disabled={savingTechnician}
+                onClick={() => handleSetTechnician(p.full_name)}
+                className={`chip ${technicianNames.length === 1 && technicianNames[0] === p.full_name ? "chip-selected" : "chip-unselected"}`}
+              >
+                {p.full_name}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditingTechnician(false)}
+            disabled={savingTechnician}
+            className="mt-2 text-xs text-neutral-500 underline hover:no-underline"
+          >
+            Vazgeç
+          </button>
+        </div>
+      )}
 
       {canManage && <StageForm batch={batch} totalOocytes={totalOocytes} onSaved={(b) => setBatch(b)} />}
 
