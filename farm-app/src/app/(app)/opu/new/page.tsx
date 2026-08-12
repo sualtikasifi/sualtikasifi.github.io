@@ -74,6 +74,8 @@ export default function NewOpuBatchPage() {
         maturation_count: null,
         embryo_count: null,
         notes: notes.trim() || null,
+        ai_analysis: null,
+        ai_analysis_generated_at: null,
         created_by: profile?.id ?? null,
       });
       for (const row of validRows) {

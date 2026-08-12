@@ -101,6 +101,28 @@ function drawTable(
   return lastTableEndY(doc, startY);
 }
 
+// Serbest metni (AI analizi gibi) sayfa genisligine gore satirlara boler ve
+// gerektiginde yeni sayfaya gecerek yazar.
+function drawWrappedText(doc: jsPDF, startY: number, text: string, options?: { fontSize?: number }): number {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const maxWidth = pageWidth - MARGIN_X * 2;
+  const fontSize = options?.fontSize ?? 9;
+  const lineHeight = fontSize * 1.35;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(fontSize);
+
+  let cursorY = startY;
+  for (const paragraph of tr(text).split("\n")) {
+    const lines: string[] = paragraph.trim() === "" ? [""] : doc.splitTextToSize(paragraph, maxWidth);
+    for (const line of lines) {
+      cursorY = ensureSpace(doc, cursorY, lineHeight + 10);
+      doc.text(line, MARGIN_X, cursorY);
+      cursorY += lineHeight;
+    }
+  }
+  return cursorY;
+}
+
 export interface OpuBatchPdfInput {
   filename: string;
   batchDateLabel: string;
@@ -110,6 +132,7 @@ export interface OpuBatchPdfInput {
   donorHeaders: string[];
   donorRows: (string | number)[][];
   notes?: string | null;
+  aiAnalysis?: string | null;
 }
 
 export function exportOpuBatchReportToPdf(input: OpuBatchPdfInput): void {
@@ -133,6 +156,12 @@ export function exportOpuBatchReportToPdf(input: OpuBatchPdfInput): void {
 
   cursorY = drawSectionTitle(doc, cursorY, "Donör Bazlı Toplama (Verim)");
   cursorY = drawTable(doc, cursorY, input.donorHeaders, input.donorRows);
+
+  if (input.aiAnalysis) {
+    cursorY = ensureSpace(doc, cursorY, 60) + 26;
+    cursorY = drawSectionTitle(doc, cursorY, "AI OPU Asistan Analizi");
+    cursorY = drawWrappedText(doc, cursorY + 4, input.aiAnalysis);
+  }
 
   if (input.notes) {
     const finalY = cursorY + 22;

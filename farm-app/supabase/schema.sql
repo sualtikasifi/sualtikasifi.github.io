@@ -530,6 +530,12 @@ create table if not exists leave_requests (
 create index if not exists leave_requests_user_idx on leave_requests (user_id);
 create index if not exists leave_requests_date_idx on leave_requests (start_date, end_date);
 
+-- 18. AI OPU Asistan cevabini onbelleklemek icin - donor/maturasyon/embriyo
+-- verisi degisince uygulama bu ikisini null'a ceker (tekrar API cagrisi
+-- yapilmasin diye), kullanici "Yeniden Analiz Et" derse yeniden doldurulur.
+alter table opu_batches add column if not exists ai_analysis text;
+alter table opu_batches add column if not exists ai_analysis_generated_at timestamptz;
+
 -- Row Level Security: giris yapmis herkes okuyabilir, yazma/silme ise
 -- kisiye ozel yetkilere (is_admin veya ilgili can_manage_* alani) bagli.
 

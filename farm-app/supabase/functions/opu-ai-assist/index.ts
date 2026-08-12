@@ -35,6 +35,10 @@ interface DonorInput {
   gradeD: number;
   historicalAvgOocytes: number | null;
   historicalSessionCount: number;
+  // Son 3 OPU seansinda (bugun dahil) hep 2 veya daha az oosit verdiyse true -
+  // client tarafinda kesin sayimla hesaplanir, AI'nin yanlis sayabilecegi bir
+  // sey degildir, sadece bunu vurgulamasi isteniyor.
+  lowYieldStreak: boolean;
 }
 
 interface HistoricalAverages {
@@ -91,7 +95,10 @@ function buildPrompt(input: OpuAiAssistRequest): string {
       d.historicalAvgOocytes != null
         ? `geçmiş ort. ${d.historicalAvgOocytes.toFixed(1)} oosit (${d.historicalSessionCount} kayıt)`
         : "geçmiş kaydı yok";
-    lines.push(`- ${d.earTag}: bugün ${d.oocyteCount} oosit (A${d.gradeA} B${d.gradeB} C${d.gradeC} D${d.gradeD}), ${hist}`);
+    const streak = d.lowYieldStreak ? " [SON 3 SEANSTIR ≤2 OOSİT]" : "";
+    lines.push(
+      `- ${d.earTag}: bugün ${d.oocyteCount} oosit (A${d.gradeA} B${d.gradeB} C${d.gradeC} D${d.gradeD}), ${hist}${streak}`
+    );
   }
   return lines.join("\n");
 }
@@ -151,12 +158,20 @@ Deno.serve(async (req: Request) => {
     const systemPrompt =
       "Sen bir çiftlik yönetim uygulamasında OPU (Ovum Pick-Up) günlerini analiz eden bir veri asistanısın. " +
       "Sana bugünkü OPU gününün donör bazlı ve toplam oosit/kalite verileri, ayrıca geçmiş OPU günlerinin " +
-      "ortalamaları verilecek. Görevin: (1) bugünkü günü 1-2 cümlede özetlemek, (2) toplam oosit sayısını ve " +
-      "kalite dağılımını (A/B/C/D) geçmiş ortalamalarla karşılaştırmak (daha iyi mi kötü mü, yüzde olarak ne " +
-      "kadar fark var), (3) varsa maturasyon ve embriyoya dönüşme oranlarını geçmiş ortalamalarla " +
+      "ortalamaları verilecek.\n\n" +
+      "ÖNEMLİ - kalite notasyonu: Oosit kalitesi A > B > C > D şeklinde sıralanır; A en iyi, D en kötü " +
+      "kalitedir. Bu yüzden A ve B oranının ARTMASI iyi, C ve D oranının ARTMASI kötüdür - C veya D " +
+      "oranının AZALMASI ise her zaman olumlu bir sonuçtur, asla 'kötü' olarak yorumlama. Her kalite " +
+      "harfini bu sıralamaya göre ayrı ayrı değerlendir, tek bir yönde (hep 'artış iyi' ya da hep 'artış " +
+      "kötü') genelleme yapma.\n\n" +
+      "Görevin: (1) bugünkü günü 1-2 cümlede özetlemek, (2) toplam oosit sayısını ve kalite dağılımını " +
+      "(A/B/C/D, yukarıdaki notasyona göre) geçmiş ortalamalarla karşılaştırmak (daha iyi mi kötü mü, yüzde " +
+      "olarak ne kadar fark var), (3) varsa maturasyon ve embriyoya dönüşme oranlarını geçmiş ortalamalarla " +
       "karşılaştırmak, (4) donör bazında öne çıkanları belirtmek - hangi donörler kendi geçmiş ortalamasının " +
-      "belirgin şekilde üstünde ya da altında performans gösterdi. Kısa, net, Türkçe ve madde işaretli yaz. " +
-      "Sadece veriye dayalı gözlem yap, spekülatif nedensellik kurma veya veterinerlik tavsiyesi verme.";
+      "belirgin şekilde üstünde ya da altında performans gösterdi, (5) '[SON 3 SEANSTIR ≤2 OOSİT]' etiketli " +
+      "bir donör varsa, bunu ayrı bir maddede vurgulayıp bu hayvanın donörlükten çıkarılıp çıkarılmayacağının " +
+      "değerlendirilmesini öner. Kısa, net, Türkçe ve madde işaretli yaz. Sadece veriye dayalı gözlem yap, " +
+      "spekülatif nedensellik kurma veya veterinerlik tavsiyesi verme.";
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
