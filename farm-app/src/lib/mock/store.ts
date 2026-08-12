@@ -23,6 +23,7 @@ import {
   MastitisProtocol,
   MastitisTreatment,
   Medicine,
+  OpuAiAssistInput,
   OpuBatch,
   OpuSession,
   PlannedEmbryoTransfer,
@@ -1277,6 +1278,36 @@ export function demoCalfAiAssist(input: CalfAiAssistInput): Promise<string> {
       : "",
     "",
     "⚠️ Bu bir karar destek önerisidir; kesin teşhis ve tedaviye veteriner hekim karar vermelidir.",
+    "",
+    "(Bu, demo modunda üretilen örnek bir cevaptır — gerçek Supabase bağlantısı eklendiğinde OpenRouter'dan gerçek bir analiz gelecektir.)",
+  ].filter(Boolean);
+  return Promise.resolve(lines.join("\n"));
+}
+
+// Demo modda gercek bir Edge Function/OpenRouter cagrisi yapilmaz - akisin
+// nasil gorunecegini gostermek icin sabit, ornek bir cevap dondurulur.
+export function demoOpuAiAssist(input: OpuAiAssistInput): Promise<string> {
+  const avgOocytes = input.donorCount > 0 ? input.totalOocytes / input.donorCount : 0;
+  const histAvg = input.historicalAverages.avgOocytesPerDonor;
+  const diffPct = histAvg && histAvg > 0 ? Math.round(((avgOocytes - histAvg) / histAvg) * 100) : null;
+  const standout = input.donors.find(
+    (d) => d.historicalAvgOocytes != null && Math.abs(d.oocyteCount - d.historicalAvgOocytes) >= 2
+  );
+  const lines = [
+    `${input.batchDate} OPU günü için örnek analiz (demo modu):`,
+    "",
+    `- ${input.donorCount} donörden toplam ${input.totalOocytes} oosit toplandı (donör başı ort. ${avgOocytes.toFixed(1)}).`,
+    diffPct != null
+      ? `- Geçmiş ${input.historicalAverages.batchCount} OPU gününün ortalamasına (${histAvg!.toFixed(1)} oosit/donör) göre ${
+          diffPct >= 0 ? `%${diffPct} daha yüksek` : `%${Math.abs(diffPct)} daha düşük`
+        }.`
+      : "- Karşılaştırılacak geçmiş veri henüz yok.",
+    `- Kalite dağılımı: A ${input.gradeTotals.a} · B ${input.gradeTotals.b} · C ${input.gradeTotals.c} · D ${input.gradeTotals.d}.`,
+    input.maturationRate != null ? `- Maturasyon oranı: %${Math.round(input.maturationRate * 100)}.` : "",
+    input.embryoRate != null ? `- Embriyoya dönüşme oranı: %${Math.round(input.embryoRate * 100)}.` : "",
+    standout
+      ? `- ${standout.earTag}, kendi geçmiş ortalamasına (${standout.historicalAvgOocytes!.toFixed(1)}) göre bugün ${standout.oocyteCount} oosit ile dikkat çekiyor.`
+      : "",
     "",
     "(Bu, demo modunda üretilen örnek bir cevaptır — gerçek Supabase bağlantısı eklendiğinde OpenRouter'dan gerçek bir analiz gelecektir.)",
   ].filter(Boolean);

@@ -80,6 +80,42 @@ export interface CalfAiAssistInput {
   selectedDiagnosis: string;
 }
 
+// AI OPU Asistan (opu-ai-assist Edge Function) istek govdesi.
+export interface OpuAiAssistDonor {
+  earTag: string;
+  oocyteCount: number;
+  gradeA: number;
+  gradeB: number;
+  gradeC: number;
+  gradeD: number;
+  historicalAvgOocytes: number | null;
+  historicalSessionCount: number;
+}
+
+export interface OpuAiAssistHistoricalAverages {
+  batchCount: number;
+  avgOocytesPerDonor: number | null;
+  avgGradeAPct: number | null;
+  avgGradeBPct: number | null;
+  avgGradeCPct: number | null;
+  avgGradeDPct: number | null;
+  avgMaturationRate: number | null;
+  avgEmbryoRate: number | null;
+}
+
+export interface OpuAiAssistInput {
+  batchDate: string;
+  donorCount: number;
+  totalOocytes: number;
+  gradeTotals: { a: number; b: number; c: number; d: number };
+  maturationCount: number | null;
+  maturationRate: number | null;
+  embryoCount: number | null;
+  embryoRate: number | null;
+  donors: OpuAiAssistDonor[];
+  historicalAverages: OpuAiAssistHistoricalAverages;
+}
+
 export interface Animal {
   id: string;
   ear_tag: string;
