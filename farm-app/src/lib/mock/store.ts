@@ -829,7 +829,14 @@ export function demoDeleteCalfFeeding(id: string): void {
 // --- Vardiya devir notlari (demo) ---
 
 export function demoListShiftNotes(): ShiftNote[] {
-  return loadDb().shiftNotes.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const db = loadDb();
+  const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
+  const kept = db.shiftNotes.filter((n) => new Date(n.created_at).getTime() >= cutoff);
+  if (kept.length !== db.shiftNotes.length) {
+    db.shiftNotes = kept;
+    saveDb(db);
+  }
+  return kept.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 export function demoCreateShiftNote(note: string, createdBy: string | null): ShiftNote {

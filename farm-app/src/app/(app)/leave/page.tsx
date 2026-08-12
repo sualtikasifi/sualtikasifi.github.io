@@ -53,6 +53,7 @@ export default function LeaveCalendarPage() {
     return new Date(t.getFullYear(), t.getMonth(), 1);
   });
   const [showForm, setShowForm] = useState(false);
+  const [detailDate, setDetailDate] = useState<string | null>(null);
   const [startDate, setStartDate] = useState(todayIso());
   const [endDate, setEndDate] = useState(todayIso());
   const [note, setNote] = useState("");
@@ -240,17 +241,33 @@ export default function LeaveCalendarPage() {
                 const isCurrentMonth = d.getMonth() === cursor.getMonth();
                 const isToday = dayIso === todayStr;
                 const dayRequests = requestsByDay.get(dayIso) ?? [];
+                const Cell = dayRequests.length > 0 ? "button" : "div";
                 return (
-                  <div
+                  <Cell
                     key={dayIso}
-                    className={`min-h-[62px] rounded-lg border p-1 text-xs ${
+                    type={dayRequests.length > 0 ? "button" : undefined}
+                    onClick={dayRequests.length > 0 ? () => setDetailDate(dayIso) : undefined}
+                    className={`min-h-[62px] rounded-lg border p-1 text-xs ${dayRequests.length > 0 ? "text-left" : ""} ${
                       isCurrentMonth ? "border-neutral-200 bg-white" : "border-neutral-100 bg-neutral-50"
                     } ${isToday ? "ring-2 ring-green-500" : ""}`}
                   >
                     <div className={`text-right font-medium ${isCurrentMonth ? "text-neutral-700" : "text-neutral-300"}`}>
                       {d.getDate()}
                     </div>
-                    <div className="mt-0.5 space-y-0.5">
+                    {/* Mobilde hucreler isim sigdiramayacak kadar dar - sadece
+                        durum rengini gosteren noktalar cizilir, tum isimler
+                        hucreye dokununca acilan pencerede gorunur. sm ve
+                        uzerinde hucreler yeterince genis oldugu icin isimler
+                        dogrudan gosterilir. */}
+                    <div className="mt-0.5 flex flex-wrap justify-end gap-0.5 sm:hidden">
+                      {dayRequests.map((r) => (
+                        <span
+                          key={r.id}
+                          className={`h-2 w-2 rounded-full ${r.status === "onaylandi" ? "bg-green-500" : "bg-amber-500"}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="mt-0.5 hidden space-y-0.5 sm:block">
                       {dayRequests.map((r) => (
                         <div
                           key={r.id}
@@ -261,7 +278,7 @@ export default function LeaveCalendarPage() {
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </Cell>
                 );
               })}
             </div>
@@ -349,6 +366,48 @@ export default function LeaveCalendarPage() {
             </div>
           )}
         </>
+      )}
+
+      {detailDate && (
+        <div
+          className="fixed inset-0 z-20 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+          onClick={() => setDetailDate(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4 shadow-lg sm:max-w-sm sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold capitalize text-neutral-900">
+                {new Date(detailDate + "T00:00:00").toLocaleDateString("tr-TR", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                  weekday: "long",
+                })}
+              </p>
+              <button type="button" onClick={() => setDetailDate(null)} className="text-xs text-neutral-500 underline hover:no-underline">
+                Kapat
+              </button>
+            </div>
+            <div className="space-y-2">
+              {(requestsByDay.get(detailDate) ?? []).map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border border-neutral-100 p-2 text-sm">
+                  <div>
+                    <p className="font-medium text-neutral-900">{nameFor(r.user_id)}</p>
+                    <p className="text-xs text-neutral-500">
+                      {r.start_date === r.end_date ? r.start_date : `${r.start_date} → ${r.end_date}`}
+                      {r.note && ` · ${r.note}`}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[r.status]}`}>
+                    {STATUS_LABELS[r.status]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
