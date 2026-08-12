@@ -1,4 +1,4 @@
-import { Animal, Bull, CalfFeeding, CalfHousingSlot, CalfProtocol, CalfProtocolDay, CalfTreatmentStatus, Embryo, Insemination, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuBatch, OpuSession, Profile, SemenInventory, Task, TaskAnimal } from "@/lib/types";
+import { Animal, Bull, CalfFeeding, CalfHousingSlot, CalfProtocol, CalfProtocolDay, CalfTreatmentStatus, Embryo, Insemination, LeaveRequest, MastitisDose, MastitisProtocol, MastitisTreatment, Medicine, OpuBatch, OpuSession, Profile, SemenInventory, Task, TaskAnimal } from "@/lib/types";
 
 export const DEMO_USER_ID = "demo-user-1";
 
@@ -18,6 +18,7 @@ export const seedProfiles: Profile[] = [
     can_manage_calves: true,
     can_manage_medicines: true,
     can_send_announcements: true,
+    can_approve_leave: true,
     created_at: new Date().toISOString(),
   },
   {
@@ -35,6 +36,7 @@ export const seedProfiles: Profile[] = [
     can_manage_calves: false,
     can_manage_medicines: false,
     can_send_announcements: false,
+    can_approve_leave: true,
     created_at: new Date().toISOString(),
   },
   {
@@ -52,6 +54,7 @@ export const seedProfiles: Profile[] = [
     can_manage_calves: true,
     can_manage_medicines: false,
     can_send_announcements: false,
+    can_approve_leave: false,
     created_at: new Date().toISOString(),
   },
 ];
@@ -945,4 +948,29 @@ export const seedCalfProtocolDays: CalfProtocolDay[] = [
   protocolDay("protocol-mycoplasma", 3, "OKSİTETRASİKLİN-YELDİF-B VİT(10CC)-C VİT-FOSFOVET-GLUTELLAC"),
   protocolDay("protocol-mycoplasma", 4, "B VİT(10CC)-C VİT-FOSFOVET-GLUTELLAC"),
   protocolDay("protocol-mycoplasma", 5, "B VİT(10CC)-C VİT-FOSFOVET-GLUTELLAC"),
+];
+
+export const seedLeaveRequests: LeaveRequest[] = [
+  {
+    id: "leave-1",
+    user_id: "demo-user-3",
+    start_date: daysFromNow(3),
+    end_date: daysFromNow(5),
+    status: "bekliyor",
+    note: "Aile ziyareti",
+    reviewed_by: null,
+    reviewed_at: null,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "leave-2",
+    user_id: "demo-user-2",
+    start_date: daysFromNow(10),
+    end_date: daysFromNow(10),
+    status: "onaylandi",
+    note: null,
+    reviewed_by: "demo-user-1",
+    reviewed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  },
 ];

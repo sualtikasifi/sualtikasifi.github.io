@@ -17,6 +17,7 @@ import {
   CourseStatus,
   Embryo,
   Insemination,
+  LeaveRequest,
   MastitisDose,
   MastitisProtocol,
   MastitisTreatment,
@@ -44,6 +45,7 @@ import {
   seedCalfTreatmentStatuses,
   seedEmbryos,
   seedInseminations,
+  seedLeaveRequests,
   seedMastitisDoses,
   seedMastitisProtocols,
   seedMastitisTreatments,
@@ -89,6 +91,7 @@ interface DemoDb {
   calfPectolitCourses: CalfPectolitCourse[];
   vaccinationPlans: VaccinationPlan[];
   pushSubscriptions: PushSubscriptionRecord[];
+  leaveRequests: LeaveRequest[];
 }
 
 function initialDb(): DemoDb {
@@ -122,6 +125,7 @@ function initialDb(): DemoDb {
     calfPectolitCourses: [],
     vaccinationPlans: [],
     pushSubscriptions: [],
+    leaveRequests: seedLeaveRequests,
   };
 }
 
@@ -166,6 +170,7 @@ function loadDb(): DemoDb {
     calfPectolitCourses: parsed.calfPectolitCourses ?? [],
     vaccinationPlans: parsed.vaccinationPlans ?? [],
     pushSubscriptions: parsed.pushSubscriptions ?? [],
+    leaveRequests: parsed.leaveRequests ?? seedLeaveRequests,
   };
 }
 
@@ -1245,4 +1250,42 @@ export function demoDeletePushSubscriptionByEndpoint(endpoint: string): void {
 export function demoSendPushNotification(title: string, body: string): void {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   new Notification(title, { body, icon: "/icons/icon-192.png" });
+}
+
+// --- Leave requests (demo) ---
+
+export function demoListLeaveRequests(): LeaveRequest[] {
+  return loadDb().leaveRequests.sort((a, b) => a.start_date.localeCompare(b.start_date));
+}
+
+export function demoCreateLeaveRequest(
+  input: Omit<LeaveRequest, "id" | "status" | "reviewed_by" | "reviewed_at" | "created_at">
+): LeaveRequest {
+  const db = loadDb();
+  const request: LeaveRequest = {
+    ...input,
+    id: newId("leave"),
+    status: "bekliyor",
+    reviewed_by: null,
+    reviewed_at: null,
+    created_at: new Date().toISOString(),
+  };
+  db.leaveRequests.push(request);
+  saveDb(db);
+  return request;
+}
+
+export function demoUpdateLeaveRequest(id: string, patch: Partial<LeaveRequest>): LeaveRequest | undefined {
+  const db = loadDb();
+  const idx = db.leaveRequests.findIndex((r) => r.id === id);
+  if (idx === -1) return undefined;
+  db.leaveRequests[idx] = { ...db.leaveRequests[idx], ...patch };
+  saveDb(db);
+  return db.leaveRequests[idx];
+}
+
+export function demoDeleteLeaveRequest(id: string): void {
+  const db = loadDb();
+  db.leaveRequests = db.leaveRequests.filter((r) => r.id !== id);
+  saveDb(db);
 }

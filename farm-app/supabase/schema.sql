@@ -510,6 +510,26 @@ create table if not exists push_subscriptions (
 
 create index if not exists push_subscriptions_profile_idx on push_subscriptions (profile_id);
 
+-- 17. Izin talep takvimi: bir calisan bir tarih araligi icin izin talep
+-- eder (status='bekliyor', sari gorunur), can_approve_leave yetkisi olan
+-- biri onaylar (status='onaylandi', yesil gorunur) ya da reddeder.
+alter table profiles add column if not exists can_approve_leave boolean not null default false;
+
+create table if not exists leave_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles (id) on delete cascade,
+  start_date date not null,
+  end_date date not null check (end_date >= start_date),
+  status text not null default 'bekliyor' check (status in ('bekliyor', 'onaylandi', 'reddedildi')),
+  note text,
+  reviewed_by uuid references profiles (id),
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists leave_requests_user_idx on leave_requests (user_id);
+create index if not exists leave_requests_date_idx on leave_requests (start_date, end_date);
+
 -- Row Level Security: giris yapmis herkes okuyabilir, yazma/silme ise
 -- kisiye ozel yetkilere (is_admin veya ilgili can_manage_* alani) bagli.
 
@@ -544,6 +564,7 @@ as $$
       when 'calves' then can_manage_calves
       when 'medicines' then can_manage_medicines
       when 'announcements' then can_send_announcements
+      when 'approve_leave' then can_approve_leave
       else false
     end
     from profiles where id = auth.uid()),
@@ -576,6 +597,7 @@ begin
     new.can_manage_calves := old.can_manage_calves;
     new.can_manage_medicines := old.can_manage_medicines;
     new.can_send_announcements := old.can_send_announcements;
+    new.can_approve_leave := old.can_approve_leave;
   end if;
   return new;
 end;
@@ -638,6 +660,7 @@ alter table calf_pectolit_courses enable row level security;
 alter table vaccination_plans enable row level security;
 alter table task_animals enable row level security;
 alter table push_subscriptions enable row level security;
+alter table leave_requests enable row level security;
 
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_update_own" on profiles for update to authenticated using (auth.uid() = id);
@@ -794,6 +817,11 @@ create policy "push_subscriptions_select" on push_subscriptions for select to au
 create policy "push_subscriptions_insert" on push_subscriptions for insert to authenticated with check (profile_id = auth.uid());
 create policy "push_subscriptions_update" on push_subscriptions for update to authenticated using (profile_id = auth.uid());
 create policy "push_subscriptions_delete" on push_subscriptions for delete to authenticated using (profile_id = auth.uid());
+
+create policy "leave_requests_select" on leave_requests for select to authenticated using (true);
+create policy "leave_requests_insert" on leave_requests for insert to authenticated with check (user_id = auth.uid());
+create policy "leave_requests_update" on leave_requests for update to authenticated using (user_id = auth.uid() or has_perm('approve_leave'));
+create policy "leave_requests_delete" on leave_requests for delete to authenticated using (user_id = auth.uid() or has_perm('approve_leave'));
 
 -- Gorev fotograflari (referans + tamamlama kaniti) icin storage bucket'i.
 -- Public bucket: link tahmin edilemez (rastgele dosya adi) oldugu icin yeterli,
