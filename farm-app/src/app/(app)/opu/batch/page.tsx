@@ -61,8 +61,8 @@ function OpuBatchContent() {
   const [savingTechnician, setSavingTechnician] = useState(false);
 
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiResult, setAiResult] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiExpanded, setAiExpanded] = useState(false);
 
   function refresh() {
     if (!id) return Promise.resolve();
@@ -128,9 +128,11 @@ function OpuBatchContent() {
         notes: null,
         created_by: profile?.id ?? null,
       });
+      await updateOpuBatch(batch!.id, { ai_analysis: null, ai_analysis_generated_at: null });
       setAddDonorId(null);
       setAddOocyteCount("");
       setShowAddDonor(false);
+      setAiExpanded(false);
       await refresh();
     } finally {
       setAddSubmitting(false);
@@ -139,6 +141,8 @@ function OpuBatchContent() {
 
   async function handleRemoveDonor(sessionId: string) {
     await deleteOpuSession(sessionId);
+    await updateOpuBatch(batch!.id, { ai_analysis: null, ai_analysis_generated_at: null });
+    setAiExpanded(false);
     await refresh();
   }
 
@@ -180,6 +184,7 @@ function OpuBatchContent() {
           s.oocyte_grade_d ?? 0,
         ]),
         notes: batch!.notes,
+        aiAnalysis: batch!.ai_analysis,
       });
     } finally {
       setExporting(false);
@@ -189,7 +194,6 @@ function OpuBatchContent() {
   async function handleAiAssist() {
     setAiLoading(true);
     setAiError(null);
-    setAiResult(null);
     try {
       const [allBatches, allSessions] = await Promise.all([listOpuBatches(), listOpuSessions()]);
       const historicalBatches = allBatches.filter((b) => b.id !== batch!.id);
@@ -223,6 +227,15 @@ function OpuBatchContent() {
         return { avg: total / past.length, count: past.length };
       };
 
+      // Son 3 seansta (bugun dahil) hep 2 veya daha az oosit verdiyse, AI'ye
+      // bu donorun donorlukten cikarilmasini degerlendirmesi icin vurgulatiyoruz.
+      const lowYieldStreakFor = (animalId: string): boolean => {
+        const today = sessions.filter((s) => s.donor_animal_id === animalId);
+        const past = historicalSessions.filter((s) => s.donor_animal_id === animalId);
+        const last3 = [...today, ...past].sort((a, b) => b.session_date.localeCompare(a.session_date)).slice(0, 3);
+        return last3.length === 3 && last3.every((s) => (s.oocyte_count ?? 0) <= 2);
+      };
+
       const input: OpuAiAssistInput = {
         batchDate: formatDate(batch!.batch_date),
         donorCount: sessions.length,
@@ -244,6 +257,7 @@ function OpuBatchContent() {
             gradeD: s.oocyte_grade_d ?? 0,
             historicalAvgOocytes: hist.avg,
             historicalSessionCount: hist.count,
+            lowYieldStreak: lowYieldStreakFor(s.donor_animal_id),
           };
         }),
         historicalAverages: {
@@ -258,9 +272,16 @@ function OpuBatchContent() {
         },
       };
 
-      setAiResult(await requestOpuAiAssist(input));
+      const answer = await requestOpuAiAssist(input);
+      const updated = await updateOpuBatch(batch!.id, {
+        ai_analysis: answer,
+        ai_analysis_generated_at: new Date().toISOString(),
+      });
+      if (updated) setBatch(updated);
+      setAiExpanded(true);
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Bir hata oluştu, tekrar deneyin.");
+      setAiExpanded(true);
     } finally {
       setAiLoading(false);
     }
@@ -281,11 +302,17 @@ function OpuBatchContent() {
             </button>
             <button
               type="button"
-              onClick={handleAiAssist}
+              onClick={() => (batch.ai_analysis ? setAiExpanded((v) => !v) : handleAiAssist())}
               disabled={aiLoading || sessions.length === 0}
               className="rounded-lg border border-purple-300 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 shadow-sm transition-all hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {aiLoading ? "Analiz ediliyor..." : "🤖 AI OPU Asistan"}
+              {aiLoading
+                ? "Analiz ediliyor..."
+                : batch.ai_analysis
+                  ? aiExpanded
+                    ? "🤖 AI Analizini Gizle"
+                    : "🤖 AI Analizini Gör"
+                  : "🤖 AI OPU Asistan"}
             </button>
             {canManage && (
               <button
@@ -373,15 +400,29 @@ function OpuBatchContent() {
         </div>
       )}
 
-      {(aiLoading || aiError || aiResult) && (
+      {(aiLoading || aiError || (aiExpanded && batch.ai_analysis)) && (
         <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-4 shadow-sm">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-purple-700">🤖 AI OPU Asistan</p>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-purple-700">🤖 AI OPU Asistan</p>
+            {batch.ai_analysis && !aiLoading && (
+              <button type="button" onClick={handleAiAssist} className="text-xs font-medium text-purple-700 hover:underline">
+                🔄 Yeniden Analiz Et
+              </button>
+            )}
+          </div>
           {aiLoading && <p className="text-sm text-neutral-500">Analiz ediliyor...</p>}
           {aiError && <p className="text-sm text-red-600">{aiError}</p>}
-          {aiResult && (
-            <div className="whitespace-pre-wrap rounded-md border border-purple-200 bg-white p-3 text-sm leading-relaxed text-neutral-800">
-              {aiResult}
-            </div>
+          {!aiLoading && aiExpanded && batch.ai_analysis && (
+            <>
+              <div className="whitespace-pre-wrap rounded-md border border-purple-200 bg-white p-3 text-sm leading-relaxed text-neutral-800">
+                {batch.ai_analysis}
+              </div>
+              {batch.ai_analysis_generated_at && (
+                <p className="mt-1 text-[11px] text-neutral-400">
+                  Oluşturulma: {new Date(batch.ai_analysis_generated_at).toLocaleString("tr-TR")}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -509,6 +550,8 @@ function StageForm({
     const updated = await updateOpuBatch(batch.id, {
       maturation_count: toNullableNumber(maturationCount),
       embryo_count: toNullableNumber(embryoCount),
+      ai_analysis: null,
+      ai_analysis_generated_at: null,
     });
     if (updated) onSaved(updated);
     setSaving(false);

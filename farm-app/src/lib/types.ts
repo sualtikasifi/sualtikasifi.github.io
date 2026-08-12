@@ -90,6 +90,7 @@ export interface OpuAiAssistDonor {
   gradeD: number;
   historicalAvgOocytes: number | null;
   historicalSessionCount: number;
+  lowYieldStreak: boolean;
 }
 
 export interface OpuAiAssistHistoricalAverages {
@@ -266,6 +267,11 @@ export interface OpuBatch {
   maturation_count: number | null;
   embryo_count: number | null;
   notes: string | null;
+  // AI OPU Asistan cevabi tekrar tekrar uretilmesin diye burada saklanir;
+  // donor/maturasyon/embriyo verisi degisince cagiran kod bu ikisini null'a
+  // cekip onbellegi gecersiz kilar.
+  ai_analysis: string | null;
+  ai_analysis_generated_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
