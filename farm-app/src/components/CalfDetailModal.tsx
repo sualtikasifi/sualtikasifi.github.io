@@ -83,6 +83,9 @@ interface Props {
   }) => Promise<void>;
   onUnassign: () => Promise<void>;
   onMove: (targetSlotId: string) => Promise<void>;
+  // Modali kapatip ana ekranda "tasima modu"nu baslatir - kullanici
+  // ardindan hedef kulubeye dokunur.
+  onStartMove: () => void;
   onStartCourse: (protocolId: string, startDate: string) => Promise<void>;
   onSetCourseStatus: (courseId: string, status: "tamamlandi" | "iptal") => Promise<void>;
   onAddTreatment: (input: {
@@ -130,6 +133,7 @@ export function CalfDetailModal({
   onCreateAndAssign,
   onUnassign,
   onMove,
+  onStartMove,
   onStartCourse,
   onSetCourseStatus,
   onAddTreatment,
@@ -440,14 +444,23 @@ export function CalfDetailModal({
                 </Link>
               </div>
               {canManage && (
-                <button
-                  type="button"
-                  onClick={() => run(onUnassign)}
-                  disabled={busy}
-                  className="text-xs font-medium text-red-600 hover:underline disabled:opacity-60"
-                >
-                  Kulübeden çıkar
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={onStartMove}
+                    className="text-xs font-medium text-blue-600 hover:underline"
+                  >
+                    Taşı
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => run(onUnassign)}
+                    disabled={busy}
+                    className="text-xs font-medium text-red-600 hover:underline disabled:opacity-60"
+                  >
+                    Kulübeden çıkar
+                  </button>
+                </div>
               )}
             </div>
 

@@ -739,6 +739,11 @@ export async function deleteCalfFeeding(id: string): Promise<void> {
 
 export async function listShiftNotes(): Promise<ShiftNote[]> {
   if (isDemoMode) return mock.demoListShiftNotes();
+  // Vardiya devir notlari 3 gunden eski olunca kendiliginden temizlenir; bu
+  // en iyi-caba bir silme oldugu icin (silme yetkisi olmayan kullanicilarda
+  // RLS engelleyebilir) hatasi listelemeyi bozmasin diye sonucu yok sayiyoruz.
+  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase!.from("shift_notes").delete().lt("created_at", cutoff);
   return fetchAllPages<ShiftNote>((from, to) =>
     supabase!.from("shift_notes").select("*", { count: "exact" }).order("created_at", { ascending: false }).range(from, to)
   );
