@@ -89,7 +89,7 @@ export function CalfSlotBox({
         e.preventDefault();
         onDropOnSlot();
       }}
-      className={`relative flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border p-1 text-center shadow-sm transition-colors ${colorClasses} ${
+      className={`relative flex shrink-0 select-none flex-col items-center justify-center gap-0.5 rounded-md border p-1 text-center shadow-sm transition-colors [-webkit-touch-callout:none] ${colorClasses} ${
         selected ? "ring-2 ring-offset-1 ring-green-700" : ""
       } ${className ?? "h-14 w-14"}`}
     >
