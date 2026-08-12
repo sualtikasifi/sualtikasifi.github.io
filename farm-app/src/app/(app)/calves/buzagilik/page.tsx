@@ -27,6 +27,7 @@ export default function BuzagilikPage() {
   const [mealSelection, setMealSelection] = useState<Set<string>>(new Set());
   const [marking, setMarking] = useState(false);
   const [dragSlotId, setDragSlotId] = useState<string | null>(null);
+  const [moveSourceSlotId, setMoveSourceSlotId] = useState<string | null>(null);
 
   const columns = Array.from({ length: COLUMN_COUNT }, (_, g) =>
     care.slots.filter((s) => s.group_index === g).sort((a, b) => a.slot_index - b.slot_index)
@@ -42,6 +43,11 @@ export default function BuzagilikPage() {
   const examPendingCount = occupied.filter((s) => care.unexaminedMissedFor(s.animal_id!).length > 0).length;
 
   function handleBoxClick(slot: CalfHousingSlot) {
+    if (moveSourceSlotId) {
+      if (slot.id !== moveSourceSlotId) care.handleMove(moveSourceSlotId, slot.id);
+      setMoveSourceSlotId(null);
+      return;
+    }
     if (entryMeal) {
       if (!slot.animal_id) return;
       setMealSelection((prev) => {
@@ -101,12 +107,13 @@ export default function BuzagilikPage() {
                 selectedSlotId === slot.id || !!(entryMeal && slot.animal_id && mealSelection.has(slot.animal_id))
               }
               onClick={() => handleBoxClick(slot)}
-              draggable={canManage && !entryMeal}
+              draggable={canManage && !entryMeal && !moveSourceSlotId}
               onDragStartSlot={() => setDragSlotId(slot.id)}
               onDropOnSlot={() => {
                 if (dragSlotId && dragSlotId !== slot.id) care.handleMove(dragSlotId, slot.id);
                 setDragSlotId(null);
               }}
+              moveTarget={!!moveSourceSlotId}
               className="h-[52px] w-full shrink-0"
             />
           ))}
@@ -170,6 +177,15 @@ export default function BuzagilikPage() {
             <h2 className="text-sm font-semibold text-neutral-800">
               Buzağılık Odası
               {entryMeal && <span className="ml-2 font-normal text-amber-700">(öğün işaretleme modu)</span>}
+              {moveSourceSlotId && (
+                <span className="ml-2 font-normal text-blue-700">
+                  (taşıma modu — hedef kulübeye dokunun ·{" "}
+                  <button type="button" onClick={() => setMoveSourceSlotId(null)} className="underline hover:no-underline">
+                    Vazgeç
+                  </button>
+                  )
+                </span>
+              )}
             </h2>
             <p className="text-xs text-neutral-500">
               Dolu: <span className="font-semibold text-neutral-800">{occupied.length}/{COLUMN_COUNT * HUTS_PER_COLUMN}</span>
@@ -186,7 +202,7 @@ export default function BuzagilikPage() {
           <p className="mt-2 text-[11px] leading-relaxed text-neutral-400">
             Kırmızı çerçeve: tedavide (üstte protokol adı) · Noktalar: son 5 öğün, soldan en yeni (yeşil içti, kırmızı
             içmedi, sarı Pectolit) · Yanıp sönen sarı nokta: Pectolit içecek · Kırmızı ünlem: muayene bekliyor · Sarı
-            ünlem: aktif not var · Taşımak için kulübeyi sürükleyip bırakın.
+            ünlem: aktif not var · Taşımak için kulübeyi sürükleyip bırakın ya da açıp &ldquo;Taşı&rdquo;ya basıp hedefe dokunun.
           </p>
         </div>
       )}
@@ -221,6 +237,10 @@ export default function BuzagilikPage() {
           }}
           onMove={async (targetSlotId) => {
             await care.handleMove(selectedSlot.id, targetSlotId);
+            setSelectedSlotId(null);
+          }}
+          onStartMove={() => {
+            setMoveSourceSlotId(selectedSlot.id);
             setSelectedSlotId(null);
           }}
           onStartCourse={(protocolId, startDate) =>

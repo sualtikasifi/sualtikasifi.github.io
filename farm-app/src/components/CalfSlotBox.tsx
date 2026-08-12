@@ -23,6 +23,9 @@ interface Props {
   draggable?: boolean;
   onDragStartSlot?: () => void;
   onDropOnSlot?: () => void;
+  // Tasima modu aktifken (bkz. "Tasi" butonu) her kutucukta gorunen,
+  // "buraya dokunarak tasi" isaretini gosterir.
+  moveTarget?: boolean;
   className?: string;
 }
 
@@ -50,6 +53,7 @@ export function CalfSlotBox({
   draggable,
   onDragStartSlot,
   onDropOnSlot,
+  moveTarget,
   className,
 }: Props) {
   const colorClasses = !animal
@@ -91,8 +95,16 @@ export function CalfSlotBox({
       }}
       className={`relative flex shrink-0 select-none flex-col items-center justify-center gap-0.5 rounded-md border p-1 text-center shadow-sm transition-colors [-webkit-touch-callout:none] ${colorClasses} ${
         selected ? "ring-2 ring-offset-1 ring-green-700" : ""
-      } ${className ?? "h-14 w-14"}`}
+      } ${moveTarget ? "ring-2 ring-offset-1 ring-blue-500" : ""} ${className ?? "h-14 w-14"}`}
     >
+      {moveTarget && (
+        <span
+          title="Buraya taşı"
+          className="absolute -left-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold leading-none text-white shadow"
+        >
+          ⇄
+        </span>
+      )}
       {animal && (alertExam || alertNote || alertPectolitResponse || alertAntibiotic) && (
         <span className="absolute -right-1 -top-1 flex flex-wrap justify-end gap-0.5" style={{ maxWidth: 28 }}>
           {alertAntibiotic && (
