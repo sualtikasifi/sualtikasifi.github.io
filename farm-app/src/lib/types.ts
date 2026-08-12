@@ -51,6 +51,35 @@ export interface LeaveRequest {
   created_at: string;
 }
 
+// AI Sağlık Asistanı (ai-assist Edge Function) istek gövdesi - veritabani
+// tablosu degil, sadece client<->fonksiyon arasindaki sozlesme.
+export interface CalfAiAssistTreatmentLog {
+  date: string;
+  protocolDay: number | null;
+  description: string;
+  note: string | null;
+}
+
+export interface CalfAiAssistCourse {
+  protocolName: string;
+  startDate: string;
+  status: string;
+  logs: CalfAiAssistTreatmentLog[];
+}
+
+export interface CalfAiAssistInput {
+  earTag: string;
+  ageDays: number | null;
+  birthDate: string | null;
+  bloodBrix: number | null;
+  colostrum1Liters: number | null;
+  colostrum1Brix: number | null;
+  colostrum2Liters: number | null;
+  colostrum2Brix: number | null;
+  treatmentHistory: CalfAiAssistCourse[];
+  selectedDiagnosis: string;
+}
+
 export interface Animal {
   id: string;
   ear_tag: string;

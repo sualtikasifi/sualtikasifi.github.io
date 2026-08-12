@@ -1,6 +1,7 @@
 import {
   Animal,
   Bull,
+  CalfAiAssistInput,
   CalfBirthRecord,
   CalfFeeding,
   CalfHousingSlot,
@@ -1257,6 +1258,29 @@ export function demoDeletePushSubscriptionByEndpoint(endpoint: string): void {
 export function demoSendPushNotification(title: string, body: string): void {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   new Notification(title, { body, icon: "/icons/icon-192.png" });
+}
+
+// Demo modda gercek bir Edge Function/OpenRouter cagrisi yapilmaz - akisin
+// nasil gorunecegini gostermek icin sabit, ornek bir cevap dondurulur.
+export function demoCalfAiAssist(input: CalfAiAssistInput): Promise<string> {
+  const triedProtocols = input.treatmentHistory.map((c) => c.protocolName);
+  const lines = [
+    `${input.earTag} için "${input.selectedDiagnosis}" teşhisine dair örnek analiz (demo modu):`,
+    "",
+    `- Yaş: ${input.ageDays ?? "-"} günlük, kan Brix: ${input.bloodBrix ?? "ölçülmemiş"}.`,
+    triedProtocols.length > 0
+      ? `- Daha önce denenmiş: ${triedProtocols.join(", ")} — bunları tekrar önermiyorum.`
+      : "- Daha önce bu hayvana uygulanmış bir tedavi kaydı yok.",
+    "- Önerilen: uygulamadaki protokollerden daha önce denenmemiş, teşhise uygun bir protokolle başlayın.",
+    input.colostrum1Brix != null && input.colostrum1Brix < 22
+      ? "- Kolostrum Brix değeri düşük görünüyor, pasif bağışıklık yetersizliği riskine karşı yakından izleyin."
+      : "",
+    "",
+    "⚠️ Bu bir karar destek önerisidir; kesin teşhis ve tedaviye veteriner hekim karar vermelidir.",
+    "",
+    "(Bu, demo modunda üretilen örnek bir cevaptır — gerçek Supabase bağlantısı eklendiğinde OpenRouter'dan gerçek bir analiz gelecektir.)",
+  ].filter(Boolean);
+  return Promise.resolve(lines.join("\n"));
 }
 
 // --- Leave requests (demo) ---

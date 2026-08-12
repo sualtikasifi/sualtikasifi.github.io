@@ -276,6 +276,11 @@ export default function IgloPage() {
           onClearLegacyStatus={() =>
             selectedSlot.animal_id ? care.handleClearLegacyStatus(selectedSlot.animal_id) : Promise.resolve()
           }
+          onAiAssist={(diagnosis) =>
+            selectedSlot.animal_id
+              ? care.requestAiAssistFor(selectedSlot.animal_id, diagnosis)
+              : Promise.reject(new Error("Hayvan seçili değil"))
+          }
           onClose={() => setSelectedSlotId(null)}
         />
       )}

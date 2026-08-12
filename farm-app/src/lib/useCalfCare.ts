@@ -23,6 +23,7 @@ import {
   listCalfTreatments,
   listCalfTreatmentStatuses,
   replaceCalfProtocolDays,
+  requestCalfAiAssist,
   setCalfMealExam,
   setCalfTreatmentCourseStatus,
   setCalfTreatmentStatus,
@@ -34,6 +35,7 @@ import {
 import {
   Animal,
   AnimalGender,
+  CalfAiAssistCourse,
   CalfBirthRecord,
   CalfHousingSlot,
   CalfHousingStructure,
@@ -162,6 +164,47 @@ export function useCalfCare(structure: CalfHousingStructure) {
     if (!born) return null;
     const diff = Math.floor((Date.now() - new Date(born).getTime()) / 86400000);
     return diff >= 0 ? diff : null;
+  };
+  // Hayvanin tum tedavi gecmisini + dogum/kolostrum/kan brix bilgilerini
+  // AI Sağlık Asistanı icin tek bir istege paketler.
+  const requestAiAssistFor = (animalId: string, diagnosis: string): Promise<string> => {
+    const animal = animalById(animalId);
+    const birthRecord = birthRecordFor(animalId);
+    const animalTreatments = treatmentsFor(animalId);
+    const treatmentHistory: CalfAiAssistCourse[] = coursesFor(animalId).map((c) => ({
+      protocolName: protocols.find((p) => p.id === c.protocol_id)?.name ?? "Bilinmeyen protokol",
+      startDate: c.start_date,
+      status: c.status,
+      logs: animalTreatments
+        .filter((t) => t.course_id === c.id)
+        .map((t) => ({ date: t.treatment_date, protocolDay: t.protocol_day, description: t.description, note: t.note })),
+    }));
+    const looseTreatments = animalTreatments.filter((t) => !t.course_id);
+    if (looseTreatments.length > 0) {
+      treatmentHistory.push({
+        protocolName: "Diğer / bağımsız kayıtlar",
+        startDate: looseTreatments[0].treatment_date,
+        status: "-",
+        logs: looseTreatments.map((t) => ({
+          date: t.treatment_date,
+          protocolDay: t.protocol_day,
+          description: t.description,
+          note: t.note,
+        })),
+      });
+    }
+    return requestCalfAiAssist({
+      earTag: animal?.ear_tag ?? "?",
+      ageDays: ageDaysFor(animalId),
+      birthDate: birthRecord?.born_at ?? animal?.birth_date ?? null,
+      bloodBrix: birthRecord?.blood_brix ?? null,
+      colostrum1Liters: birthRecord?.colostrum1_liters ?? null,
+      colostrum1Brix: birthRecord?.colostrum1_brix ?? null,
+      colostrum2Liters: birthRecord?.colostrum2_liters ?? null,
+      colostrum2Brix: birthRecord?.colostrum2_brix ?? null,
+      treatmentHistory,
+      selectedDiagnosis: diagnosis,
+    });
   };
   const activePectolitCourseFor = (animalId: string) =>
     pectolitCourses.find((c) => c.animal_id === animalId && c.status === "aktif");
@@ -447,6 +490,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
     coursesFor,
     birthRecordFor,
     ageDaysFor,
+    requestAiAssistFor,
     activePectolitCourseFor,
     pectolitCoursesFor,
     notesFor,

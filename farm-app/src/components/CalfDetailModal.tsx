@@ -108,6 +108,7 @@ interface Props {
     days: { day_number: number; medicines: string }[]
   ) => Promise<void>;
   onClearLegacyStatus: () => Promise<void>;
+  onAiAssist: (diagnosis: string) => Promise<string>;
   onClose: () => void;
 }
 
@@ -146,6 +147,7 @@ export function CalfDetailModal({
   onMealExam,
   onSaveProtocol,
   onClearLegacyStatus,
+  onAiAssist,
   onClose,
 }: Props) {
   const { profile } = useAuth();
@@ -185,6 +187,28 @@ export function CalfDetailModal({
   const [editingProtocolId, setEditingProtocolId] = useState<string | null>(null);
   const [protocolNameDraft, setProtocolNameDraft] = useState("");
   const [protocolDaysDraft, setProtocolDaysDraft] = useState<string[]>([]);
+
+  const [showAiAssist, setShowAiAssist] = useState(false);
+  const [aiDiagnosis, setAiDiagnosis] = useState<string | null>(null);
+  const [aiCustomDiagnosis, setAiCustomDiagnosis] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  async function handleAiAnalyze() {
+    const diagnosis = aiDiagnosis === "__other__" ? aiCustomDiagnosis.trim() : aiDiagnosis;
+    if (!diagnosis) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiResult(null);
+    try {
+      setAiResult(await onAiAssist(diagnosis));
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Bir hata oluştu, tekrar deneyin.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   function openProtocolEditor(protocolId: string | null) {
     if (protocolId) {
@@ -724,7 +748,65 @@ export function CalfDetailModal({
 
             {/* Tedavi */}
             <div className="space-y-2 rounded-lg border border-neutral-200 p-3">
-              <p className="text-xs font-semibold text-neutral-700">Tedavi</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-neutral-700">Tedavi</p>
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAiAssist((v) => !v)}
+                    className="text-xs font-medium text-purple-600 hover:underline"
+                  >
+                    🤖 AI Sağlık Asistanı
+                  </button>
+                )}
+              </div>
+
+              {showAiAssist && canManage && (
+                <div className="space-y-2 rounded-md border border-purple-200 bg-purple-50/50 p-2">
+                  <p className="text-xs font-medium text-neutral-700">Teşhis seçin:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {protocols.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setAiDiagnosis(p.name)}
+                        className={`chip ${aiDiagnosis === p.name ? "chip-selected" : "chip-unselected"}`}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setAiDiagnosis("__other__")}
+                      className={`chip ${aiDiagnosis === "__other__" ? "chip-selected" : "chip-unselected"}`}
+                    >
+                      Diğer
+                    </button>
+                  </div>
+                  {aiDiagnosis === "__other__" && (
+                    <input
+                      value={aiCustomDiagnosis}
+                      onChange={(e) => setAiCustomDiagnosis(e.target.value)}
+                      placeholder="Teşhisi yazın"
+                      className="input"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAiAnalyze}
+                    disabled={aiLoading || !aiDiagnosis || (aiDiagnosis === "__other__" && !aiCustomDiagnosis.trim())}
+                    className="btn-primary"
+                  >
+                    {aiLoading ? "Analiz ediliyor..." : "Analiz Et"}
+                  </button>
+                  {aiError && <p className="text-xs text-red-600">{aiError}</p>}
+                  {aiResult && (
+                    <div className="whitespace-pre-wrap rounded-md border border-purple-200 bg-white p-2 text-xs leading-relaxed text-neutral-800">
+                      {aiResult}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {legacyStatus?.under_treatment && !activeCourse && (
                 <div className="flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-2 py-1.5">
