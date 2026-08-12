@@ -13,6 +13,7 @@ const links = [
   { href: "/opu", label: "OPU/Embriyo", icon: "🧬" },
   { href: "/tasks", label: "Görevler", icon: "✅" },
   { href: "/medicines", label: "İlaç Stoğu", icon: "💊" },
+  { href: "/leave", label: "İzin Takvimi", icon: "🗓️" },
 ];
 
 export function NavBar() {

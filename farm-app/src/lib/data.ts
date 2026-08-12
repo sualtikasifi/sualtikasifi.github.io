@@ -19,6 +19,7 @@ import {
   CourseStatus,
   Embryo,
   Insemination,
+  LeaveRequest,
   MastitisDose,
   MastitisProtocol,
   MastitisTreatment,
@@ -1213,5 +1214,40 @@ export async function sendPushNotification(input: {
     return;
   }
   const { error } = await supabase!.functions.invoke("send-push", { body: input });
+  if (error) throw error;
+}
+
+// --- Leave requests ---
+
+export async function listLeaveRequests(): Promise<LeaveRequest[]> {
+  if (isDemoMode) return mock.demoListLeaveRequests();
+  return fetchAllPages<LeaveRequest>((from, to) =>
+    supabase!.from("leave_requests").select("*", { count: "exact" }).order("start_date", { ascending: true }).range(from, to)
+  );
+}
+
+export async function createLeaveRequest(
+  input: Omit<LeaveRequest, "id" | "status" | "reviewed_by" | "reviewed_at" | "created_at">
+): Promise<LeaveRequest> {
+  if (isDemoMode) return mock.demoCreateLeaveRequest(input);
+  const { data, error } = await supabase!
+    .from("leave_requests")
+    .insert({ ...input, status: "bekliyor", reviewed_by: null, reviewed_at: null })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as LeaveRequest;
+}
+
+export async function updateLeaveRequest(id: string, patch: Partial<LeaveRequest>): Promise<LeaveRequest | undefined> {
+  if (isDemoMode) return mock.demoUpdateLeaveRequest(id, patch);
+  const { data, error } = await supabase!.from("leave_requests").update(patch).eq("id", id).select().single();
+  if (error) throw error;
+  return data as LeaveRequest;
+}
+
+export async function deleteLeaveRequest(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteLeaveRequest(id);
+  const { error } = await supabase!.from("leave_requests").delete().eq("id", id);
   if (error) throw error;
 }

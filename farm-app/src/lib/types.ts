@@ -18,6 +18,8 @@ export type EmbryoStage =
   | "yumurtadan_cikan_blastosist";
 export type EmbryoStatus = "gelisiyor" | "dondu" | "transfer_edildi" | "atildi";
 
+export type LeaveStatus = "bekliyor" | "onaylandi" | "reddedildi";
+
 export interface Profile {
   id: string;
   full_name: string;
@@ -33,6 +35,19 @@ export interface Profile {
   can_manage_calves: boolean;
   can_manage_medicines: boolean;
   can_send_announcements: boolean;
+  can_approve_leave: boolean;
+  created_at: string;
+}
+
+export interface LeaveRequest {
+  id: string;
+  user_id: string;
+  start_date: string;
+  end_date: string;
+  status: LeaveStatus;
+  note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   created_at: string;
 }
 

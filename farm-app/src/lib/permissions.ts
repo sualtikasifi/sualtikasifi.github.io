@@ -8,7 +8,8 @@ export type PermissionKey =
   | "can_manage_opu"
   | "can_manage_calves"
   | "can_manage_medicines"
-  | "can_send_announcements";
+  | "can_send_announcements"
+  | "can_approve_leave";
 
 export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   can_manage_animals: "Hayvan kayıtları (ekleme, içe aktarma)",
@@ -19,6 +20,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   can_manage_calves: "Buzağı besleme ve not kayıtları",
   can_manage_medicines: "İlaç stoğu",
   can_send_announcements: "Duyuru ve hatırlatma bildirimi gönderme",
+  can_approve_leave: "İzin taleplerini onaylama/reddetme",
 };
 
 export const PERMISSION_KEYS = Object.keys(PERMISSION_LABELS) as PermissionKey[];
