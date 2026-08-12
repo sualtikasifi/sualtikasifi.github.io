@@ -8,12 +8,14 @@ import {
   deleteOpuSession,
   getOpuBatch,
   listAnimals,
+  listOpuBatches,
   listOpuSessions,
   listProfiles,
+  requestOpuAiAssist,
   updateOpuBatch,
   updateOpuSession,
 } from "@/lib/data";
-import { Animal, OpuBatch, OpuSession, Profile } from "@/lib/types";
+import { Animal, OpuAiAssistInput, OpuBatch, OpuSession, Profile } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { exportOpuBatchReportToPdf } from "@/lib/pdfExport";
 import { useAuth } from "@/lib/auth";
@@ -57,6 +59,10 @@ function OpuBatchContent() {
 
   const [editingTechnician, setEditingTechnician] = useState(false);
   const [savingTechnician, setSavingTechnician] = useState(false);
+
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   function refresh() {
     if (!id) return Promise.resolve();
@@ -180,6 +186,86 @@ function OpuBatchContent() {
     }
   }
 
+  async function handleAiAssist() {
+    setAiLoading(true);
+    setAiError(null);
+    setAiResult(null);
+    try {
+      const [allBatches, allSessions] = await Promise.all([listOpuBatches(), listOpuSessions()]);
+      const historicalBatches = allBatches.filter((b) => b.id !== batch!.id);
+      const historicalSessions = allSessions.filter((s) => s.batch_id !== batch!.id);
+
+      const histTotalOocytes = historicalSessions.reduce((sum, s) => sum + (s.oocyte_count ?? 0), 0);
+      const histGrades = historicalSessions.reduce(
+        (acc, s) => ({
+          a: acc.a + (s.oocyte_grade_a ?? 0),
+          b: acc.b + (s.oocyte_grade_b ?? 0),
+          c: acc.c + (s.oocyte_grade_c ?? 0),
+          d: acc.d + (s.oocyte_grade_d ?? 0),
+        }),
+        { a: 0, b: 0, c: 0, d: 0 }
+      );
+      const histGradeSum = histGrades.a + histGrades.b + histGrades.c + histGrades.d;
+
+      const batchOocytes = (b: OpuBatch) =>
+        historicalSessions.filter((s) => s.batch_id === b.id).reduce((sum, s) => sum + (s.oocyte_count ?? 0), 0);
+      const maturationBatches = historicalBatches.filter((b) => b.maturation_count !== null);
+      const totalOocytesForMaturation = maturationBatches.reduce((sum, b) => sum + batchOocytes(b), 0);
+      const totalMaturationCount = maturationBatches.reduce((sum, b) => sum + (b.maturation_count ?? 0), 0);
+      const embryoBatches = historicalBatches.filter((b) => b.embryo_count !== null && b.maturation_count);
+      const totalMaturationForEmbryo = embryoBatches.reduce((sum, b) => sum + (b.maturation_count ?? 0), 0);
+      const totalEmbryoCount = embryoBatches.reduce((sum, b) => sum + (b.embryo_count ?? 0), 0);
+
+      const donorHistory = (animalId: string) => {
+        const past = historicalSessions.filter((s) => s.donor_animal_id === animalId);
+        if (past.length === 0) return { avg: null as number | null, count: 0 };
+        const total = past.reduce((sum, s) => sum + (s.oocyte_count ?? 0), 0);
+        return { avg: total / past.length, count: past.length };
+      };
+
+      const input: OpuAiAssistInput = {
+        batchDate: formatDate(batch!.batch_date),
+        donorCount: sessions.length,
+        totalOocytes,
+        gradeTotals,
+        maturationCount: batch!.maturation_count,
+        maturationRate: batch!.maturation_count !== null && totalOocytes > 0 ? batch!.maturation_count / totalOocytes : null,
+        embryoCount: batch!.embryo_count,
+        embryoRate:
+          batch!.embryo_count !== null && batch!.maturation_count ? batch!.embryo_count / batch!.maturation_count : null,
+        donors: sessions.map((s) => {
+          const hist = donorHistory(s.donor_animal_id);
+          return {
+            earTag: earTagFor(s.donor_animal_id),
+            oocyteCount: s.oocyte_count ?? 0,
+            gradeA: s.oocyte_grade_a ?? 0,
+            gradeB: s.oocyte_grade_b ?? 0,
+            gradeC: s.oocyte_grade_c ?? 0,
+            gradeD: s.oocyte_grade_d ?? 0,
+            historicalAvgOocytes: hist.avg,
+            historicalSessionCount: hist.count,
+          };
+        }),
+        historicalAverages: {
+          batchCount: historicalBatches.length,
+          avgOocytesPerDonor: historicalSessions.length > 0 ? histTotalOocytes / historicalSessions.length : null,
+          avgGradeAPct: histGradeSum > 0 ? histGrades.a / histGradeSum : null,
+          avgGradeBPct: histGradeSum > 0 ? histGrades.b / histGradeSum : null,
+          avgGradeCPct: histGradeSum > 0 ? histGrades.c / histGradeSum : null,
+          avgGradeDPct: histGradeSum > 0 ? histGrades.d / histGradeSum : null,
+          avgMaturationRate: totalOocytesForMaturation > 0 ? totalMaturationCount / totalOocytesForMaturation : null,
+          avgEmbryoRate: totalMaturationForEmbryo > 0 ? totalEmbryoCount / totalMaturationForEmbryo : null,
+        },
+      };
+
+      setAiResult(await requestOpuAiAssist(input));
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Bir hata oluştu, tekrar deneyin.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -192,6 +278,14 @@ function OpuBatchContent() {
           <>
             <button type="button" onClick={handleExportPdf} disabled={exporting} className="btn-secondary">
               {exporting ? "Hazırlanıyor..." : "PDF'e Aktar"}
+            </button>
+            <button
+              type="button"
+              onClick={handleAiAssist}
+              disabled={aiLoading || sessions.length === 0}
+              className="rounded-lg border border-purple-300 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 shadow-sm transition-all hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {aiLoading ? "Analiz ediliyor..." : "🤖 AI OPU Asistan"}
             </button>
             {canManage && (
               <button
@@ -276,6 +370,19 @@ function OpuBatchContent() {
           >
             Vazgeç
           </button>
+        </div>
+      )}
+
+      {(aiLoading || aiError || aiResult) && (
+        <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-4 shadow-sm">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-purple-700">🤖 AI OPU Asistan</p>
+          {aiLoading && <p className="text-sm text-neutral-500">Analiz ediliyor...</p>}
+          {aiError && <p className="text-sm text-red-600">{aiError}</p>}
+          {aiResult && (
+            <div className="whitespace-pre-wrap rounded-md border border-purple-200 bg-white p-3 text-sm leading-relaxed text-neutral-800">
+              {aiResult}
+            </div>
+          )}
         </div>
       )}
 

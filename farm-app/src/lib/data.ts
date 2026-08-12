@@ -25,6 +25,7 @@ import {
   MastitisProtocol,
   MastitisTreatment,
   Medicine,
+  OpuAiAssistInput,
   OpuBatch,
   OpuSession,
   PlannedEmbryoTransfer,
@@ -1228,6 +1229,15 @@ export async function sendPushNotification(input: {
 export async function requestCalfAiAssist(input: CalfAiAssistInput): Promise<string> {
   if (isDemoMode) return mock.demoCalfAiAssist(input);
   const { data, error } = await supabase!.functions.invoke("ai-assist", { body: input });
+  if (error) throw error;
+  return data.answer as string;
+}
+
+// --- AI OPU Asistan (OpenRouter uzerinden, opu-ai-assist Edge Function ile) ---
+
+export async function requestOpuAiAssist(input: OpuAiAssistInput): Promise<string> {
+  if (isDemoMode) return mock.demoOpuAiAssist(input);
+  const { data, error } = await supabase!.functions.invoke("opu-ai-assist", { body: input });
   if (error) throw error;
   return data.answer as string;
 }

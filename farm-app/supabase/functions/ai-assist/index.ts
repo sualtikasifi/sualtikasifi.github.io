@@ -14,7 +14,8 @@
 //
 // Required secrets (set with `supabase secrets set NAME=value`):
 //   OPENROUTER_API_KEY - never commit this, keep it only in Supabase secrets
-//   OPENROUTER_MODEL    - optional, defaults to anthropic/claude-haiku-4.5
+//   OPENROUTER_MODEL    - optional, defaults to google/gemini-2.5-flash-lite
+//                          (shared with opu-ai-assist - same secret name)
 //
 // SUPABASE_URL and SUPABASE_ANON_KEY are provided automatically by the
 // Edge Functions runtime and do not need to be set manually.
@@ -27,7 +28,7 @@ const corsHeaders = {
 };
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") ?? "";
-const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "anthropic/claude-haiku-4.5";
+const OPENROUTER_MODEL = Deno.env.get("OPENROUTER_MODEL") ?? "google/gemini-2.5-flash-lite";
 
 const DISCLAIMER =
   "\n\n⚠️ Bu bir karar destek önerisidir; kesin teşhis ve tedaviye veteriner hekim karar vermelidir.";
