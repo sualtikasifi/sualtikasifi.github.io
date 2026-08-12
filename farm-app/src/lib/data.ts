@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { isDemoMode, supabase } from "./supabaseClient";
 import * as mock from "./mock/store";
 import {
@@ -1232,12 +1233,30 @@ export async function sendPushNotification(input: {
   if (error) throw error;
 }
 
+// supabase-js'in FunctionsHttpError.message'i hep ayni jenerik metni doner
+// ("Edge Function returned a non-2xx status code") - asil nedeni (orn.
+// "OPENROUTER_API_KEY tanimli degil") fonksiyonun donduryu JSON govdeden
+// okuyup kullaniciya onu gosteriyoruz. Sonuc her zaman gercek bir Error
+// nesnesi (arayuzdeki "err instanceof Error" kontrolu hep dogru olsun diye).
+async function describeFunctionsInvokeError(error: unknown): Promise<Error> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      if (body?.error) return new Error(String(body.error));
+    } catch {
+      // govde JSON degilse asagidaki jenerik mesaja dusuyoruz
+    }
+  }
+  if (error instanceof Error) return error;
+  return new Error("Bir hata oluştu, tekrar deneyin.");
+}
+
 // --- AI Sağlık Asistanı (OpenRouter uzerinden, ai-assist Edge Function ile) ---
 
 export async function requestCalfAiAssist(input: CalfAiAssistInput): Promise<string> {
   if (isDemoMode) return mock.demoCalfAiAssist(input);
   const { data, error } = await supabase!.functions.invoke("ai-assist", { body: input });
-  if (error) throw error;
+  if (error) throw await describeFunctionsInvokeError(error);
   return data.answer as string;
 }
 
@@ -1246,7 +1265,7 @@ export async function requestCalfAiAssist(input: CalfAiAssistInput): Promise<str
 export async function requestOpuAiAssist(input: OpuAiAssistInput): Promise<string> {
   if (isDemoMode) return mock.demoOpuAiAssist(input);
   const { data, error } = await supabase!.functions.invoke("opu-ai-assist", { body: input });
-  if (error) throw error;
+  if (error) throw await describeFunctionsInvokeError(error);
   return data.answer as string;
 }
 
