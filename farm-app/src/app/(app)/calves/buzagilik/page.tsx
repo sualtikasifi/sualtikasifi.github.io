@@ -270,6 +270,7 @@ export default function BuzagilikPage() {
           onDeleteNote={(noteId) => care.handleDeleteNote(noteId)}
           onMealExam={(mealId, result) => care.handleMealExam(mealId, result)}
           onSaveProtocol={(protocolId, name, days) => care.handleSaveProtocol(protocolId, name, days)}
+          onDeleteProtocol={(protocolId) => care.handleDeleteProtocol(protocolId)}
           onClearLegacyStatus={() =>
             selectedSlot.animal_id ? care.handleClearLegacyStatus(selectedSlot.animal_id) : Promise.resolve()
           }

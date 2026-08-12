@@ -404,7 +404,7 @@ create table if not exists calf_protocol_days (
 create table if not exists calf_treatment_courses (
   id uuid primary key default gen_random_uuid(),
   animal_id uuid not null references animals (id) on delete cascade,
-  protocol_id uuid not null references calf_protocols (id) on delete cascade,
+  protocol_id uuid not null references calf_protocols (id) on delete restrict,
   start_date date not null default current_date,
   status text not null default 'aktif' check (status in ('aktif', 'tamamlandi', 'iptal')),
   created_by uuid references profiles (id),
@@ -535,6 +535,14 @@ create index if not exists leave_requests_date_idx on leave_requests (start_date
 -- yapilmasin diye), kullanici "Yeniden Analiz Et" derse yeniden doldurulur.
 alter table opu_batches add column if not exists ai_analysis text;
 alter table opu_batches add column if not exists ai_analysis_generated_at timestamptz;
+
+-- 19. Protokol silme ozelligi: bir protokol daha once bir tedavi kurunde
+-- kullanildiysa silinememeli (gecmis veri kaybolmasin diye). Bu yuzden
+-- calf_treatment_courses.protocol_id icin cascade yerine restrict kullaniyoruz;
+-- calf_protocol_days ise sadece protokol icerigi oldugu icin cascade kaliyor.
+alter table calf_treatment_courses drop constraint if exists calf_treatment_courses_protocol_id_fkey;
+alter table calf_treatment_courses add constraint calf_treatment_courses_protocol_id_fkey
+  foreign key (protocol_id) references calf_protocols (id) on delete restrict;
 
 -- Row Level Security: giris yapmis herkes okuyabilir, yazma/silme ise
 -- kisiye ozel yetkilere (is_admin veya ilgili can_manage_* alani) bagli.

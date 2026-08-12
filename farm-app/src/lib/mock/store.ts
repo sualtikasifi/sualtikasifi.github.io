@@ -1035,6 +1035,19 @@ export function demoReplaceCalfProtocolDays(protocolId: string, days: { day_numb
   saveDb(db);
 }
 
+// Gercek DB'deki "on delete restrict" davranisini demo modda da taklit eder -
+// protokol daha once bir tedavi kurunde kullanildiysa silinemez.
+export function demoDeleteCalfProtocol(id: string): void {
+  const db = loadDb();
+  const inUse = db.calfTreatmentCourses.some((c) => c.protocol_id === id);
+  if (inUse) {
+    throw new Error("Bu protokol daha önce tedavi için kullanılmış, bu yüzden silinemiyor.");
+  }
+  db.calfProtocols = db.calfProtocols.filter((p) => p.id !== id);
+  db.calfProtocolDays = db.calfProtocolDays.filter((d) => d.protocol_id !== id);
+  saveDb(db);
+}
+
 export function demoListCalfTreatmentCourses(): CalfTreatmentCourse[] {
   return loadDb().calfTreatmentCourses.sort((a, b) => b.created_at.localeCompare(a.created_at));
 }

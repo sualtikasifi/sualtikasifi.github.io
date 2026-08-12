@@ -8,6 +8,7 @@ import {
   deleteCalfNote,
   createCalfProtocol,
   createCalfTreatment,
+  deleteCalfProtocol,
   deleteCalfTreatment,
   createCalfTreatmentCourse,
   createCalfPectolitCourse,
@@ -447,6 +448,11 @@ export function useCalfCare(structure: CalfHousingStructure) {
     await refresh();
   }
 
+  async function handleDeleteProtocol(protocolId: string) {
+    await deleteCalfProtocol(protocolId);
+    await refresh();
+  }
+
   async function handleDeleteNote(noteId: string) {
     await deleteCalfNote(noteId);
     await refresh();
@@ -515,6 +521,7 @@ export function useCalfCare(structure: CalfHousingStructure) {
     handleDeleteNote,
     handleMealExam,
     handleSaveProtocol,
+    handleDeleteProtocol,
     handleClearLegacyStatus,
     activeNotesFor,
     unexaminedMissedFor,

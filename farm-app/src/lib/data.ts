@@ -959,6 +959,14 @@ export async function updateCalfProtocolName(id: string, name: string): Promise<
   return data as CalfProtocol;
 }
 
+// Protokole ait gunler (calf_protocol_days) cascade ile silinir; daha once
+// bir tedavi kurunde kullanilmissa DB tarafinda (on delete restrict) engellenir.
+export async function deleteCalfProtocol(id: string): Promise<void> {
+  if (isDemoMode) return mock.demoDeleteCalfProtocol(id);
+  const { error } = await supabase!.from("calf_protocols").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // Protokolun gun listesini komple degistirir (gun ekleme/silme/duzenleme).
 export async function replaceCalfProtocolDays(
   protocolId: string,
