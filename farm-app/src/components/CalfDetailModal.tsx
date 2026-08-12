@@ -107,6 +107,7 @@ interface Props {
     name: string,
     days: { day_number: number; medicines: string }[]
   ) => Promise<void>;
+  onDeleteProtocol: (protocolId: string) => Promise<void>;
   onClearLegacyStatus: () => Promise<void>;
   onAiAssist: (diagnosis: string) => Promise<string>;
   onClose: () => void;
@@ -146,6 +147,7 @@ export function CalfDetailModal({
   onDeleteNote,
   onMealExam,
   onSaveProtocol,
+  onDeleteProtocol,
   onClearLegacyStatus,
   onAiAssist,
   onClose,
@@ -187,6 +189,28 @@ export function CalfDetailModal({
   const [editingProtocolId, setEditingProtocolId] = useState<string | null>(null);
   const [protocolNameDraft, setProtocolNameDraft] = useState("");
   const [protocolDaysDraft, setProtocolDaysDraft] = useState<string[]>([]);
+  const [deleteProtocolError, setDeleteProtocolError] = useState<string | null>(null);
+
+  async function handleDeleteProtocol(protocolId: string, protocolName: string) {
+    if (!window.confirm(`"${protocolName}" protokolünü silmek istediğinize emin misiniz?`)) return;
+    setDeleteProtocolError(null);
+    setBusy(true);
+    try {
+      await onDeleteProtocol(protocolId);
+      if (editingProtocolId === protocolId) setEditingProtocolId(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (/row-level security|permission denied/i.test(msg)) {
+        setDeleteProtocolError("Bu işlem için yetkiniz yok.");
+      } else if (msg) {
+        setDeleteProtocolError(msg);
+      } else {
+        setDeleteProtocolError("Protokol silinemedi, tekrar deneyin.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const [showAiAssist, setShowAiAssist] = useState(false);
   const [aiDiagnosis, setAiDiagnosis] = useState<string | null>(null);
@@ -888,10 +912,20 @@ export function CalfDetailModal({
                             >
                               Düzenle
                             </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleDeleteProtocol(p.id, p.name)}
+                              className="shrink-0 text-[11px] font-medium text-red-600 underline hover:no-underline disabled:opacity-50"
+                            >
+                              Sil
+                            </button>
                           </div>
                         );
                       })}
                     </div>
+
+                    {deleteProtocolError && <p className="text-xs text-red-600">{deleteProtocolError}</p>}
 
                     {editingProtocolId !== null && (
                       <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50/50 p-2">
