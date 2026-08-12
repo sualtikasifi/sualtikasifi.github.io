@@ -3,6 +3,7 @@ import * as mock from "./mock/store";
 import {
   Animal,
   Bull,
+  CalfAiAssistInput,
   CalfBirthRecord,
   CalfFeeding,
   CalfHousingSlot,
@@ -1220,6 +1221,15 @@ export async function sendPushNotification(input: {
   }
   const { error } = await supabase!.functions.invoke("send-push", { body: input });
   if (error) throw error;
+}
+
+// --- AI Sağlık Asistanı (OpenRouter uzerinden, ai-assist Edge Function ile) ---
+
+export async function requestCalfAiAssist(input: CalfAiAssistInput): Promise<string> {
+  if (isDemoMode) return mock.demoCalfAiAssist(input);
+  const { data, error } = await supabase!.functions.invoke("ai-assist", { body: input });
+  if (error) throw error;
+  return data.answer as string;
 }
 
 // --- Leave requests ---
