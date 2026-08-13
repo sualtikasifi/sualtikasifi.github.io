@@ -41,6 +41,7 @@ export default function NewOpuBatchPage() {
   const [technicianName, setTechnicianName] = useState("");
   const [notes, setNotes] = useState("");
   const [rows, setRows] = useState<DonorRow[]>([emptyRow()]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([listAnimals(), listProfiles()]).then(([a, p]) => {
@@ -68,6 +69,7 @@ export default function NewOpuBatchPage() {
     e.preventDefault();
     if (validRows.length === 0) return;
     setSubmitting(true);
+    setError(null);
     try {
       const batch = await createOpuBatch({
         batch_date: batchDate,
@@ -101,7 +103,8 @@ export default function NewOpuBatchPage() {
         });
       }
       router.push(`/opu/batch?id=${batch.id}`);
-    } finally {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kaydedilemedi, tekrar deneyin.");
       setSubmitting(false);
     }
   }
@@ -225,6 +228,8 @@ export default function NewOpuBatchPage() {
         <Field label="Notlar (opsiyonel)">
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={2} />
         </Field>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button type="submit" disabled={submitting || validRows.length === 0} className="btn-primary">
           {submitting ? "Kaydediliyor..." : `Kaydet (${validRows.length} donör)`}
