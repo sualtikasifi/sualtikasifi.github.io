@@ -82,9 +82,11 @@ function drawTable(
   startY: number,
   head: string[],
   body: (string | number)[][],
-  options?: { fontSize?: number; rightAlignFrom?: number }
+  options?: { fontSize?: number; rightAlignFrom?: number; centerAlignFrom?: number }
 ): number {
-  const rightAlignFrom = options?.rightAlignFrom;
+  const { rightAlignFrom, centerAlignFrom } = options ?? {};
+  const alignFrom = rightAlignFrom ?? centerAlignFrom;
+  const halign = rightAlignFrom !== undefined ? ("right" as const) : ("center" as const);
   autoTable(doc, {
     startY,
     margin: { left: MARGIN_X, right: MARGIN_X },
@@ -94,8 +96,8 @@ function drawTable(
     headStyles: { fillColor: BRAND_GREEN, textColor: 255, fontStyle: "bold" },
     styles: { fontSize: options?.fontSize ?? 9, cellPadding: 4 },
     columnStyles:
-      rightAlignFrom !== undefined
-        ? Object.fromEntries(head.slice(rightAlignFrom).map((_, i) => [i + rightAlignFrom, { halign: "right" as const }]))
+      alignFrom !== undefined
+        ? Object.fromEntries(head.slice(alignFrom).map((_, i) => [i + alignFrom, { halign }]))
         : undefined,
   });
   return lastTableEndY(doc, startY);
@@ -155,7 +157,7 @@ export function exportOpuBatchReportToPdf(input: OpuBatchPdfInput): void {
     ) + 26;
 
   cursorY = drawSectionTitle(doc, cursorY, "Donör Bazlı Toplama (Verim)");
-  cursorY = drawTable(doc, cursorY, input.donorHeaders, input.donorRows);
+  cursorY = drawTable(doc, cursorY, input.donorHeaders, input.donorRows, { centerAlignFrom: 1 });
 
   if (input.aiAnalysis) {
     cursorY = ensureSpace(doc, cursorY, 60) + 26;
