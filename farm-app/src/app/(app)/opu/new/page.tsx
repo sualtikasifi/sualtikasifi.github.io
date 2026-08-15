@@ -6,6 +6,7 @@ import { createOpuBatch, createOpuSession, listAnimals, listProfiles } from "@/l
 import { Animal, Profile } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { EarTagPicker } from "@/components/EarTagPicker";
+import { describeError } from "@/lib/errors";
 import { todayIso } from "@/lib/format";
 
 interface DonorRow {
@@ -104,7 +105,7 @@ export default function NewOpuBatchPage() {
       }
       router.push(`/opu/batch?id=${batch.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kaydedilemedi, tekrar deneyin.");
+      setError(describeError(err, "Kaydedilemedi, tekrar deneyin."));
       setSubmitting(false);
     }
   }
