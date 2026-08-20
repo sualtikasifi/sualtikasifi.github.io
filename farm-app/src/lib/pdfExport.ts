@@ -16,10 +16,12 @@ const TR_FONT_FALLBACK: Record<string, string> = {
   Ş: "S",
   ğ: "g",
   Ğ: "G",
+  "≤": "<=",
+  "≥": ">=",
 };
 
 function tr(text: string): string {
-  return text.replace(/[ışŞğĞİ]/g, (ch) => TR_FONT_FALLBACK[ch] ?? ch);
+  return text.replace(/[ışŞğĞİ≤≥]/g, (ch) => TR_FONT_FALLBACK[ch] ?? ch);
 }
 
 function trCell(cell: string | number): string | number {

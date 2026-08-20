@@ -69,6 +69,25 @@ function pct(v: number | null): string {
   return v != null ? `%${Math.round(v * 100)}` : "bilinmiyor";
 }
 
+// LLM'ler kucuk sayisal farklarda (orn. 3 ile 3.7) yon hesaplamasini
+// (ustunde mi altinda mi) yanlis yapabiliyor - bu yuzden yon+fark burada
+// deterministik olarak hesaplanip prompt'a hazir etiket olarak veriliyor;
+// modelin kendi hesap yapmasina gerek birakilmiyor.
+function compareCount(today: number, hist: number | null): string {
+  if (hist == null) return "";
+  const diff = today - hist;
+  if (Math.abs(diff) < 0.05) return "(ortalamayla aynı)";
+  const diffStr = `${diff > 0 ? "+" : ""}${diff.toFixed(1)} oosit`;
+  return diff > 0 ? `(ortalamanın ÜZERİNDE, fark: ${diffStr})` : `(ortalamanın ALTINDA, fark: ${diffStr})`;
+}
+
+function comparePct(todayFrac: number, histFrac: number | null): string {
+  if (histFrac == null) return "";
+  const diff = Math.round(todayFrac * 100) - Math.round(histFrac * 100);
+  if (diff === 0) return "(ortalamayla aynı)";
+  return diff > 0 ? `(ortalamanın ÜZERİNDE, fark: +${diff} puan)` : `(ortalamanın ALTINDA, fark: ${diff} puan)`;
+}
+
 function buildPrompt(input: OpuAiAssistRequest): string {
   const h = input.historicalAverages;
   const lines: string[] = [];
@@ -88,12 +107,28 @@ function buildPrompt(input: OpuAiAssistRequest): string {
   );
   lines.push(`- Ortalama maturasyon oranı: ${pct(h.avgMaturationRate)}`);
   lines.push(`- Ortalama embriyoya dönüşme oranı: ${pct(h.avgEmbryoRate)}`);
+  if (input.totalOocytes > 0) {
+    const todayA = input.gradeTotals.a / input.totalOocytes;
+    const todayB = input.gradeTotals.b / input.totalOocytes;
+    const todayC = input.gradeTotals.c / input.totalOocytes;
+    const todayD = input.gradeTotals.d / input.totalOocytes;
+    lines.push("");
+    lines.push(
+      "Kalite karşılaştırması (bugün vs geçmiş ortalama, yön ve fark ÖNCEDEN HESAPLANMIŞ - AYNEN kullan, kendin yeniden hesaplama):"
+    );
+    lines.push(`- A: bugün ${pct(todayA)} ${comparePct(todayA, h.avgGradeAPct)}`);
+    lines.push(`- B: bugün ${pct(todayB)} ${comparePct(todayB, h.avgGradeBPct)}`);
+    lines.push(`- C: bugün ${pct(todayC)} ${comparePct(todayC, h.avgGradeCPct)}`);
+    lines.push(`- D: bugün ${pct(todayD)} ${comparePct(todayD, h.avgGradeDPct)}`);
+  }
   lines.push("");
-  lines.push("Donör bazlı (bugün vs. o donörün kendi geçmiş ortalaması):");
+  lines.push(
+    "Donör bazlı (bugün vs. o donörün kendi geçmiş ortalaması - yön ve fark ÖNCEDEN HESAPLANMIŞ, AYNEN kullan):"
+  );
   for (const d of input.donors) {
     const hist =
       d.historicalAvgOocytes != null
-        ? `geçmiş ort. ${d.historicalAvgOocytes.toFixed(1)} oosit (${d.historicalSessionCount} kayıt)`
+        ? `geçmiş ort. ${d.historicalAvgOocytes.toFixed(1)} oosit (${d.historicalSessionCount} kayıt) ${compareCount(d.oocyteCount, d.historicalAvgOocytes)}`
         : "geçmiş kaydı yok";
     const streak = d.lowYieldStreak ? " [SON 3 SEANSTIR ≤2 OOSİT]" : "";
     lines.push(
@@ -164,14 +199,19 @@ Deno.serve(async (req: Request) => {
       "oranının AZALMASI ise her zaman olumlu bir sonuçtur, asla 'kötü' olarak yorumlama. Her kalite " +
       "harfini bu sıralamaya göre ayrı ayrı değerlendir, tek bir yönde (hep 'artış iyi' ya da hep 'artış " +
       "kötü') genelleme yapma.\n\n" +
+      "ÖNEMLİ - karşılaştırma yönleri: Kalite yüzdeleri ve donör bazlı oosit sayıları için 'bugün vs geçmiş " +
+      "ortalama' karşılaştırmaları (ÜZERİNDE/ALTINDA ve fark miktarı) sana veride HAZIR ETİKET olarak " +
+      "veriliyor. Bu etiketleri AYNEN kullan - kendi kafandan üstünde mi altında mı olduğunu yeniden hesaplama " +
+      "veya veride yazandan farklı bir yön belirtme; küçük sayısal farklarda (örn. 3 oosit ile 3.7 ortalama) " +
+      "yön hesabını yanlış yapma riski vardır, bu yüzden hesaplama senin için önceden yapıldı.\n\n" +
       "Görevin: (1) bugünkü günü 1-2 cümlede özetlemek, (2) toplam oosit sayısını ve kalite dağılımını " +
-      "(A/B/C/D, yukarıdaki notasyona göre) geçmiş ortalamalarla karşılaştırmak (daha iyi mi kötü mü, yüzde " +
-      "olarak ne kadar fark var), (3) varsa maturasyon ve embriyoya dönüşme oranlarını geçmiş ortalamalarla " +
-      "karşılaştırmak, (4) donör bazında öne çıkanları belirtmek - hangi donörler kendi geçmiş ortalamasının " +
-      "belirgin şekilde üstünde ya da altında performans gösterdi, (5) '[SON 3 SEANSTIR ≤2 OOSİT]' etiketli " +
-      "bir donör varsa, bunu ayrı bir maddede vurgulayıp bu hayvanın donörlükten çıkarılıp çıkarılmayacağının " +
-      "değerlendirilmesini öner. Kısa, net, Türkçe ve madde işaretli yaz. Sadece veriye dayalı gözlem yap, " +
-      "spekülatif nedensellik kurma veya veterinerlik tavsiyesi verme.";
+      "(A/B/C/D, yukarıdaki notasyona göre) geçmiş ortalamalarla karşılaştırmak (verilen ÜZERİNDE/ALTINDA " +
+      "etiketlerini ve puan farklarını kullanarak), (3) varsa maturasyon ve embriyoya dönüşme oranlarını " +
+      "geçmiş ortalamalarla karşılaştırmak, (4) donör bazında öne çıkanları belirtmek - hangi donörler kendi " +
+      "geçmiş ortalamasının (verilen etikete göre) belirgin şekilde üstünde ya da altında performans gösterdi, " +
+      "(5) '[SON 3 SEANSTIR ≤2 OOSİT]' etiketli bir donör varsa, bunu ayrı bir maddede vurgulayıp bu hayvanın " +
+      "donörlükten çıkarılıp çıkarılmayacağının değerlendirilmesini öner. Kısa, net, Türkçe ve madde işaretli " +
+      "yaz. Sadece veriye dayalı gözlem yap, spekülatif nedensellik kurma veya veterinerlik tavsiyesi verme.";
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
