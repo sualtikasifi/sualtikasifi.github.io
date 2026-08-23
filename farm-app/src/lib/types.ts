@@ -117,6 +117,21 @@ export interface OpuAiAssistInput {
   historicalAverages: OpuAiAssistHistoricalAverages;
 }
 
+// --- Sesli komut asistanı (metne dönüştürülmüş sesli komutu yapılandırılmış
+// bir işleme çevirir - bkz. voice-command-assist Edge Function) ---
+
+export interface VoiceCommandInput {
+  transcript: string;
+  todayIso: string;
+  animalEarTags: string[];
+  calfProtocolNames: string[];
+}
+
+export type VoiceCommandResult =
+  | { action: "start_calf_protocol"; animalEarTag: string; protocolName: string; summary: string }
+  | { action: "create_task"; title: string; dueDate: string; description: string | null; animalEarTag: string | null; summary: string }
+  | { action: "unrecognized"; summary: string };
+
 export interface Animal {
   id: string;
   ear_tag: string;
