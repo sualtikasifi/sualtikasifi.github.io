@@ -34,6 +34,8 @@ import {
   Task,
   TaskAnimal,
   VaccinationPlan,
+  VoiceCommandInput,
+  VoiceCommandResult,
 } from "@/lib/types";
 import { todayIso } from "../format";
 import {
@@ -1325,6 +1327,48 @@ export function demoOpuAiAssist(input: OpuAiAssistInput): Promise<string> {
     "(Bu, demo modunda üretilen örnek bir cevaptır — gerçek Supabase bağlantısı eklendiğinde OpenRouter'dan gerçek bir analiz gelecektir.)",
   ].filter(Boolean);
   return Promise.resolve(lines.join("\n"));
+}
+
+// Demo modda gercek bir Edge Function/OpenRouter cagrisi yapilmaz - basit
+// anahtar kelime eslestirmesiyle akisin nasil gorunecegini gosterir.
+export function demoVoiceCommand(input: VoiceCommandInput): Promise<VoiceCommandResult> {
+  const text = input.transcript.toLowerCase();
+  const earTag = input.animalEarTags.find((tag) => text.includes(tag.toLowerCase()));
+  const protocolName = input.calfProtocolNames.find((name) => text.includes(name.toLowerCase()));
+
+  if (/tedavi|protokol/.test(text)) {
+    if (earTag && protocolName) {
+      return Promise.resolve({
+        action: "start_calf_protocol",
+        animalEarTag: earTag,
+        protocolName,
+        summary: `${earTag} numaralı hayvana ${protocolName} protokolü başlatılacak (demo modu).`,
+      });
+    }
+    return Promise.resolve({
+      action: "unrecognized",
+      summary: "Hayvan küpe no'su veya protokol adı sistemdeki kayıtlarla eşleşmedi (demo modu).",
+    });
+  }
+
+  if (/görev|hatırlat|yapılacak/.test(text)) {
+    const dueDate = /yarın/.test(text)
+      ? new Date(new Date(`${input.todayIso}T00:00:00`).getTime() + 86400000).toISOString().slice(0, 10)
+      : input.todayIso;
+    return Promise.resolve({
+      action: "create_task",
+      title: input.transcript.trim().slice(0, 80),
+      dueDate,
+      description: null,
+      animalEarTag: earTag ?? null,
+      summary: `"${input.transcript.trim()}" görevi ${dueDate} tarihi için oluşturulacak (demo modu).`,
+    });
+  }
+
+  return Promise.resolve({
+    action: "unrecognized",
+    summary: "Komut anlaşılamadı (demo modu) — gerçek bağlantıda Gemini bu komutu yorumlayacak.",
+  });
 }
 
 // --- Leave requests (demo) ---

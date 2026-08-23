@@ -37,6 +37,8 @@ import {
   Task,
   TaskAnimal,
   VaccinationPlan,
+  VoiceCommandInput,
+  VoiceCommandResult,
 } from "./types";
 
 export { isDemoMode };
@@ -1267,6 +1269,15 @@ export async function requestOpuAiAssist(input: OpuAiAssistInput): Promise<strin
   const { data, error } = await supabase!.functions.invoke("opu-ai-assist", { body: input });
   if (error) throw await describeFunctionsInvokeError(error);
   return data.answer as string;
+}
+
+// --- Sesli Komut Asistanı (OpenRouter uzerinden, voice-command-assist Edge Function ile) ---
+
+export async function requestVoiceCommand(input: VoiceCommandInput): Promise<VoiceCommandResult> {
+  if (isDemoMode) return mock.demoVoiceCommand(input);
+  const { data, error } = await supabase!.functions.invoke("voice-command-assist", { body: input });
+  if (error) throw await describeFunctionsInvokeError(error);
+  return data.result as VoiceCommandResult;
 }
 
 // --- Leave requests ---

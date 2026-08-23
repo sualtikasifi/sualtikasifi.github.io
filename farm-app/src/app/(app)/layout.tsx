@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { NavBar } from "@/components/NavBar";
 import { DemoBanner } from "@/components/DemoBanner";
+import { VoiceCommandButton } from "@/components/VoiceCommandButton";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { loading, profile } = useAuth();
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <DemoBanner />
       <NavBar />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-8">{children}</main>
+      <VoiceCommandButton />
     </div>
   );
 }
